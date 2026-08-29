@@ -1,141 +1,80 @@
-"""Ollama provider for local models."""
+"""Ollama LLM provider for Bahram Agent."""
 
 from __future__ import annotations
 
-import json
 import logging
-from typing import Any, AsyncIterator
-
-from bahram.core.engine import AgentResponse, Message, MessageRole, ToolCall
-from bahram.providers.base import BaseProvider
+from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
 
-class OllamaProvider(BaseProvider):
-    """Ollama provider for local models."""
+class OllamaProvider:
+    """Ollama local LLM provider."""
+
+    def __init__(self, base_url: str = "http://localhost:11434", model: str = "") -> None:
+        self.base_url = base_url.rstrip("/")
+        self.model = model or "llama3"
 
     async def complete(
         self,
-        messages: list[Message],
-        tools: list[dict[str, Any]],
-        **kwargs: Any,
-    ) -> AgentResponse:
-        """Generate a completion using Ollama API."""
+        messages: list[dict],
+        model: str = None,
+        temperature: float = 0.7,
+        max_tokens: int = 4096,
+        stream: bool = False,
+    ) -> str:
+        """Complete a conversation."""
         try:
             import httpx
 
-            base_url = self.config.base_url or "http://localhost:11434"
-
-            # Convert messages
-            ollama_messages = []
-            for msg in messages:
-                ollama_messages.append(
-                    {"role": msg.role.value, "content": msg.content}
-                )
-
-            # Prepare request
-            payload = {
-                "model": kwargs.get("model", "llama3.1"),
-                "messages": ollama_messages,
-                "stream": False,
-                "options": {
-                    "num_predict": kwargs.get("max_tokens", 4096),
-                    "temperature": kwargs.get("temperature", 0.7),
-                },
-            }
-
-            if tools:
-                payload["tools"] = tools
-
-            # Make request
             async with httpx.AsyncClient() as client:
                 response = await client.post(
-                    f"{base_url}/api/chat",
-                    json=payload,
+                    f"{self.base_url}/api/chat",
+                    json={
+                        "model": model or self.model,
+                        "messages": messages,
+                        "stream": False,
+                        "options": {
+                            "temperature": temperature,
+                            "num_predict": max_tokens,
+                        },
+                    },
                     timeout=120.0,
                 )
 
-                if response.status_code != 200:
-                    raise Exception(f"Ollama error: {response.text}")
-
-                data = response.json()
-                message = data.get("message", {})
-
-                # Parse response
-                content = message.get("content", "")
-                tool_calls = []
-
-                if "tool_calls" in message:
-                    for tc in message["tool_calls"]:
-                        func = tc.get("function", {})
-                        tool_calls.append(
-                            ToolCall(
-                                id=f"call_{len(tool_calls)}",
-                                name=func.get("name", ""),
-                                arguments=func.get("arguments", {}),
-                            )
-                        )
-
-                return AgentResponse(
-                    content=content,
-                    tool_calls=tool_calls,
-                    metadata={"eval_count": data.get("eval_count", 0)},
-                )
+                if response.status_code == 200:
+                    data = response.json()
+                    return data.get("message", {}).get("content", "")
+                else:
+                    error = response.text
+                    raise RuntimeError(f"Ollama API error: {error}")
 
         except ImportError:
-            raise Exception("httpx not installed")
+            raise ImportError("httpx not installed. Run: pip install httpx")
         except Exception as e:
-            logger.error(f"Ollama API error: {e}")
+            logger.error(f"Ollama completion failed: {e}")
             raise
 
-    async def stream(
-        self,
-        messages: list[Message],
-        tools: list[dict[str, Any]],
-        **kwargs: Any,
-    ) -> AsyncIterator[str]:
-        """Stream a completion using Ollama API."""
+    async def list_models(self) -> list[str]:
+        """List available models."""
         try:
             import httpx
 
-            base_url = self.config.base_url or "http://localhost:11434"
-
-            ollama_messages = []
-            for msg in messages:
-                ollama_messages.append(
-                    {"role": msg.role.value, "content": msg.content}
-                )
-
-            payload = {
-                "model": kwargs.get("model", "llama3.1"),
-                "messages": ollama_messages,
-                "stream": True,
-                "options": {
-                    "num_predict": kwargs.get("max_tokens", 4096),
-                    "temperature": kwargs.get("temperature", 0.7),
-                },
-            }
-
             async with httpx.AsyncClient() as client:
-                async with client.stream(
-                    "POST",
-                    f"{base_url}/api/chat",
-                    json=payload,
-                    timeout=120.0,
-                ) as response:
-                    if response.status_code != 200:
-                        raise Exception(f"Ollama stream error: {response.status_code}")
+                response = await client.get(f"{self.base_url}/api/tags", timeout=10.0)
 
-                    async for line in response.aiter_lines():
-                        if line:
-                            try:
-                                data = json.loads(line)
-                                if data.get("message", {}).get("content"):
-                                    yield data["message"]["content"]
-                            except json.JSONDecodeError:
-                                continue
+                if response.status_code == 200:
+                    data = response.json()
+                    return [m["name"] for m in data.get("models", [])]
+                return []
 
-        except Exception as e:
-            logger.error(f"Ollama stream error: {e}")
-            raise
+        except Exception:
+            return []
+
+    def get_provider_info(self) -> dict[str, Any]:
+        """Get provider information."""
+        return {
+            "name": "ollama",
+            "base_url": self.base_url,
+            "model": self.model,
+        }

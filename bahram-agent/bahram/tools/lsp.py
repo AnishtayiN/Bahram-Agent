@@ -1,4 +1,4 @@
-"""LSP (Language Server Protocol) integration for Bahram Agent."""
+"""LSP (Language Server Protocol) tool for Bahram Agent."""
 
 from __future__ import annotations
 
@@ -12,81 +12,111 @@ logger = logging.getLogger(__name__)
 
 
 @dataclass
-class Diagnostic:
-    """A language diagnostic."""
+class LSPServer:
+    """LSP server info."""
 
-    file: str
-    line: int
-    column: int
-    message: str
-    severity: str  # error, warning, info, hint
-    source: str = ""
-    code: str = ""
+    name: str
+    command: str
+    language: str
+    process: Any = None
 
 
-class LSPClient:
-    """Language Server Protocol client."""
+class LSPTool:
+    """Language Server Protocol integration."""
 
     def __init__(self) -> None:
-        self._servers: dict[str, asyncio.subprocess.Process] = {}
-        self._diagnostics: dict[str, list[Diagnostic]] = {}
+        self._servers: dict[str, LSPServer] = {}
+        self._initialized: dict[str, bool] = {}
 
-    async def start_server(
+    def register_server(
         self,
+        name: str,
+        command: str,
         language: str,
-        command: list[str],
-    ) -> bool:
-        """Start a language server."""
+    ) -> None:
+        """Register an LSP server."""
+        self._servers[name] = LSPServer(
+            name=name,
+            command=command,
+            language=language,
+        )
+
+    async def start_server(self, name: str) -> bool:
+        """Start an LSP server."""
+        server = self._servers.get(name)
+        if not server:
+            return False
+
         try:
-            process = await asyncio.create_subprocess_exec(
-                *command,
+            proc = await asyncio.create_subprocess_shell(
+                server.command,
                 stdin=asyncio.subprocess.PIPE,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
             )
-            self._servers[language] = process
-            logger.info(f"Started LSP server for {language}")
+            server.process = proc
+            self._initialized[name] = True
             return True
+
         except Exception as e:
-            logger.error(f"Failed to start LSP for {language}: {e}")
+            logger.error(f"Failed to start LSP server {name}: {e}")
             return False
 
-    async def stop_server(self, language: str) -> None:
-        """Stop a language server."""
-        process = self._servers.get(language)
-        if process:
-            process.terminate()
-            del self._servers[language]
+    async def stop_server(self, name: str) -> bool:
+        """Stop an LSP server."""
+        server = self._servers.get(name)
+        if not server or not server.process:
+            return False
 
-    async def get_diagnostics(self, file_path: str) -> list[Diagnostic]:
-        """Get diagnostics for a file."""
-        # Placeholder - actual LSP would send textDocument/diagnostic
-        return self._diagnostics.get(file_path, [])
+        try:
+            server.process.terminate()
+            await server.process.wait()
+            server.process = None
+            self._initialized[name] = False
+            return True
+        except Exception as e:
+            logger.error(f"Failed to stop LSP server {name}: {e}")
+            return False
 
-    async def open_file(self, file_path: str, content: str) -> None:
-        """Notify server about file open."""
-        pass
+    async def completion(
+        self,
+        server_name: str,
+        file_path: str,
+        line: int,
+        character: int,
+    ) -> list[dict]:
+        """Request completion."""
+        server = self._servers.get(server_name)
+        if not server or not server.process:
+            return []
 
-    async def save_file(self, file_path: str) -> None:
-        """Notify server about file save."""
-        pass
+        try:
+            request = {
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "textDocument/completion",
+                "params": {
+                    "textDocument": {"uri": f"file://{file_path}"},
+                    "position": {"line": line, "character": character},
+                },
+            }
 
-    async def format_file(self, file_path: str) -> Optional[str]:
-        """Format a file using LSP."""
-        return None
+            message = f"Content-Length: {len(json.dumps(request))}\r\n\r\n{json.dumps(request)}"
+            server.process.stdin.write(message.encode())
+            await server.process.stdin.drain()
 
-    async def goto_definition(self, file_path: str, line: int, character: int) -> Optional[dict]:
-        """Go to definition."""
-        return None
+            # Read response (simplified)
+            response = await asyncio.wait_for(
+                server.process.stdout.readline(),
+                timeout=5.0,
+            )
 
-    async def find_references(self, file_path: str, line: int, character: int) -> list[dict]:
-        """Find references."""
-        return []
+            return json.loads(response.decode().split("\r\n\r\n")[-1]).get("result", [])
 
-    async def get_completions(self, file_path: str, line: int, character: int) -> list[dict]:
-        """Get completions."""
-        return []
+        except Exception as e:
+            logger.warning(f"Completion failed: {e}")
+            return []
 
-    def get_all_diagnostics(self) -> dict[str, list[Diagnostic]]:
-        """Get all diagnostics across files."""
-        return self._diagnostics
+    def is_running(self, name: str) -> bool:
+        """Check if server is running."""
+        return self._initialized.get(name, False)

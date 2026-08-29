@@ -1,125 +1,92 @@
-"""Image generation for Bahram Agent."""
+"""Image generation tool for Bahram Agent."""
 
 from __future__ import annotations
 
 import logging
+from pathlib import Path
 from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
 
-class ImageGenerator:
-    """Generate images using various providers."""
+class ImageGenTool:
+    """Generate images using AI."""
 
-    def __init__(self, provider: str = "openai", api_key: str = "") -> None:
-        self.provider = provider
-        self.api_key = api_key
+    def __init__(self) -> None:
+        self._provider: str = "openai"
+        self._api_key: str = ""
+        self._output_dir: str = "data/images"
 
     async def generate(
         self,
         prompt: str,
         size: str = "1024x1024",
         style: str = "vivid",
-        quality: str = "standard",
+        output_path: str = None,
     ) -> dict[str, Any]:
-        """Generate an image from a prompt.
-
-        Returns:
-            Dict with 'url' or 'error' key.
-        """
-        if not self.api_key:
-            return {"error": f"No API key configured for {self.provider}"}
-
-        try:
-            if self.provider == "openai":
-                return await self._generate_openai(prompt, size, style, quality)
-            elif self.provider == "stability":
-                return await self._generate_stability(prompt)
-            elif self.provider == "fal":
-                return await self._generate_fal(prompt)
-            else:
-                return {"error": f"Unknown provider: {self.provider}"}
-        except Exception as e:
-            return {"error": str(e)}
+        """Generate an image from a prompt."""
+        if self._provider == "openai":
+            return await self._generate_openai(prompt, size, style, output_path)
+        else:
+            return {"error": f"Unsupported provider: {self._provider}"}
 
     async def _generate_openai(
         self,
         prompt: str,
         size: str,
         style: str,
-        quality: str,
-    ) -> dict:
+        output_path: str = None,
+    ) -> dict[str, Any]:
         """Generate using OpenAI DALL-E."""
-        import httpx
+        try:
+            import httpx
 
-        async with httpx.AsyncClient() as client:
-            response = await client.post(
-                "https://api.openai.com/v1/images/generations",
-                headers={"Authorization": f"Bearer {self.api_key}"},
-                json={
-                    "model": "dall-e-3",
-                    "prompt": prompt,
-                    "size": size,
-                    "style": style,
-                    "quality": quality,
-                    "n": 1,
-                },
-                timeout=60.0,
-            )
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    "https://api.openai.com/v1/images/generations",
+                    headers={
+                        "Authorization": f"Bearer {self._api_key}",
+                        "Content-Type": "application/json",
+                    },
+                    json={
+                        "model": "dall-e-3",
+                        "prompt": prompt,
+                        "size": size,
+                        "style": style,
+                        "n": 1,
+                    },
+                    timeout=120.0,
+                )
 
-            if response.status_code == 200:
-                data = response.json()
-                return {"url": data["data"][0]["url"]}
-            else:
-                return {"error": f"API error: {response.status_code}"}
+                if response.status_code == 200:
+                    data = response.json()
+                    image_url = data["data"][0]["url"]
 
-    async def _generate_stability(self, prompt: str) -> dict:
-        """Generate using Stability AI."""
-        import httpx
+                    # Download image
+                    if output_path:
+                        img_response = await client.get(image_url)
+                        if img_response.status_code == 200:
+                            Path(output_path).parent.mkdir(parents=True, exist_ok=True)
+                            Path(output_path).write_bytes(img_response.content)
+                            return {
+                                "url": image_url,
+                                "path": output_path,
+                            }
 
-        async with httpx.AsyncClient() as client:
-            response = await client.post(
-                "https://api.stability.ai/v1/generation/stable-diffusion-xl-1024-v1-0/text-to-image",
-                headers={
-                    "Authorization": f"Bearer {self.api_key}",
-                    "Content-Type": "application/json",
-                },
-                json={
-                    "text_prompts": [{"text": prompt}],
-                    "cfg_scale": 7,
-                    "height": 1024,
-                    "width": 1024,
-                    "samples": 1,
-                },
-                timeout=60.0,
-            )
+                    return {"url": image_url}
+                else:
+                    error = response.json().get("error", {}).get("message", "Unknown error")
+                    return {"error": error}
 
-            if response.status_code == 200:
-                data = response.json()
-                import base64
-                image_data = base64.b64decode(data["artifacts"][0]["base64"])
-                # Save to file
-                output_path = "generated_image.png"
-                with open(output_path, "wb") as f:
-                    f.write(image_data)
-                return {"path": output_path}
-            else:
-                return {"error": f"API error: {response.status_code}"}
+        except ImportError:
+            return {"error": "httpx not installed"}
+        except Exception as e:
+            return {"error": str(e)}
 
-    async def _generate_fal(self, prompt: str) -> dict:
-        """Generate using FAL.ai."""
-        import httpx
+    def set_provider(self, provider: str) -> None:
+        """Set image generation provider."""
+        self._provider = provider
 
-        async with httpx.AsyncClient() as client:
-            response = await client.post(
-                "https://fal.run/fal-ai/flux/schnell",
-                headers={"Authorization": f"Bearer {self.api_key}"},
-                json={"prompt": prompt},
-                timeout=60.0,
-            )
-
-            if response.status_code == 200:
-                data = response.json()
-                return {"url": data.get("images", [{}])[0].get("url", "")}
-            else:
-                return {"error": f"API error: {response.status_code}"}
+    def set_api_key(self, api_key: str) -> None:
+        """Set API key."""
+        self._api_key = api_key

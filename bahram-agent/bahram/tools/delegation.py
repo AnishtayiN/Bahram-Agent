@@ -4,91 +4,95 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import uuid
 from dataclasses import dataclass, field
-from typing import Any, Optional, Callable
+from typing import Any, Callable, Optional
 
 logger = logging.getLogger(__name__)
 
 
 @dataclass
-class SubAgent:
-    """A spawned subagent."""
+class DelegatedTask:
+    """A delegated task."""
 
-    id: str = field(default_factory=lambda: str(uuid.uuid4())[:8])
-    task: str = ""
+    task_id: str
+    agent: str
+    description: str
     status: str = "pending"
-    result: Optional[str] = None
-    error: Optional[str] = None
-    context: dict[str, Any] = field(default_factory=dict)
+    result: Any = None
+    error: str = ""
 
 
 class DelegationTool:
-    """Spawn isolated subagents for parallel work."""
+    """Delegate tasks to other agents."""
 
     def __init__(self) -> None:
-        self._subagents: dict[str, SubAgent] = {}
-        self._task_fn: Optional[Callable] = None
+        self._agents: dict[str, Callable] = {}
+        self._tasks: dict[str, DelegatedTask] = {}
 
-    def set_task_fn(self, fn: Callable) -> None:
-        """Set the function to execute tasks."""
-        self._task_fn = fn
+    def register_agent(self, name: str, handler: Callable) -> None:
+        """Register an agent handler."""
+        self._agents[name] = handler
 
     async def delegate(
         self,
-        task: str,
-        context: dict[str, Any] = None,
-    ) -> SubAgent:
-        """Delegate a task to a subagent."""
-        agent = SubAgent(
-            task=task,
-            context=context or {},
+        agent: str,
+        task_id: str,
+        description: str,
+        **kwargs,
+    ) -> dict[str, Any]:
+        """Delegate a task to an agent."""
+        if agent not in self._agents:
+            return {"error": f"Agent '{agent}' not registered"}
+
+        task = DelegatedTask(
+            task_id=task_id,
+            agent=agent,
+            description=description,
+            status="running",
         )
-        self._subagents[agent.id] = agent
-
-        # Execute in background
-        asyncio.create_task(self._run_agent(agent))
-
-        return agent
-
-    async def _run_agent(self, agent: SubAgent) -> None:
-        """Run a subagent."""
-        agent.status = "running"
+        self._tasks[task_id] = task
 
         try:
-            if self._task_fn:
-                result = await self._task_fn(agent.task, agent.context)
-                agent.result = result
-                agent.status = "completed"
+            handler = self._agents[agent]
+            if asyncio.iscoroutinefunction(handler):
+                result = await handler(task_id=task_id, description=description, **kwargs)
             else:
-                agent.error = "No task function configured"
-                agent.status = "failed"
+                result = handler(task_id=task_id, description=description, **kwargs)
+
+            task.status = "completed"
+            task.result = result
+            return {"status": "completed", "result": result}
+
         except Exception as e:
-            agent.error = str(e)
-            agent.status = "failed"
+            task.status = "failed"
+            task.error = str(e)
+            return {"status": "failed", "error": str(e)}
 
-    def get_agent(self, agent_id: str) -> Optional[SubAgent]:
-        """Get a subagent by ID."""
-        return self._subagents.get(agent_id)
+    def get_task(self, task_id: str) -> Optional[dict]:
+        """Get task information."""
+        task = self._tasks.get(task_id)
+        if task:
+            return {
+                "task_id": task.task_id,
+                "agent": task.agent,
+                "description": task.description,
+                "status": task.status,
+                "result": task.result,
+                "error": task.error,
+            }
+        return None
 
-    def list_agents(self) -> list[SubAgent]:
-        """List all subagents."""
-        return list(self._subagents.values())
+    def list_agents(self) -> list[str]:
+        """List registered agents."""
+        return list(self._agents.keys())
 
-    def render_status(self) -> str:
-        """Render status of all subagents."""
-        if not self._subagents:
-            return "No subagents."
-
-        parts = []
-        for agent in self._subagents.values():
-            status_icon = {
-                "pending": "[ ]",
-                "running": "[~]",
-                "completed": "[x]",
-                "failed": "[-]",
-            }.get(agent.status, "[ ]")
-
-            parts.append(f"{status_icon} Agent {agent.id}: {agent.task[:50]}...")
-
-        return "\n".join(parts)
+    def list_tasks(self) -> list[dict]:
+        """List all tasks."""
+        return [
+            {
+                "task_id": t.task_id,
+                "agent": t.agent,
+                "status": t.status,
+            }
+            for t in self._tasks.values()
+        ]

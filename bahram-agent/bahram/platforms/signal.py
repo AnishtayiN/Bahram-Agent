@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import logging
 from typing import Any, Callable, Optional
 
@@ -9,57 +10,85 @@ logger = logging.getLogger(__name__)
 
 
 class SignalAdapter:
-    """Signal messaging adapter."""
+    """Signal messaging platform adapter."""
 
-    def __init__(self, config: dict = None) -> None:
-        self.config = config or {}
-        self._handler: Optional[Callable] = None
-        self._running = False
+    def __init__(self, number: str = "", api_url: str = "http://localhost:8080") -> None:
+        self.number = number
+        self.api_url = api_url.rstrip("/")
+        self._message_fn: Optional[Callable] = None
 
-    def set_handler(self, handler: Callable) -> None:
-        """Set message handler."""
-        self._handler = handler
+    def set_message_function(self, fn: Callable) -> None:
+        """Set the message handling function."""
+        self._message_fn = fn
 
-    async def start(self) -> None:
-        """Start the adapter."""
-        self._running = True
-        logger.info("Signal adapter started")
+    async def handle_webhook(self, data: dict) -> dict[str, Any]:
+        """Handle incoming webhook from signal-cli-rest-api."""
+        try:
+            envelope = data.get("envelope", {})
 
-    async def stop(self) -> None:
-        """Stop the adapter."""
-        self._running = False
-        logger.info("Signal adapter stopped")
+            if envelope.get("syncMessage"):
+                sync = envelope["syncMessage"]
+                if sync.get("sentMessage"):
+                    sent = sync["sentMessage"]
+                    if self._message_fn:
+                        await self._message_fn(
+                            platform="signal",
+                            chat_id=sent.get("destination", {}).get("number", ""),
+                            user_id=envelope.get("source", ""),
+                            text=sent.get("message", ""),
+                            message_id=sent.get("timestamp", ""),
+                        )
 
-    async def send_message(
-        self,
-        chat_id: str,
-        text: str,
-        **kwargs: Any,
-    ) -> bool:
-        """Send a message."""
-        logger.info(f"Signal message to {chat_id}: {text[:100]}...")
-        return True
+            return {"status": "ok"}
+        except Exception as e:
+            logger.error(f"Failed to handle Signal webhook: {e}")
+            return {"status": "error", "error": str(e)}
 
-    async def send_image(
-        self,
-        chat_id: str,
-        image_path: str,
-        caption: str = "",
-    ) -> bool:
+    async def send_message(self, chat_id: str, text: str, **kwargs) -> bool:
+        """Send a Signal message."""
+        try:
+            import httpx
+
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    f"{self.api_url}/v2/send",
+                    json={
+                        "number": self.number,
+                        "recipients": [chat_id],
+                        "message": text,
+                    },
+                    timeout=10.0,
+                )
+                return response.status_code == 200
+        except Exception as e:
+            logger.error(f"Failed to send Signal message: {e}")
+            return False
+
+    async def send_image(self, chat_id: str, image_path: str) -> bool:
         """Send an image."""
-        logger.info(f"Signal image to {chat_id}")
-        return True
+        try:
+            import httpx
 
-    async def send_file(
-        self,
-        chat_id: str,
-        file_path: str,
-        caption: str = "",
-    ) -> bool:
-        """Send a file."""
-        logger.info(f"Signal file to {chat_id}")
-        return True
+            async with httpx.AsyncClient() as client:
+                with open(image_path, "rb") as f:
+                    response = await client.post(
+                        f"{self.api_url}/v2/send",
+                        data={
+                            "number": self.number,
+                            "recipients": [chat_id],
+                        },
+                        files={"attachment": f},
+                        timeout=30.0,
+                    )
+                return response.status_code == 200
+        except Exception as e:
+            logger.error(f"Failed to send Signal image: {e}")
+            return False
 
-    async def set_typing(self, chat_id: str, typing: bool = True) -> None:
-        """Set typing indicator."""
-        pass
+    def get_platform_info(self) -> dict[str, Any]:
+        """Get platform information."""
+        return {
+            "name": "signal",
+            "version": "1.0.0",
+            "configured": bool(self.number),
+        }

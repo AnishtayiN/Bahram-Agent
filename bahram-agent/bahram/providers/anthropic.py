@@ -1,184 +1,85 @@
-"""Anthropic provider."""
+"""Anthropic Claude LLM provider for Bahram Agent."""
 
 from __future__ import annotations
 
-import json
 import logging
-from typing import Any, AsyncIterator
-
-from bahram.core.engine import AgentResponse, Message, MessageRole, ToolCall
-from bahram.providers.base import BaseProvider
+from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
 
-class AnthropicProvider(BaseProvider):
-    """Anthropic Claude provider."""
+class AnthropicProvider:
+    """Anthropic Claude LLM provider."""
+
+    def __init__(self, api_key: str = "", model: str = "") -> None:
+        self.api_key = api_key
+        self.model = model or "claude-3-5-sonnet-20241022"
 
     async def complete(
         self,
-        messages: list[Message],
-        tools: list[dict[str, Any]],
-        **kwargs: Any,
-    ) -> AgentResponse:
-        """Generate a completion using Anthropic API."""
+        messages: list[dict],
+        model: str = None,
+        temperature: float = 0.7,
+        max_tokens: int = 4096,
+        stream: bool = False,
+        system: str = "",
+    ) -> str:
+        """Complete a conversation."""
         try:
             import httpx
 
-            api_key = self.config.api_key
-            if not api_key:
-                raise ValueError("Anthropic API key not configured")
+            # Separate system message
+            if not system and messages and messages[0].get("role") == "system":
+                system = messages[0]["content"]
+                messages = messages[1:]
 
-            # Convert messages to Anthropic format
-            system_msg = ""
-            anthropic_messages = []
-
-            for msg in messages:
-                if msg.role == MessageRole.SYSTEM:
-                    system_msg = msg.content
-                elif msg.role in (MessageRole.USER, MessageRole.ASSISTANT):
-                    anthropic_messages.append(
-                        {"role": msg.role.value, "content": msg.content}
-                    )
-
-            # Prepare request
-            payload = {
-                "model": kwargs.get("model", "claude-sonnet-4-6"),
-                "max_tokens": kwargs.get("max_tokens", 4096),
-                "messages": anthropic_messages,
-            }
-
-            if system_msg:
-                payload["system"] = system_msg
-
-            if tools:
-                payload["tools"] = self._convert_tools(tools)
-
-            # Make request
             async with httpx.AsyncClient() as client:
+                payload = {
+                    "model": model or self.model,
+                    "messages": messages,
+                    "temperature": temperature,
+                    "max_tokens": max_tokens,
+                }
+                if system:
+                    payload["system"] = system
+
                 response = await client.post(
                     "https://api.anthropic.com/v1/messages",
                     headers={
-                        "x-api-key": api_key,
+                        "x-api-key": self.api_key,
                         "anthropic-version": "2023-06-01",
-                        "content-type": "application/json",
+                        "Content-Type": "application/json",
                     },
                     json=payload,
-                    timeout=60.0,
+                    timeout=120.0,
                 )
 
-                if response.status_code != 200:
-                    error = response.json().get("error", {})
-                    raise Exception(f"API error: {error.get('message', 'Unknown error')}")
-
-                data = response.json()
-
-                # Parse response
-                content = ""
-                tool_calls = []
-
-                for block in data.get("content", []):
-                    if block["type"] == "text":
-                        content += block["text"]
-                    elif block["type"] == "tool_use":
-                        tool_calls.append(
-                            ToolCall(
-                                id=block["id"],
-                                name=block["name"],
-                                arguments=block["input"],
-                            )
-                        )
-
-                return AgentResponse(
-                    content=content,
-                    tool_calls=tool_calls,
-                    metadata={"usage": data.get("usage", {})},
-                )
+                if response.status_code == 200:
+                    data = response.json()
+                    return data["content"][0]["text"]
+                else:
+                    error = response.json().get("error", {}).get("message", "Unknown error")
+                    raise RuntimeError(f"Anthropic API error: {error}")
 
         except ImportError:
-            raise Exception("httpx not installed. Install with: pip install httpx")
+            raise ImportError("httpx not installed. Run: pip install httpx")
         except Exception as e:
-            logger.error(f"Anthropic API error: {e}")
+            logger.error(f"Anthropic completion failed: {e}")
             raise
 
-    async def stream(
-        self,
-        messages: list[Message],
-        tools: list[dict[str, Any]],
-        **kwargs: Any,
-    ) -> AsyncIterator[str]:
-        """Stream a completion using Anthropic API."""
-        try:
-            import httpx
+    def get_models(self) -> list[str]:
+        """Get available models."""
+        return [
+            "claude-3-5-sonnet-20241022",
+            "claude-3-5-haiku-20241022",
+            "claude-3-opus-20240229",
+            "claude-3-haiku-20240307",
+        ]
 
-            api_key = self.config.api_key
-            if not api_key:
-                raise ValueError("Anthropic API key not configured")
-
-            # Convert messages
-            system_msg = ""
-            anthropic_messages = []
-
-            for msg in messages:
-                if msg.role == MessageRole.SYSTEM:
-                    system_msg = msg.content
-                elif msg.role in (MessageRole.USER, MessageRole.ASSISTANT):
-                    anthropic_messages.append(
-                        {"role": msg.role.value, "content": msg.content}
-                    )
-
-            # Prepare request
-            payload = {
-                "model": kwargs.get("model", "claude-sonnet-4-6"),
-                "max_tokens": kwargs.get("max_tokens", 4096),
-                "messages": anthropic_messages,
-                "stream": True,
-            }
-
-            if system_msg:
-                payload["system"] = system_msg
-
-            if tools:
-                payload["tools"] = self._convert_tools(tools)
-
-            # Stream request
-            async with httpx.AsyncClient() as client:
-                async with client.stream(
-                    "POST",
-                    "https://api.anthropic.com/v1/messages",
-                    headers={
-                        "x-api-key": api_key,
-                        "anthropic-version": "2023-06-01",
-                        "content-type": "application/json",
-                    },
-                    json=payload,
-                    timeout=60.0,
-                ) as response:
-                    if response.status_code != 200:
-                        raise Exception(f"Stream error: {response.status_code}")
-
-                    async for line in response.aiter_lines():
-                        if line.startswith("data: "):
-                            data = json.loads(line[6:])
-                            if data["type"] == "content_block_delta":
-                                if data["delta"]["type"] == "text_delta":
-                                    yield data["delta"]["text"]
-
-        except Exception as e:
-            logger.error(f"Anthropic stream error: {e}")
-            raise
-
-    def _convert_tools(self, tools: list[dict[str, Any]]) -> list[dict[str, Any]]:
-        """Convert tools to Anthropic format."""
-        converted = []
-        for tool in tools:
-            if "function" in tool:
-                func = tool["function"]
-                converted.append(
-                    {
-                        "name": func["name"],
-                        "description": func.get("description", ""),
-                        "input_schema": func.get("parameters", {}),
-                    }
-                )
-        return converted
+    def get_provider_info(self) -> dict[str, Any]:
+        """Get provider information."""
+        return {
+            "name": "anthropic",
+            "configured": bool(self.api_key),
+            "model": self.model,
+        }

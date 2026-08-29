@@ -1,152 +1,77 @@
-"""Hugging Face provider."""
+"""Hugging Face LLM provider for Bahram Agent."""
 
 from __future__ import annotations
 
-import json
 import logging
-from typing import Any, AsyncIterator
-
-from bahram.core.engine import AgentResponse, Message, MessageRole, ToolCall
-from bahram.providers.base import BaseProvider
+from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
 
-class HuggingFaceProvider(BaseProvider):
-    """Hugging Face Inference API provider."""
+class HuggingFaceProvider:
+    """Hugging Face LLM provider."""
+
+    def __init__(self, api_key: str = "", model: str = "") -> None:
+        self.api_key = api_key
+        self.model = model or "meta-llama/Meta-Llama-3.1-8B-Instruct"
 
     async def complete(
         self,
-        messages: list[Message],
-        tools: list[dict[str, Any]],
-        **kwargs: Any,
-    ) -> AgentResponse:
-        """Generate a completion using Hugging Face API."""
+        messages: list[dict],
+        model: str = None,
+        temperature: float = 0.7,
+        max_tokens: int = 4096,
+        stream: bool = False,
+    ) -> str:
+        """Complete a conversation."""
         try:
             import httpx
 
-            api_key = self.config.api_key
-            base_url = self.config.base_url or "https://api-inference.huggingface.co/models"
-
-            if not api_key:
-                raise ValueError("Hugging Face API key not configured")
-
-            model = kwargs.get("model", "meta-llama/Llama-3.1-405B-Instruct")
-
-            # Convert messages
-            openai_messages = []
-            for msg in messages:
-                openai_messages.append(
-                    {"role": msg.role.value, "content": msg.content}
-                )
-
-            # Prepare request
-            payload = {
-                "model": model,
-                "messages": openai_messages,
-                "max_tokens": kwargs.get("max_tokens", 4096),
-                "temperature": kwargs.get("temperature", 0.7),
-            }
-
-            if tools:
-                payload["tools"] = tools
-
-            # Make request
             async with httpx.AsyncClient() as client:
                 response = await client.post(
-                    f"{base_url}/{model}/v1/chat/completions",
+                    f"https://api-inference.huggingface.co/models/{model or self.model}",
                     headers={
-                        "Authorization": f"Bearer {api_key}",
+                        "Authorization": f"Bearer {self.api_key}",
                         "Content-Type": "application/json",
                     },
-                    json=payload,
-                    timeout=60.0,
+                    json={
+                        "inputs": messages[-1]["content"],
+                        "parameters": {
+                            "temperature": temperature,
+                            "max_new_tokens": max_tokens,
+                        },
+                    },
+                    timeout=120.0,
                 )
 
-                if response.status_code != 200:
-                    error = response.json().get("error", {})
-                    raise Exception(f"API error: {error.get('message', 'Unknown error')}")
-
-                data = response.json()
-                choice = data["choices"][0]
-                message = choice["message"]
-
-                content = message.get("content", "") or ""
-                tool_calls = []
-
-                if "tool_calls" in message:
-                    for tc in message["tool_calls"]:
-                        tool_calls.append(
-                            ToolCall(
-                                id=tc["id"],
-                                name=tc["function"]["name"],
-                                arguments=json.loads(tc["function"]["arguments"]),
-                            )
-                        )
-
-                return AgentResponse(
-                    content=content,
-                    tool_calls=tool_calls,
-                    metadata={"usage": data.get("usage", {})},
-                )
+                if response.status_code == 200:
+                    data = response.json()
+                    if isinstance(data, list) and len(data) > 0:
+                        return data[0].get("generated_text", "")
+                    return str(data)
+                else:
+                    error = response.json().get("error", "Unknown error")
+                    raise RuntimeError(f"HuggingFace API error: {error}")
 
         except ImportError:
-            raise Exception("httpx not installed")
+            raise ImportError("httpx not installed. Run: pip install httpx")
         except Exception as e:
-            logger.error(f"Hugging Face API error: {e}")
+            logger.error(f"HuggingFace completion failed: {e}")
             raise
 
-    async def stream(
-        self,
-        messages: list[Message],
-        tools: list[dict[str, Any]],
-        **kwargs: Any,
-    ) -> AsyncIterator[str]:
-        """Stream a completion using Hugging Face API."""
-        try:
-            import httpx
+    def get_models(self) -> list[str]:
+        """Get available models."""
+        return [
+            "meta-llama/Meta-Llama-3.1-8B-Instruct",
+            "meta-llama/Meta-Llama-3.1-70B-Instruct",
+            "mistralai/Mixtral-8x7B-Instruct-v0.1",
+            "google/gemma-2-9b-it",
+        ]
 
-            api_key = self.config.api_key
-            base_url = self.config.base_url or "https://api-inference.huggingface.co/models"
-
-            if not api_key:
-                raise ValueError("Hugging Face API key not configured")
-
-            model = kwargs.get("model", "meta-llama/Llama-3.1-405B-Instruct")
-
-            openai_messages = []
-            for msg in messages:
-                openai_messages.append(
-                    {"role": msg.role.value, "content": msg.content}
-                )
-
-            payload = {
-                "model": model,
-                "messages": openai_messages,
-                "max_tokens": kwargs.get("max_tokens", 4096),
-                "stream": True,
-            }
-
-            async with httpx.AsyncClient() as client:
-                async with client.stream(
-                    "POST",
-                    f"{base_url}/{model}/v1/chat/completions",
-                    headers={
-                        "Authorization": f"Bearer {api_key}",
-                        "Content-Type": "application/json",
-                    },
-                    json=payload,
-                    timeout=60.0,
-                ) as response:
-                    if response.status_code != 200:
-                        raise Exception(f"Stream error: {response.status_code}")
-
-                    async for line in response.aiter_lines():
-                        if line.startswith("data: "):
-                            data = json.loads(line[6:])
-                            if data["choices"][0]["delta"].get("content"):
-                                yield data["choices"][0]["delta"]["content"]
-
-        except Exception as e:
-            logger.error(f"Hugging Face stream error: {e}")
-            raise
+    def get_provider_info(self) -> dict[str, Any]:
+        """Get provider information."""
+        return {
+            "name": "huggingface",
+            "configured": bool(self.api_key),
+            "model": self.model,
+        }

@@ -1,78 +1,95 @@
-"""Slack platform integration."""
+"""Slack platform adapter for Bahram Agent."""
 
 from __future__ import annotations
 
+import json
 import logging
-from typing import Any
-
-from bahram.platforms.base import BasePlatform, PlatformMessage
+import re
+from typing import Any, Callable, Optional
 
 logger = logging.getLogger(__name__)
 
 
-class SlackPlatform(BasePlatform):
-    """Slack bot integration."""
+class SlackAdapter:
+    """Slack messaging platform adapter."""
 
-    @property
-    def name(self) -> str:
-        return "slack"
+    def __init__(self, token: str = "", signing_secret: str = "") -> None:
+        self.token = token
+        self.signing_secret = signing_secret
+        self._app = None
+        self._message_fn: Optional[Callable] = None
+
+    def set_message_function(self, fn: Callable) -> None:
+        """Set the message handling function."""
+        self._message_fn = fn
 
     async def start(self) -> None:
-        """Start the Slack bot."""
+        """Start the Slack adapter."""
+        if not self.token:
+            logger.warning("Slack token not configured")
+            return
+
         try:
             from slack_bolt.async_app import AsyncApp
             from slack_bolt.adapter.socket_mode.async_handler import AsyncSocketModeHandler
 
-            token = self.config.token
-            app_token = self.config.app_token
+            self._app = AsyncApp(token=self.token)
 
-            if not token or not app_token:
-                logger.error("Slack tokens not configured")
-                return
+            @self._app.message(".*")
+            async def handle_message(message, say):
+                if self._message_fn:
+                    await self._message_fn(
+                        platform="slack",
+                        chat_id=message.get("channel", ""),
+                        user_id=message.get("user", ""),
+                        text=message.get("text", ""),
+                        message_id=message.get("ts", ""),
+                    )
 
-            self.app = AsyncApp(token=token)
-
-            @self.app.message("")
-            async def handle_message(message: dict, say: Any) -> None:
-                msg = PlatformMessage(
-                    platform="slack",
-                    user_id=message.get("user", ""),
-                    user_name=message.get("user", ""),
-                    content=message.get("text", ""),
-                    chat_id=message.get("channel", ""),
-                    message_id=message.get("ts", ""),
-                    timestamp=float(message.get("ts", 0)),
-                    reply_to=message.get("thread_ts"),
-                )
-
-                await self._handle_message(msg)
-
-            # Start the app
-            handler = AsyncSocketModeHandler(self.app, app_token)
+            handler = AsyncSocketModeHandler(self._app, self.signing_secret)
             await handler.start_async()
-
-            logger.info("Slack bot started")
+            logger.info("Slack adapter started")
 
         except ImportError:
-            logger.error("slack-bolt not installed. Install with: pip install slack-bolt")
+            logger.warning("slack-bolt not installed")
         except Exception as e:
-            logger.error(f"Failed to start Slack bot: {e}")
+            logger.error(f"Failed to start Slack adapter: {e}")
 
-    async def stop(self) -> None:
-        """Stop the Slack bot."""
-        # Slack doesn't have a direct stop method
-        logger.info("Slack bot stopped")
+    async def send_message(self, chat_id: str, text: str, **kwargs) -> bool:
+        """Send a message to Slack."""
+        if not self._app:
+            return False
 
-    async def send_message(self, chat_id: str, content: str) -> None:
-        """Send a message to a Slack channel."""
-        if hasattr(self, "app"):
-            await self.app.client.chat_postMessage(channel=chat_id, text=content)
-
-    async def reply(self, message: PlatformMessage, content: str) -> None:
-        """Reply to a Slack message."""
-        if hasattr(self, "app"):
-            await self.app.client.chat_postMessage(
-                channel=message.chat_id,
-                text=content,
-                thread_ts=message.reply_to or message.message_id,
+        try:
+            await self._app.client.chat_postMessage(
+                channel=chat_id,
+                text=text,
+                **kwargs,
             )
+            return True
+        except Exception as e:
+            logger.error(f"Failed to send Slack message: {e}")
+            return False
+
+    async def send_dm(self, user_id: str, text: str) -> bool:
+        """Send a direct message."""
+        if not self._app:
+            return False
+
+        try:
+            # Open DM channel
+            response = await self._app.client.conversations_open(users=[user_id])
+            channel_id = response["channel"]["id"]
+
+            return await self.send_message(channel_id, text)
+        except Exception as e:
+            logger.error(f"Failed to send Slack DM: {e}")
+            return False
+
+    def get_platform_info(self) -> dict[str, Any]:
+        """Get platform information."""
+        return {
+            "name": "slack",
+            "version": "1.0.0",
+            "configured": bool(self.token),
+        }

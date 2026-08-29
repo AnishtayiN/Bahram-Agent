@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import logging
 from typing import Any, Callable, Optional
 
@@ -9,57 +10,104 @@ logger = logging.getLogger(__name__)
 
 
 class WhatsAppAdapter:
-    """WhatsApp messaging adapter."""
+    """WhatsApp messaging platform adapter."""
 
-    def __init__(self, config: dict = None) -> None:
-        self.config = config or {}
-        self._handler: Optional[Callable] = None
-        self._running = False
+    def __init__(self, phone_number_id: str = "", access_token: str = "", verify_token: str = "") -> None:
+        self.phone_number_id = phone_number_id
+        self.access_token = access_token
+        self.verify_token = verify_token
+        self._message_fn: Optional[Callable] = None
 
-    def set_handler(self, handler: Callable) -> None:
-        """Set message handler."""
-        self._handler = handler
+    def set_message_function(self, fn: Callable) -> None:
+        """Set the message handling function."""
+        self._message_fn = fn
 
-    async def start(self) -> None:
-        """Start the adapter."""
-        self._running = True
-        logger.info("WhatsApp adapter started")
+    async def handle_webhook(self, data: dict) -> dict[str, Any]:
+        """Handle incoming webhook."""
+        try:
+            entry = data.get("entry", [{}])[0]
+            changes = entry.get("changes", [{}])[0]
+            value = changes.get("value", {})
 
-    async def stop(self) -> None:
-        """Stop the adapter."""
-        self._running = False
-        logger.info("WhatsApp adapter stopped")
+            messages = value.get("messages", [])
+            for msg in messages:
+                if self._message_fn:
+                    await self._message_fn(
+                        platform="whatsapp",
+                        chat_id=msg.get("from", ""),
+                        user_id=msg.get("from", ""),
+                        text=msg.get("text", {}).get("body", ""),
+                        message_id=msg.get("id", ""),
+                    )
 
-    async def send_message(
-        self,
-        chat_id: str,
-        text: str,
-        **kwargs: Any,
-    ) -> bool:
-        """Send a message."""
-        logger.info(f"WhatsApp message to {chat_id}: {text[:100]}...")
-        return True
+            return {"status": "ok"}
+        except Exception as e:
+            logger.error(f"Failed to handle WhatsApp webhook: {e}")
+            return {"status": "error", "error": str(e)}
 
-    async def send_image(
-        self,
-        chat_id: str,
-        image_path: str,
-        caption: str = "",
-    ) -> bool:
+    async def verify_webhook(self, mode: str, token: str, challenge: str) -> str:
+        """Verify webhook subscription."""
+        if mode == "subscribe" and token == self.verify_token:
+            return challenge
+        return ""
+
+    async def send_message(self, chat_id: str, text: str, **kwargs) -> bool:
+        """Send a WhatsApp message."""
+        try:
+            import httpx
+
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    f"https://graph.facebook.com/v17.0/{self.phone_number_id}/messages",
+                    headers={
+                        "Authorization": f"Bearer {self.access_token}",
+                        "Content-Type": "application/json",
+                    },
+                    json={
+                        "messaging_product": "whatsapp",
+                        "to": chat_id,
+                        "type": "text",
+                        "text": {"body": text},
+                    },
+                    timeout=10.0,
+                )
+                return response.status_code == 200
+        except Exception as e:
+            logger.error(f"Failed to send WhatsApp message: {e}")
+            return False
+
+    async def send_image(self, chat_id: str, image_url: str, caption: str = "") -> bool:
         """Send an image."""
-        logger.info(f"WhatsApp image to {chat_id}")
-        return True
+        try:
+            import httpx
 
-    async def send_file(
-        self,
-        chat_id: str,
-        file_path: str,
-        caption: str = "",
-    ) -> bool:
-        """Send a file."""
-        logger.info(f"WhatsApp file to {chat_id}")
-        return True
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    f"https://graph.facebook.com/v17.0/{self.phone_number_id}/messages",
+                    headers={
+                        "Authorization": f"Bearer {self.access_token}",
+                        "Content-Type": "application/json",
+                    },
+                    json={
+                        "messaging_product": "whatsapp",
+                        "to": chat_id,
+                        "type": "image",
+                        "image": {
+                            "link": image_url,
+                            "caption": caption,
+                        },
+                    },
+                    timeout=10.0,
+                )
+                return response.status_code == 200
+        except Exception as e:
+            logger.error(f"Failed to send WhatsApp image: {e}")
+            return False
 
-    async def set_typing(self, chat_id: str, typing: bool = True) -> None:
-        """Set typing indicator."""
-        pass
+    def get_platform_info(self) -> dict[str, Any]:
+        """Get platform information."""
+        return {
+            "name": "whatsapp",
+            "version": "1.0.0",
+            "configured": bool(self.phone_number_id and self.access_token),
+        }

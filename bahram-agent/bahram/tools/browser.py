@@ -1,96 +1,130 @@
-"""Browser automation for Bahram Agent."""
+"""Browser tool for Bahram Agent."""
 
 from __future__ import annotations
 
+import asyncio
 import logging
+from dataclasses import dataclass, field
 from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class BrowserState:
+    """Browser state."""
+
+    url: str = ""
+    title: str = ""
+    content: str = ""
+    screenshot: bytes = b""
 
 
 class BrowserTool:
     """Browser automation tool."""
 
     def __init__(self) -> None:
-        self._page: Any = None
-        self._browser: Any = None
+        self._browser = None
+        self._page = None
+        self._headless: bool = True
 
-    async def navigate(self, url: str) -> dict[str, Any]:
-        """Navigate to a URL."""
+    async def start(self, headless: bool = True) -> bool:
+        """Start the browser."""
         try:
             from playwright.async_api import async_playwright
 
-            if not self._browser:
-                pw = await async_playwright().__aenter__()
-                self._browser = await pw.chromium.launch(headless=True)
-                self._page = await self._browser.new_page()
+            self._playwright = await async_playwright().start()
+            self._browser = await self._playwright.chromium.launch(headless=headless)
+            self._page = await self._browser.new_page()
+            self._headless = headless
+            return True
 
-            await self._page.goto(url, wait_until="domcontentloaded")
-            title = await self._page.title()
-
-            return {
-                "status": "ok",
-                "url": url,
-                "title": title,
-            }
         except ImportError:
-            return {"error": "Playwright not installed. Run: pip install playwright && playwright install"}
+            logger.warning("playwright not installed")
+            return False
         except Exception as e:
-            return {"error": str(e)}
+            logger.error(f"Failed to start browser: {e}")
+            return False
 
-    async def snapshot(self) -> dict[str, Any]:
-        """Take a snapshot of the current page."""
+    async def stop(self) -> None:
+        """Stop the browser."""
+        if self._browser:
+            await self._browser.close()
+        if self._playwright:
+            await self._playwright.stop()
+
+    async def navigate(self, url: str) -> dict[str, Any]:
+        """Navigate to a URL."""
         if not self._page:
-            return {"error": "No page loaded"}
+            return {"error": "Browser not started"}
 
         try:
+            await self._page.goto(url, wait_until="domcontentloaded")
+            title = await self._page.title()
             content = await self._page.content()
-            text = await self._page.inner_text("body")
 
             return {
-                "status": "ok",
-                "text": text[:5000],
-                "html": content[:5000],
+                "url": url,
+                "title": title,
+                "content": content[:10000],
             }
         except Exception as e:
             return {"error": str(e)}
 
-    async def click(self, selector: str) -> dict[str, Any]:
+    async def click(self, selector: str) -> bool:
         """Click an element."""
         if not self._page:
-            return {"error": "No page loaded"}
+            return False
 
         try:
             await self._page.click(selector)
-            return {"status": "ok"}
+            return True
         except Exception as e:
-            return {"error": str(e)}
+            logger.warning(f"Click failed: {e}")
+            return False
 
-    async def type_text(self, selector: str, text: str) -> dict[str, Any]:
+    async def type_text(self, selector: str, text: str) -> bool:
         """Type text into an element."""
         if not self._page:
-            return {"error": "No page loaded"}
+            return False
 
         try:
             await self._page.fill(selector, text)
-            return {"status": "ok"}
+            return True
         except Exception as e:
-            return {"error": str(e)}
+            logger.warning(f"Type failed: {e}")
+            return False
 
-    async def screenshot(self, path: str = "screenshot.png") -> dict[str, Any]:
-        """Take a screenshot."""
+    async def get_content(self) -> str:
+        """Get page content."""
         if not self._page:
-            return {"error": "No page loaded"}
+            return ""
 
         try:
-            await self._page.screenshot(path=path)
-            return {"status": "ok", "path": path}
+            return await self._page.content()
+        except Exception:
+            return ""
+
+    async def screenshot(self) -> Optional[bytes]:
+        """Take a screenshot."""
+        if not self._page:
+            return None
+
+        try:
+            return await self._page.screenshot()
+        except Exception:
+            return None
+
+    async def evaluate(self, expression: str) -> Any:
+        """Evaluate JavaScript."""
+        if not self._page:
+            return None
+
+        try:
+            return await self._page.evaluate(expression)
         except Exception as e:
             return {"error": str(e)}
 
-    async def close(self) -> None:
-        """Close the browser."""
-        if self._browser:
-            await self._browser.close()
-            self._browser = None
-            self._page = None
+    def is_running(self) -> bool:
+        """Check if browser is running."""
+        return self._browser is not None

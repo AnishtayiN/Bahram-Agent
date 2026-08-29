@@ -3,101 +3,81 @@
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass, field
 from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
 
-@dataclass
-class ClarifyQuestion:
-    """A clarification question."""
-
-    question: str
-    options: list[dict[str, str]] = field(default_factory=list)
-    multi_select: bool = False
-    allow_custom: bool = True
-
-
 class ClarifyTool:
-    """Ask user for clarification with multiple choice options."""
+    """Ask for clarification when needed."""
 
     def __init__(self) -> None:
-        self._pending: Optional[ClarifyQuestion] = None
+        self._pending_clarifications: dict[str, dict] = {}
+        self._clarification_history: list[dict] = []
 
-    def ask(
+    async def request_clarification(
         self,
         question: str,
+        context: str = "",
         options: list[str] = None,
-        multi_select: bool = False,
-    ) -> ClarifyQuestion:
-        """Ask a clarification question."""
-        formatted_options = []
-        if options:
-            for i, opt in enumerate(options, 1):
-                formatted_options.append({
-                    "index": str(i),
-                    "label": opt,
-                })
+        required: bool = True,
+    ) -> dict[str, Any]:
+        """Request clarification from user."""
+        import uuid
+        import time
 
-        self._pending = ClarifyQuestion(
-            question=question,
-            options=formatted_options,
-            multi_select=multi_select,
-        )
-        return self._pending
+        clarification_id = f"clarify_{uuid.uuid4().hex[:8]}"
 
-    def render(self, question: ClarifyQuestion = None) -> str:
-        """Render question for display."""
-        q = question or self._pending
-        if not q:
-            return ""
+        self._pending_clarifications[clarification_id] = {
+            "question": question,
+            "context": context,
+            "options": options,
+            "required": required,
+            "timestamp": time.time(),
+        }
 
-        parts = [f"**{q.question}**\n"]
+        return {
+            "clarification_id": clarification_id,
+            "question": question,
+            "context": context,
+            "options": options,
+            "required": required,
+        }
 
-        if q.options:
-            for opt in q.options:
-                parts.append(f"  {opt['index']}. {opt['label']}")
+    def get_clarification(self, clarification_id: str) -> Optional[dict]:
+        """Get pending clarification."""
+        return self._pending_clarifications.get(clarification_id)
 
-        if q.multi_select:
-            parts.append("\n(Multiple selections allowed - separate with commas)")
-
-        if q.allow_custom:
-            parts.append("\nOr type your own answer.")
-
-        return "\n".join(parts)
-
-    def parse_response(self, response: str) -> dict[str, Any]:
-        """Parse user response."""
-        if not self._pending:
-            return {"error": "No pending question"}
-
-        q = self._pending
-        self._pending = None
-
-        if not response.strip():
-            return {"cancelled": True}
-
-        # Check if it's a number selection
-        if q.options:
-            if q.multi_select:
-                # Parse multiple selections
-                parts = [p.strip() for p in response.split(",")]
-                selections = []
-                for part in parts:
-                    if part.isdigit() and 1 <= int(part) <= len(q.options):
-                        selections.append(q.options[int(part) - 1]["label"])
-                    elif q.allow_custom:
-                        selections.append(part)
-                return {"selected": selections}
-            else:
-                # Single selection
-                if response.isdigit() and 1 <= int(response) <= len(q.options):
-                    return {"selected": q.options[int(response) - 1]["label"]}
-
-        # Custom answer
-        return {"selected": response}
+    def answer_clarification(
+        self,
+        clarification_id: str,
+        answer: str,
+    ) -> bool:
+        """Answer a clarification."""
+        if clarification_id in self._pending_clarifications:
+            clarification = self._pending_clarifications.pop(clarification_id)
+            self._clarification_history.append({
+                "question": clarification["question"],
+                "answer": answer,
+                "timestamp": clarification["timestamp"],
+            })
+            return True
+        return False
 
     def has_pending(self) -> bool:
-        """Check if there's a pending question."""
-        return self._pending is not None
+        """Check if there are pending clarifications."""
+        return len(self._pending_clarifications) > 0
+
+    def get_pending_count(self) -> int:
+        """Get count of pending clarifications."""
+        return len(self._pending_clarifications)
+
+    def get_history(self) -> list[dict]:
+        """Get clarification history."""
+        return self._clarification_history.copy()
+
+    def clear_pending(self) -> int:
+        """Clear all pending clarifications."""
+        count = len(self._pending_clarifications)
+        self._pending_clarifications.clear()
+        return count

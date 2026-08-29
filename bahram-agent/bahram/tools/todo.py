@@ -1,13 +1,12 @@
-"""Todo/task planning tool for Bahram Agent."""
+"""Todo tool for Bahram Agent."""
 
 from __future__ import annotations
 
 import json
 import logging
 from dataclasses import dataclass, field
-from datetime import datetime
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -16,135 +15,121 @@ logger = logging.getLogger(__name__)
 class TodoItem:
     """A todo item."""
 
-    id: int
+    id: str
     content: str
     status: str = "pending"  # pending, in_progress, completed, cancelled
-    priority: str = "medium"  # high, medium, low
-    created_at: str = field(default_factory=lambda: datetime.now().isoformat())
-    completed_at: Optional[str] = None
-    subtasks: list["TodoItem"] = field(default_factory=list)
+    priority: str = "medium"  # low, medium, high
+    created_at: float = 0.0
+    completed_at: float = 0.0
 
 
-class TodoManager:
-    """Manage task lists."""
+class TodoTool:
+    """Manage todo lists."""
 
-    def __init__(self, data_dir: str = "data/todos") -> None:
+    def __init__(self, data_dir: str = "data") -> None:
         self.data_dir = Path(data_dir)
         self.data_dir.mkdir(parents=True, exist_ok=True)
-        self._lists: dict[str, list[TodoItem]] = {}
-        self._counter = 0
+        self._todos: dict[str, TodoItem] = {}
+        self._load()
 
-    def _next_id(self) -> int:
-        """Generate next ID."""
-        self._counter += 1
-        return self._counter
+    def _load(self) -> None:
+        """Load todos from disk."""
+        todos_file = self.data_dir / "todos.json"
+        if todos_file.exists():
+            try:
+                with open(todos_file) as f:
+                    data = json.load(f)
+                for todo_data in data:
+                    todo = TodoItem(**todo_data)
+                    self._todos[todo.id] = todo
+            except Exception as e:
+                logger.warning(f"Failed to load todos: {e}")
 
-    def create_list(self, name: str = "default") -> list[TodoItem]:
-        """Create a new todo list."""
-        if name not in self._lists:
-            self._lists[name] = []
-        return self._lists[name]
-
-    def add_item(
-        self,
-        content: str,
-        list_name: str = "default",
-        priority: str = "medium",
-    ) -> TodoItem:
-        """Add an item to the list."""
-        if list_name not in self._lists:
-            self.create_list(list_name)
-
-        item = TodoItem(
-            id=self._next_id(),
-            content=content,
-            priority=priority,
-        )
-        self._lists[list_name].append(item)
-        self._save(list_name)
-        return item
-
-    def update_status(
-        self,
-        item_id: int,
-        status: str,
-        list_name: str = "default",
-    ) -> bool:
-        """Update item status."""
-        items = self._lists.get(list_name, [])
-        for item in items:
-            if item.id == item_id:
-                item.status = status
-                if status == "completed":
-                    item.completed_at = datetime.now().isoformat()
-                self._save(list_name)
-                return True
-        return False
-
-    def remove_item(self, item_id: int, list_name: str = "default") -> bool:
-        """Remove an item."""
-        items = self._lists.get(list_name, [])
-        for i, item in enumerate(items):
-            if item.id == item_id:
-                items.pop(i)
-                self._save(list_name)
-                return True
-        return False
-
-    def get_list(self, list_name: str = "default") -> list[TodoItem]:
-        """Get a todo list."""
-        return self._lists.get(list_name, [])
-
-    def render(self, list_name: str = "default") -> str:
-        """Render a list as markdown."""
-        items = self.get_list(list_name)
-        if not items:
-            return "No tasks."
-
-        parts = []
-        for item in items:
-            status_icon = {
-                "pending": "[ ]",
-                "in_progress": "[~]",
-                "completed": "[x]",
-                "cancelled": "[-]",
-            }.get(item.status, "[ ]")
-
-            priority_icon = {
-                "high": "!!",
-                "medium": "",
-                "low": "~",
-            }.get(item.priority, "")
-
-            parts.append(f"{status_icon} #{item.id} {item.content} {priority_icon}")
-
-        return "\n".join(parts)
-
-    def _save(self, list_name: str) -> None:
-        """Save list to disk."""
-        items = self._lists.get(list_name, [])
+    def _save(self) -> None:
+        """Save todos to disk."""
+        todos_file = self.data_dir / "todos.json"
         data = [
             {
-                "id": item.id,
-                "content": item.content,
-                "status": item.status,
-                "priority": item.priority,
-                "created_at": item.created_at,
-                "completed_at": item.completed_at,
+                "id": t.id,
+                "content": t.content,
+                "status": t.status,
+                "priority": t.priority,
+                "created_at": t.created_at,
+                "completed_at": t.completed_at,
             }
-            for item in items
+            for t in self._todos.values()
         ]
-
-        filepath = self.data_dir / f"{list_name}.json"
-        with open(filepath, "w") as f:
+        with open(todos_file, "w") as f:
             json.dump(data, f, indent=2)
 
-    def _load(self, list_name: str) -> None:
-        """Load list from disk."""
-        filepath = self.data_dir / f"{list_name}.json"
-        if filepath.exists():
-            with open(filepath) as f:
-                data = json.load(f)
-            self._lists[list_name] = [
-                TodoItem(**item) for item in data
-            ]
+    def add(
+        self,
+        content: str,
+        priority: str = "medium",
+    ) -> TodoItem:
+        """Add a todo item."""
+        import uuid
+        import time
+
+        todo_id = f"todo_{uuid.uuid4().hex[:8]}"
+        todo = TodoItem(
+            id=todo_id,
+            content=content,
+            priority=priority,
+            created_at=time.time(),
+        )
+        self._todos[todo_id] = todo
+        self._save()
+        return todo
+
+    def update_status(self, todo_id: str, status: str) -> bool:
+        """Update todo status."""
+        if todo_id in self._todos:
+            import time
+            self._todos[todo_id].status = status
+            if status == "completed":
+                self._todos[todo_id].completed_at = time.time()
+            self._save()
+            return True
+        return False
+
+    def delete(self, todo_id: str) -> bool:
+        """Delete a todo item."""
+        if todo_id in self._todos:
+            del self._todos[todo_id]
+            self._save()
+            return True
+        return False
+
+    def list_todos(self, status: str = None) -> list[dict]:
+        """List todos."""
+        todos = list(self._todos.values())
+        if status:
+            todos = [t for t in todos if t.status == status]
+        return [
+            {
+                "id": t.id,
+                "content": t.content,
+                "status": t.status,
+                "priority": t.priority,
+            }
+            for t in todos
+        ]
+
+    def get_summary(self) -> dict[str, int]:
+        """Get todo summary."""
+        return {
+            "total": len(self._todos),
+            "pending": sum(1 for t in self._todos.values() if t.status == "pending"),
+            "in_progress": sum(1 for t in self._todos.values() if t.status == "in_progress"),
+            "completed": sum(1 for t in self._todos.values() if t.status == "completed"),
+        }
+
+    def clear_completed(self) -> int:
+        """Clear completed todos."""
+        completed = [t.id for t in self._todos.values() if t.status == "completed"]
+        for todo_id in completed:
+            del self._todos[todo_id]
+        if completed:
+            self._save()
+        return len(completed)

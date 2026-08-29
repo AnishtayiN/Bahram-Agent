@@ -1,161 +1,83 @@
-"""Google Gemini provider."""
+"""Google Gemini LLM provider for Bahram Agent."""
 
 from __future__ import annotations
 
-import json
 import logging
-from typing import Any, AsyncIterator
-
-from bahram.core.engine import AgentResponse, Message, MessageRole, ToolCall
-from bahram.providers.base import BaseProvider
+from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
 
-class GoogleProvider(BaseProvider):
-    """Google Gemini provider."""
+class GoogleProvider:
+    """Google Gemini LLM provider."""
+
+    def __init__(self, api_key: str = "", model: str = "") -> None:
+        self.api_key = api_key
+        self.model = model or "gemini-pro"
 
     async def complete(
         self,
-        messages: list[Message],
-        tools: list[dict[str, Any]],
-        **kwargs: Any,
-    ) -> AgentResponse:
-        """Generate a completion using Google Gemini API."""
+        messages: list[dict],
+        model: str = None,
+        temperature: float = 0.7,
+        max_tokens: int = 4096,
+        stream: bool = False,
+    ) -> str:
+        """Complete a conversation."""
         try:
             import httpx
 
-            api_key = self.config.api_key
-            base_url = self.config.base_url or "https://generativelanguage.googleapis.com/v1beta"
-
-            if not api_key:
-                raise ValueError("Google API key not configured")
-
-            model = kwargs.get("model", "gemini-1.5-pro")
-
-            # Convert messages to Gemini format
+            # Convert messages to Google format
             contents = []
             for msg in messages:
-                if msg.role == MessageRole.SYSTEM:
-                    contents.append({"role": "user", "parts": [{"text": msg.content}]})
-                else:
-                    role = "user" if msg.role == MessageRole.USER else "model"
-                    contents.append({"role": role, "parts": [{"text": msg.content}]})
+                role = "user" if msg["role"] in ("user", "system") else "model"
+                contents.append({
+                    "role": role,
+                    "parts": [{"text": msg["content"]}],
+                })
 
-            # Prepare request
-            payload = {
-                "contents": contents,
-                "generationConfig": {
-                    "maxOutputTokens": kwargs.get("max_tokens", 4096),
-                    "temperature": kwargs.get("temperature", 0.7),
-                },
-            }
-
-            if tools:
-                payload["tools"] = [{"functionDeclarations": tools}]
-
-            # Make request
             async with httpx.AsyncClient() as client:
                 response = await client.post(
-                    f"{base_url}/models/{model}:generateContent?key={api_key}",
-                    headers={"Content-Type": "application/json"},
-                    json=payload,
-                    timeout=60.0,
+                    f"https://generativelanguage.googleapis.com/v1beta/models/{model or self.model}:generateContent?key={self.api_key}",
+                    headers={
+                        "Content-Type": "application/json",
+                    },
+                    json={
+                        "contents": contents,
+                        "generationConfig": {
+                            "temperature": temperature,
+                            "maxOutputTokens": max_tokens,
+                        },
+                    },
+                    timeout=120.0,
                 )
 
-                if response.status_code != 200:
-                    error = response.json().get("error", {})
-                    raise Exception(f"API error: {error.get('message', 'Unknown error')}")
-
-                data = response.json()
-                candidate = data["candidates"][0]
-                content = candidate["content"]
-
-                # Parse response
-                text = ""
-                tool_calls = []
-
-                for part in content.get("parts", []):
-                    if "text" in part:
-                        text += part["text"]
-                    elif "functionCall" in part:
-                        func = part["functionCall"]
-                        tool_calls.append(
-                            ToolCall(
-                                id=f"call_{len(tool_calls)}",
-                                name=func["name"],
-                                arguments=func["args"],
-                            )
-                        )
-
-                return AgentResponse(
-                    content=text,
-                    tool_calls=tool_calls,
-                    metadata={"usage": data.get("usageMetadata", {})},
-                )
+                if response.status_code == 200:
+                    data = response.json()
+                    return data["candidates"][0]["content"]["parts"][0]["text"]
+                else:
+                    error = response.json().get("error", {}).get("message", "Unknown error")
+                    raise RuntimeError(f"Google API error: {error}")
 
         except ImportError:
-            raise Exception("httpx not installed")
+            raise ImportError("httpx not installed. Run: pip install httpx")
         except Exception as e:
-            logger.error(f"Google Gemini API error: {e}")
+            logger.error(f"Google completion failed: {e}")
             raise
 
-    async def stream(
-        self,
-        messages: list[Message],
-        tools: list[dict[str, Any]],
-        **kwargs: Any,
-    ) -> AsyncIterator[str]:
-        """Stream a completion using Google Gemini API."""
-        try:
-            import httpx
+    def get_models(self) -> list[str]:
+        """Get available models."""
+        return [
+            "gemini-pro",
+            "gemini-pro-vision",
+            "gemini-1.5-pro",
+            "gemini-1.5-flash",
+        ]
 
-            api_key = self.config.api_key
-            base_url = self.config.base_url or "https://generativelanguage.googleapis.com/v1beta"
-
-            if not api_key:
-                raise ValueError("Google API key not configured")
-
-            model = kwargs.get("model", "gemini-1.5-pro")
-
-            contents = []
-            for msg in messages:
-                if msg.role == MessageRole.SYSTEM:
-                    contents.append({"role": "user", "parts": [{"text": msg.content}]})
-                else:
-                    role = "user" if msg.role == MessageRole.USER else "model"
-                    contents.append({"role": role, "parts": [{"text": msg.content}]})
-
-            payload = {
-                "contents": contents,
-                "generationConfig": {
-                    "maxOutputTokens": kwargs.get("max_tokens", 4096),
-                    "temperature": kwargs.get("temperature", 0.7),
-                },
-            }
-
-            async with httpx.AsyncClient() as client:
-                async with client.stream(
-                    "POST",
-                    f"{base_url}/models/{model}:streamGenerateContent?key={api_key}",
-                    headers={"Content-Type": "application/json"},
-                    json=payload,
-                    timeout=60.0,
-                ) as response:
-                    if response.status_code != 200:
-                        raise Exception(f"Stream error: {response.status_code}")
-
-                    async for line in response.aiter_lines():
-                        if line:
-                            try:
-                                data = json.loads(line)
-                                candidate = data["candidates"][0]
-                                for part in candidate["content"].get("parts", []):
-                                    if "text" in part:
-                                        yield part["text"]
-                            except json.JSONDecodeError:
-                                continue
-
-        except Exception as e:
-            logger.error(f"Google Gemini stream error: {e}")
-            raise
+    def get_provider_info(self) -> dict[str, Any]:
+        """Get provider information."""
+        return {
+            "name": "google",
+            "configured": bool(self.api_key),
+            "model": self.model,
+        }
