@@ -129,14 +129,17 @@ Bahram Agent is an advanced self-improving AI agent inspired by [Hermes Agent](h
 - **Background Notifications** - Background task status
 
 ### 🔐 Advanced Security
-- **Tirith Scanner** - Pre-execution content scanning
-- **File Write Safety** - Protected paths, safe root
+- **Tirith Scanner** - Pre-execution content scanning (dangerous patterns, secrets detection)
+- **File Write Safety** - Protected paths, safe root, max file size
 - **Container Security** - Hardened Docker settings
 - **PTY Support** - Interactive terminal sessions
-- **Sudo Support** - Password caching
+- **Sudo Support** - Password caching with timeout
 - **Shell Init Handling** - Non-interactive guards
 - **Credential Passthrough** - OAuth in sandbox
 - **Env Passthrough** - Controlled environment variables
+- **DM Pairing** - Code-based authorization
+- **Website Policy** - URL access rules
+- **Supply-Chain Checker** - Package vulnerability scanning
 
 ### 🎙️ Voice & Media
 - **Voice Transcription** - Whisper API integration
