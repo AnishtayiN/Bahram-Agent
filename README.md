@@ -51,8 +51,20 @@ Bahram Agent is an advanced self-improving AI agent inspired by [Hermes Agent](h
 - **Personality System** - SOUL.md and built-in personalities
 - **Mixture of Agents** - Orchestrate multiple LLMs for better results
 
-### 🛠️ Tools & Capabilities
-- **30+ Built-in Tools** - Bash, files, web search, code analysis, browser, image gen, git, database, API generator, testing, deployment, monitoring, profiler, security scanner
+### 🛠️ Tools & Capabilities (40+ Tools!)
+- **AI Code Generator** - Generate complete apps from descriptions
+- **Smart Doc Generator** - AI-powered documentation
+- **Code Migration** - Python 2→3, Pydantic v1→v2, FastAPI
+- **Performance Optimizer** - Intelligent optimization suggestions
+- **Test Generator** - Auto-generate unit/integration tests
+- **Code Translator** - Translate between Python/JS/TS
+- **Code Explainer** - AI-powered code explanations
+- **Smart Formatter** - Auto-format code with style rules
+- **Complexity Analyzer** - Cyclomatic/cognitive complexity metrics
+- **Code Search Engine** - Semantic code search
+- **Security Scanner** - Vulnerability detection
+- **Dependency Analyzer** - Package analysis
+- **Bash, files, web search, browser, image gen, git, database, API generator, testing, deployment, monitoring, profiler
 - **Terminal Backends** - Local, Docker, SSH, Singularity, Modal, Daytona, Vercel
 - **Background Process Management** - Start, poll, wait, kill background processes
 - **Execute Code** - Run Python/bash in sandboxed environment
