@@ -1,177 +1,76 @@
-"""Search tools for finding files and content."""
+"""Tool search for Bahram Agent."""
 
 from __future__ import annotations
 
 import logging
-import os
-from pathlib import Path
-from typing import Any
-
-from bahram.tools.base import BaseTool
+from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
 
-class GlobTool(BaseTool):
-    """Tool for finding files by pattern."""
+class ToolSearch:
+    """Search and discover available tools."""
 
-    @property
-    def name(self) -> str:
-        return "glob"
+    def __init__(self) -> None:
+        self._tools: dict[str, dict[str, Any]] = {}
 
-    @property
-    def description(self) -> str:
-        return """Find files matching a glob pattern.
-Useful for finding files by name, extension, or pattern.
-Supports standard glob patterns like **/*.py, src/**/*.ts, etc."""
-
-    @property
-    def parameters(self) -> dict[str, Any]:
-        return {
-            "type": "object",
-            "properties": {
-                "pattern": {
-                    "type": "string",
-                    "description": "Glob pattern to match",
-                },
-                "path": {
-                    "type": "string",
-                    "description": "Directory to search in (default: current directory)",
-                },
-            },
-            "required": ["pattern"],
+    def register_tool(
+        self,
+        name: str,
+        description: str,
+        category: str = "",
+        parameters: dict = None,
+    ) -> None:
+        """Register a tool for search."""
+        self._tools[name] = {
+            "name": name,
+            "description": description,
+            "category": category,
+            "parameters": parameters or {},
         }
 
-    async def execute(self, **kwargs: Any) -> str:
-        """Find files matching a pattern."""
-        pattern = kwargs.get("pattern", "")
-        path = kwargs.get("path", ".")
+    def search(
+        self,
+        query: str,
+        category: str = "",
+        limit: int = 10,
+    ) -> list[dict]:
+        """Search tools by query."""
+        query_lower = query.lower()
+        results = []
 
-        if not pattern:
-            return "Error: No pattern provided"
+        for tool in self._tools.values():
+            # Category filter
+            if category and tool["category"] != category:
+                continue
 
-        try:
-            search_path = Path(path)
-            matches = list(search_path.glob(pattern))
+            # Relevance scoring
+            score = 0
+            if query_lower in tool["name"].lower():
+                score += 10
+            if query_lower in tool["description"].lower():
+                score += 5
+            if query_lower in tool["category"].lower():
+                score += 3
 
-            if not matches:
-                return f"No files found matching pattern: {pattern}"
+            if score > 0:
+                results.append({**tool, "score": score})
 
-            # Format results
-            results = [str(m) for m in matches[:100]]  # Limit to 100 results
+        results.sort(key=lambda x: x["score"], reverse=True)
+        return results[:limit]
 
-            output = f"Found {len(matches)} files:\n"
-            output += "\n".join(results)
+    def list_categories(self) -> list[str]:
+        """List all tool categories."""
+        categories = set()
+        for tool in self._tools.values():
+            if tool["category"]:
+                categories.add(tool["category"])
+        return sorted(categories)
 
-            if len(matches) > 100:
-                output += f"\n... and {len(matches) - 100} more"
+    def get_tool(self, name: str) -> Optional[dict]:
+        """Get tool by name."""
+        return self._tools.get(name)
 
-            return output
-
-        except Exception as e:
-            return f"Error searching files: {e}"
-
-
-class GrepTool(BaseTool):
-    """Tool for searching file contents."""
-
-    @property
-    def name(self) -> str:
-        return "grep"
-
-    @property
-    def description(self) -> str:
-        return """Search for content in files using regex patterns.
-Returns matching files and line numbers.
-Useful for finding code, variables, functions, or any text pattern."""
-
-    @property
-    def parameters(self) -> dict[str, Any]:
-        return {
-            "type": "object",
-            "properties": {
-                "pattern": {
-                    "type": "string",
-                    "description": "Regex pattern to search for",
-                },
-                "path": {
-                    "type": "string",
-                    "description": "Directory to search in (default: current directory)",
-                },
-                "include": {
-                    "type": "string",
-                    "description": "File pattern to include (e.g., '*.py')",
-                },
-                "exclude": {
-                    "type": "string",
-                    "description": "File pattern to exclude",
-                },
-            },
-            "required": ["pattern"],
-        }
-
-    async def execute(self, **kwargs: Any) -> str:
-        """Search for content in files."""
-        import re
-
-        pattern = kwargs.get("pattern", "")
-        path = kwargs.get("path", ".")
-        include = kwargs.get("include", None)
-        exclude = kwargs.get("exclude", None)
-
-        if not pattern:
-            return "Error: No pattern provided"
-
-        try:
-            # Compile regex
-            regex = re.compile(pattern, re.IGNORECASE)
-
-            search_path = Path(path)
-            matches = []
-
-            # Walk through files
-            for root, dirs, files in os.walk(search_path):
-                # Skip hidden directories
-                dirs[:] = [d for d in dirs if not d.startswith(".")]
-
-                for file in files:
-                    # Apply include/exclude filters
-                    if include and not file.endswith(include.replace("*", "")):
-                        continue
-                    if exclude and file.endswith(exclude.replace("*", "")):
-                        continue
-
-                    file_path = Path(root) / file
-
-                    try:
-                        with open(file_path, "r", encoding="utf-8", errors="replace") as f:
-                            for line_num, line in enumerate(f, 1):
-                                if regex.search(line):
-                                    matches.append(
-                                        f"{file_path}:{line_num}: {line.strip()[:100]}"
-                                    )
-
-                                    if len(matches) >= 100:
-                                        break
-
-                    except Exception:
-                        continue
-
-                    if len(matches) >= 100:
-                        break
-
-                if len(matches) >= 100:
-                    break
-
-            if not matches:
-                return f"No matches found for pattern: {pattern}"
-
-            output = f"Found {len(matches)} matches:\n"
-            output += "\n".join(matches)
-
-            return output
-
-        except re.error as e:
-            return f"Invalid regex pattern: {e}"
-        except Exception as e:
-            return f"Error searching content: {e}"
+    def list_all(self) -> list[dict]:
+        """List all registered tools."""
+        return list(self._tools.values())
