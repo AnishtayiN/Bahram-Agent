@@ -117,6 +117,26 @@ Bahram Agent is an advanced self-improving AI agent inspired by [Hermes Agent](h
 - **Progress Bubble Cleanup** - Auto-delete progress messages
 - **Message Timestamps** - In model context
 - **Status Phrases** - Configurable status messages
+- **Session Resume** - Auto-resume after gateway restart
+- **Circuit Breaker** - Auto-pause failing platforms
+- **Restart Notifications** - "Agent is back" messages
+- **Profile Management** - Multiple agent profiles
+- **Secrets Management** - Secure credential storage
+- **Egress Proxy** - Network proxy support
+- **Installation Scripts** - Shell/PowerShell installers
+- **Tool Annotations** - Signal deaths, UTF-16 transcoding
+- **Tool Progress** - Real-time tool execution updates
+- **Background Notifications** - Background task status
+
+### 🔐 Advanced Security
+- **Tirith Scanner** - Pre-execution content scanning
+- **File Write Safety** - Protected paths, safe root
+- **Container Security** - Hardened Docker settings
+- **PTY Support** - Interactive terminal sessions
+- **Sudo Support** - Password caching
+- **Shell Init Handling** - Non-interactive guards
+- **Credential Passthrough** - OAuth in sandbox
+- **Env Passthrough** - Controlled environment variables
 
 ### 🎙️ Voice & Media
 - **Voice Transcription** - Whisper API integration
