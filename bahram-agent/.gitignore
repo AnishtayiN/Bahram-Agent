@@ -1,4 +1,5 @@
-__pycache__
+.DS_Store
+__pycache__/
 *.py[cod]
 *$py.class
 *.so
@@ -19,41 +20,33 @@ wheels/
 .installed.cfg
 *.egg
 MANIFEST
-
-# Virtual environments
-venv/
-ENV/
-env/
-
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# Testing
+*.manifest
+*.spec
+pip-log.txt
+pip-delete-this-directory.txt
+htmlcov/
 .tox/
 .nox/
 .coverage
 .coverage.*
-htmlcov/
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
 .pytest_cache/
-
-# mypy
-.mypy_cache/
-
-# Logs
-logs/
+cover/
 *.log
-
-# Data
-data/
-*.db
-
-# Environment
 .env
 .env.local
-
-# OS
+venv/
+env/
+ENV/
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
 .DS_Store
 Thumbs.db
