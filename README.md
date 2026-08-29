@@ -27,6 +27,8 @@ pip install -e .
 - **Task Scheduler** - Automated job execution
 - **Rich CLI** - Beautiful terminal interface
 
+---
+
 ## Quick Start
 
 ### 1. Install
@@ -78,14 +80,17 @@ bahram chat "What can you do?"
 bahram chat --model anthropic/claude-sonnet-4-6 "Hello"
 ```
 
-## Telegram Bot Setup
+---
+
+## 🤖 Telegram Bot Setup
 
 ### 1. Create Bot
 
 1. Open [@BotFather](https://t.me/BotFather) on Telegram
 2. Send `/newbot`
-3. Choose a name for your bot
-4. Copy the bot token
+3. Choose a name: `Bahram Agent`
+4. Choose a username: `bahram_agent_bot`
+5. Copy the bot token
 
 ### 2. Configure
 
@@ -94,22 +99,73 @@ bahram chat --model anthropic/claude-sonnet-4-6 "Hello"
 TELEGRAM_BOT_TOKEN=your-bot-token-here
 ```
 
-### 3. Start Gateway
+### 3. Run Bot
 
 ```bash
-# Start Telegram gateway
+# Method 1: Using bahram command
 bahram gateway --platform telegram
+
+# Method 2: Using bot.py directly
+cd bahram-agent
+python bot.py
 ```
 
-Your bot is now live on Telegram!
+Your bot is now live on Telegram! 🎉
 
-### Telegram Commands
+### Bot Features
 
-- `/start` - Start the bot
-- `/help` - Show help
-- `/clear` - Clear conversation
-- `/model <name>` - Change model
-- `/status` - Show status
+- 💬 **Text Chat** - Chat with AI naturally
+- 🎤 **Voice Messages** - Send voice for transcription
+- 🖼️ **Images** - Send images for analysis
+- 📄 **Documents** - Send files for processing
+- 🌐 **URLs** - Send URLs to fetch and analyze
+- ⌨️ **Inline Buttons** - Quick actions with buttons
+- 🤖 **Model Selection** - Switch between AI models
+- 📊 **Status** - Check bot status anytime
+
+### Bot Commands
+
+| Command | Description |
+|---------|-------------|
+| `/start` | Start the bot |
+| `/help` | Show help |
+| `/clear` | Clear conversation |
+| `/model` | Change AI model |
+| `/status` | Show status |
+
+---
+
+## 💻 CLI Interface
+
+### Interactive Chat
+
+```bash
+cd bahram-agent
+python cli.py
+```
+
+### CLI Features
+
+- 🎨 **Rich UI** - Beautiful terminal interface
+- 📝 **Markdown Support** - Code highlighting
+- ⚡ **Streaming** - Real-time responses
+- 📊 **Status Display** - Model, session, timing
+- 💾 **Export** - Save conversations
+- 🔄 **Model Switching** - Change models on the fly
+
+### CLI Commands
+
+| Command | Description |
+|---------|-------------|
+| `/help` | Show help |
+| `/model` | Change model |
+| `/clear` | Clear history |
+| `/status` | Show status |
+| `/history` | Show conversation history |
+| `/export` | Export to markdown |
+| `/quit` | Exit |
+
+---
 
 ## Supported Models
 
@@ -139,6 +195,8 @@ Your bot is now live on Telegram!
 | Ollama | Install Ollama, run `ollama serve` |
 | LM Studio | Install LM Studio, start server |
 
+---
+
 ## Tools
 
 Bahram has access to these tools:
@@ -154,6 +212,8 @@ Bahram has access to these tools:
 | `webfetch` | Fetch web pages |
 | `websearch` | Search the web |
 | `task` | Spawn subagents |
+
+---
 
 ## Commands
 
@@ -182,6 +242,8 @@ bahram serve --host 0.0.0.0 --port 8000
 bahram version
 ```
 
+---
+
 ## Configuration
 
 Edit `config/config.yaml`:
@@ -199,6 +261,8 @@ providers:
     models:
       - "custom-model"
 ```
+
+---
 
 ## Development
 
@@ -220,6 +284,8 @@ ruff check .
 mypy .
 ```
 
+---
+
 ## Project Structure
 
 ```
@@ -233,10 +299,14 @@ bahram-agent/
 │   ├── providers/      # 17+ LLM providers
 │   ├── scheduler/      # Task scheduler
 │   └── cli.py          # CLI interface
+├── bot.py              # Telegram bot
+├── cli.py              # Interactive CLI
 ├── config/             # Configuration
 ├── skills/             # Example skills
 └── tests/              # Test suite
 ```
+
+---
 
 ## Inspired By
 
