@@ -47,7 +47,7 @@ Bahram Agent is an advanced self-improving AI agent inspired by [Hermes Agent](h
 - **Cursor Rules** - .cursorrules and context file support
 
 ### 🛠️ Tools & Capabilities
-- **20+ Built-in Tools** - Bash, files, web search, code analysis, browser, image gen
+- **30+ Built-in Tools** - Bash, files, web search, code analysis, browser, image gen, git, database, API generator, testing, deployment, monitoring, profiler, security scanner
 - **Terminal Backends** - Local, Docker, SSH, Singularity, Modal, Daytona, Vercel
 - **Background Process Management** - Start, poll, wait, kill background processes
 - **Execute Code** - Run Python/bash in sandboxed environment
