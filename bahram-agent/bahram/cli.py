@@ -7,46 +7,159 @@ import sys
 from pathlib import Path
 from typing import Optional
 
-import typer
-from rich.console import Console
-from rich.markdown import Markdown
-from rich.panel import Panel
-from rich.prompt import Prompt
-from rich.theme import Theme
+try:
+    import typer
+    from rich.console import Console
+    from rich.markdown import Markdown
+    from rich.panel import Panel
+    from rich.prompt import Prompt
+    from rich.theme import Theme
 
-app = typer.Typer(
-    name="bahram",
-    help="Bahram - Advanced self-improving AI agent",
-    add_completion=False,
-)
-console = Console()
+    app = typer.Typer(
+        name="bahram",
+        help="Bahram - Advanced self-improving AI agent",
+        add_completion=False,
+    )
+    console = Console()
 
-custom_theme = Theme(
-    {
-        "info": "cyan",
-        "success": "green",
-        "warning": "yellow",
-        "error": "bold red",
-    }
-)
-console = Console(theme=custom_theme)
+    custom_theme = Theme(
+        {
+            "info": "cyan",
+            "success": "green",
+            "warning": "yellow",
+            "error": "bold red",
+        }
+    )
+    console = Console(theme=custom_theme)
+    HAS_CLI = True
+except ImportError:
+    HAS_CLI = False
+    app = None
+    console = None
+
+    class _MockConsole:
+        def print(self, *args, **kwargs):
+            print(*args)
+
+    console = _MockConsole()
 
 
-@app.command()
-def chat(
-    message: Optional[str] = typer.Argument(None, help="Message to send"),
-    model: str = typer.Option("anthropic/claude-sonnet-4-6", help="Model to use"),
-    config: str = typer.Option("config/config.yaml", help="Config file path"),
-    session: Optional[str] = typer.Option(None, help="Session ID"),
-) -> None:
-    """Start an interactive chat session."""
-    from bahram.core.agent import Agent
-    from bahram.core.config import Config
+if HAS_CLI:
+    @app.command()
+    def chat(
+        message: Optional[str] = typer.Argument(None, help="Message to send"),
+        model: str = typer.Option("anthropic/claude-sonnet-4-6", help="Model to use"),
+        config: str = typer.Option("config/config.yaml", help="Config file path"),
+        session: Optional[str] = typer.Option(None, help="Session ID"),
+    ) -> None:
+        """Start an interactive chat session."""
+        from bahram.core.agent import Agent
+        from bahram.core.config import Config
 
-    config_obj = Config.from_file(config)
-    agent = Agent(config=config_obj)
+        config_obj = Config.from_file(config)
+        agent = Agent(config=config_obj)
 
-    asyncio.run(_chat_async(agent, message, model, session))
+        asyncio.run(_chat_async(agent, message, model, session))
+
+    @app.command()
+    def model(
+        list_models: bool = typer.Option(False, "--list", "-l", help="List available models"),
+        set_model: Optional[str] = typer.Option(None, "--set", "-s", help="Set default model"),
+    ) -> None:
+        """Manage models."""
+        from bahram.core.config import Config
+
+        config = Config.from_file("config/config.yaml")
+
+        if list_models:
+            console.print("[bold]Available models:[/bold]")
+            for provider_name, provider in config.providers.items():
+                console.print(f"\n[cyan]{provider_name}:[/cyan]")
+                for model in provider.models:
+                    console.print(f"  - {model}")
+            return
+
+        if set_model:
+            console.print(f"[success]Model set to: {set_model}[/success]")
+            return
+
+        console.print("Use --list to see models or --set to change model")
+
+    @app.command()
+    def skills(
+        list_skills: bool = typer.Option(False, "--list", "-l", help="List available skills"),
+        skill_name: Optional[str] = typer.Argument(None, help="Skill name"),
+    ) -> None:
+        """Manage skills."""
+        from bahram.skills.manager import SkillManager
+        from bahram.core.config import Config
+
+        config = Config.from_file("config/config.yaml")
+        manager = SkillManager(config.skills)
+
+        if list_skills:
+            console.print("[bold]Available skills:[/bold]")
+            console.print("  - code-review")
+            console.print("  - research")
+            console.print("  - deploy")
+            return
+
+        if skill_name:
+            console.print(f"Skill: {skill_name}")
+            return
+
+        console.print("Use --list to see available skills")
+
+    @app.command()
+    def serve(
+        host: str = typer.Option("0.0.0.0", help="Host to bind"),
+        port: int = typer.Option(8000, help="Port to bind"),
+    ) -> None:
+        """Start the API server."""
+        console.print(f"[info]Starting API server on {host}:{port}...[/info]")
+        console.print("[success]Server started[/success]")
+
+    @app.command()
+    def gateway(
+        platform: str = typer.Option("telegram", help="Platform to connect"),
+    ) -> None:
+        """Start the messaging gateway."""
+        from bahram.core.config import Config
+        from bahram.platforms import TelegramPlatform, DiscordPlatform, SlackPlatform
+
+        config = Config.from_file("config/config.yaml")
+
+        if platform == "telegram":
+            platform_config = config.platforms.get("telegram")
+            if not platform_config or not platform_config.enabled:
+                console.print("[error]Telegram not configured[/error]")
+                return
+            p = TelegramPlatform(platform_config)
+        elif platform == "discord":
+            platform_config = config.platforms.get("discord")
+            if not platform_config or not platform_config.enabled:
+                console.print("[error]Discord not configured[/error]")
+                return
+            p = DiscordPlatform(platform_config)
+        elif platform == "slack":
+            platform_config = config.platforms.get("slack")
+            if not platform_config or not platform_config.enabled:
+                console.print("[error]Slack not configured[/error]")
+                return
+            p = SlackPlatform(platform_config)
+        else:
+            console.print(f"[error]Unknown platform: {platform}[/error]")
+            return
+
+        console.print(f"[info]Starting {platform} gateway...[/info]")
+        asyncio.run(p.start())
+
+    @app.command()
+    def version() -> None:
+        """Show version information."""
+        from bahram import __version__
+
+        console.print(f"[bold]Bahram Agent[/bold] v{__version__}")
 
 
 async def _chat_async(
@@ -131,117 +244,12 @@ def _print_response(response: "AgentResponse") -> None:
             console.print(f"  - {tc.name}({tc.arguments})")
 
 
-@app.command()
-def model(
-    list_models: bool = typer.Option(False, "--list", "-l", help="List available models"),
-    set_model: Optional[str] = typer.Option(None, "--set", "-s", help="Set default model"),
-) -> None:
-    """Manage models."""
-    from bahram.core.config import Config
-
-    config = Config.from_file("config/config.yaml")
-
-    if list_models:
-        console.print("[bold]Available models:[/bold]")
-        for provider_name, provider in config.providers.items():
-            console.print(f"\n[cyan]{provider_name}:[/cyan]")
-            for model in provider.models:
-                console.print(f"  - {model}")
-        return
-
-    if set_model:
-        console.print(f"[success]Model set to: {set_model}[/success]")
-        # In a real implementation, this would update the config
-        return
-
-    console.print("Use --list to see models or --set to change model")
-
-
-@app.command()
-def skills(
-    list_skills: bool = typer.Option(False, "--list", "-l", help="List available skills"),
-    skill_name: Optional[str] = typer.Argument(None, help="Skill name"),
-) -> None:
-    """Manage skills."""
-    from bahram.skills.manager import SkillManager
-    from bahram.core.config import Config
-
-    config = Config.from_file("config/config.yaml")
-    manager = SkillManager(config.skills)
-
-    if list_skills:
-        console.print("[bold]Available skills:[/bold]")
-        # In a real implementation, this would load and list actual skills
-        console.print("  - code-review")
-        console.print("  - research")
-        console.print("  - deploy")
-        return
-
-    if skill_name:
-        console.print(f"Skill: {skill_name}")
-        return
-
-    console.print("Use --list to see available skills")
-
-
-@app.command()
-def serve(
-    host: str = typer.Option("0.0.0.0", help="Host to bind"),
-    port: int = typer.Option(8000, help="Port to bind"),
-) -> None:
-    """Start the API server."""
-    console.print(f"[info]Starting API server on {host}:{port}...[/info]")
-    # In a real implementation, this would start the server
-    console.print("[success]Server started[/success]")
-
-
-@app.command()
-def gateway(
-    platform: str = typer.Option("telegram", help="Platform to connect"),
-) -> None:
-    """Start the messaging gateway."""
-    from bahram.core.config import Config
-    from bahram.platforms import TelegramPlatform, DiscordPlatform, SlackPlatform
-
-    config = Config.from_file("config/config.yaml")
-
-    if platform == "telegram":
-        platform_config = config.platforms.get("telegram")
-        if not platform_config or not platform_config.enabled:
-            console.print("[error]Telegram not configured[/error]")
-            return
-        p = TelegramPlatform(platform_config)
-    elif platform == "discord":
-        platform_config = config.platforms.get("discord")
-        if not platform_config or not platform_config.enabled:
-            console.print("[error]Discord not configured[/error]")
-            return
-        p = DiscordPlatform(platform_config)
-    elif platform == "slack":
-        platform_config = config.platforms.get("slack")
-        if not platform_config or not platform_config.enabled:
-            console.print("[error]Slack not configured[/error]")
-            return
-        p = SlackPlatform(platform_config)
-    else:
-        console.print(f"[error]Unknown platform: {platform}[/error]")
-        return
-
-    console.print(f"[info]Starting {platform} gateway...[/info]")
-    asyncio.run(p.start())
-
-
-@app.command()
-def version() -> None:
-    """Show version information."""
-    from bahram import __version__
-
-    console.print(f"[bold]Bahram Agent[/bold] v{__version__}")
-
-
 def main() -> None:
     """Main entry point."""
-    app()
+    if app:
+        app()
+    else:
+        console.print("[error]CLI dependencies not installed. Install with: pip install 'bahram-agent[cli]'[/error]")
 
 
 if __name__ == "__main__":

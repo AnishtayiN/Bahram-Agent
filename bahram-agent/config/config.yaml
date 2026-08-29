@@ -3,34 +3,47 @@
 agent:
   name: "Bahram"
   version: "1.0.0"
-  description: "Advanced self-improving AI agent"
+  description: "Advanced self-improving AI agent inspired by Hermes"
   
-  # Default model
+  # Default models
   model: "anthropic/claude-sonnet-4-6"
   small_model: "anthropic/claude-haiku-3.5"
   
-  # Agent personality
+  # System prompt
   system_prompt: |
     You are Bahram, an advanced AI agent with self-improving capabilities.
     You are autonomous, reliable, and constantly learning.
     Execute tasks with confidence, verify with care, and always strive to be better.
+    
+    You have access to tools for:
+    - Running shell commands
+    - Reading and writing files
+    - Searching the web
+    - Analyzing code
+    - And more...
+    
+    Always be helpful, accurate, and security-conscious.
 
-# LLM Providers
+# LLM Providers - Configure at least one
 providers:
+  # Anthropic (Claude)
   anthropic:
     api_key: "${ANTHROPIC_API_KEY}"
     models:
       - "claude-sonnet-4-6"
       - "claude-haiku-3.5"
       - "claude-opus-4-6"
-    
+  
+  # OpenAI (GPT)
   openai:
     api_key: "${OPENAI_API_KEY}"
     models:
       - "gpt-4o"
       - "gpt-4o-mini"
       - "o1"
+      - "o1-mini"
   
+  # OpenRouter (Multi-model)
   openrouter:
     api_key: "${OPENROUTER_API_KEY}"
     base_url: "https://openrouter.ai/api/v1"
@@ -38,6 +51,119 @@ providers:
       - "anthropic/claude-sonnet-4-6"
       - "openai/gpt-4o"
       - "meta-llama/llama-3.1-405b"
+      - "google/gemini-2.0-flash"
+  
+  # Nous Portal (Hermes models)
+  nous:
+    api_key: "${NOUS_API_KEY}"
+    base_url: "https://api.nousresearch.com/v1"
+    models:
+      - "hermes-3-llama-3.1-405b"
+      - "hermes-3-llama-3.1-70b"
+      - "hermes-3-llama-3.1-8b"
+  
+  # NVIDIA NIM (Nemotron)
+  nvidia:
+    api_key: "${NVIDIA_API_KEY}"
+    base_url: "https://integrate.api.nvidia.com/v1"
+    models:
+      - "nvidia/nemotron-4-340b-instruct"
+      - "nvidia/nemotron-4-70b-instruct"
+  
+  # Groq (Fast inference)
+  groq:
+    api_key: "${GROQ_API_KEY}"
+    base_url: "https://api.groq.com/openai/v1"
+    models:
+      - "llama-3.1-70b-versatile"
+      - "llama-3.1-8b-instant"
+      - "mixtral-8x7b-32768"
+  
+  # DeepSeek
+  deepseek:
+    api_key: "${DEEPSEEK_API_KEY}"
+    base_url: "https://api.deepseek.com/v1"
+    models:
+      - "deepseek-chat"
+      - "deepseek-coder"
+  
+  # Mistral AI
+  mistral:
+    api_key: "${MISTRAL_API_KEY}"
+    base_url: "https://api.mistral.ai/v1"
+    models:
+      - "mistral-large-latest"
+      - "mistral-medium-latest"
+      - "mistral-small-latest"
+  
+  # Google Gemini
+  google:
+    api_key: "${GOOGLE_API_KEY}"
+    models:
+      - "gemini-1.5-pro"
+      - "gemini-1.5-flash"
+      - "gemini-2.0-flash"
+  
+  # Hugging Face
+  huggingface:
+    api_key: "${HF_API_KEY}"
+    models:
+      - "meta-llama/Llama-3.1-405B-Instruct"
+      - "meta-llama/Llama-3.1-70B-Instruct"
+  
+  # Xiaomi MiMo
+  xiaomi:
+    api_key: "${XIAOMI_API_KEY}"
+    base_url: "https://api.xiaomimimo.com/v1"
+    models:
+      - "mimo-7b"
+  
+  # MiniMax
+  minimax:
+    api_key: "${MINIMAX_API_KEY}"
+    base_url: "https://api.minimax.chat/v1"
+    models:
+      - "abab6.5s-chat"
+      - "abab5.5-chat"
+  
+  # Kimi/Moonshot
+  kimi:
+    api_key: "${KIMI_API_KEY}"
+    base_url: "https://api.moonshot.cn/v1"
+    models:
+      - "moonshot-v1-128k"
+      - "moonshot-v1-32k"
+      - "moonshot-v1-8k"
+  
+  # Zhipu AI/GLM
+  zhipu:
+    api_key: "${ZHIPU_API_KEY}"
+    base_url: "https://open.bigmodel.cn/api/paas/v4"
+    models:
+      - "glm-4"
+      - "glm-4-flash"
+  
+  # Ollama (Local)
+  ollama:
+    base_url: "http://localhost:11434"
+    models:
+      - "llama3.1"
+      - "codellama"
+      - "mistral"
+      - "phi3"
+  
+  # LM Studio (Local)
+  lmstudio:
+    base_url: "http://localhost:1234/v1"
+    models:
+      - "local-model"
+  
+  # Custom endpoint
+  custom:
+    api_key: "${CUSTOM_API_KEY}"
+    base_url: "${CUSTOM_BASE_URL}"
+    models:
+      - "custom-model"
 
 # Memory configuration
 memory:
@@ -54,7 +180,6 @@ skills:
   directory: "skills"
   auto_create: true
   auto_improve: true
-  hub_url: "https://skills.bahram-agent.dev"
 
 # Tools configuration
 tools:
@@ -69,19 +194,17 @@ tools:
     - "websearch"
     - "task"
   disabled: []
-  bash:
-    timeout: 120
-    sandbox: false
-  webfetch:
-    timeout: 30
-    max_size: 1048576
+  bash_timeout: 120
+  bash_sandbox: false
+  webfetch_timeout: 30
+  webfetch_max_size: 1048576
 
 # Platform integrations
 platforms:
   telegram:
-    enabled: false
+    enabled: true
     token: "${TELEGRAM_BOT_TOKEN}"
-    allowed_users: []
+    allowed_users: []  # Empty = allow all
   
   discord:
     enabled: false
@@ -119,7 +242,7 @@ logging:
   max_size: "10MB"
   backup_count: 5
 
-# Server (for API access)
+# API Server
 server:
   enabled: false
   host: "0.0.0.0"
