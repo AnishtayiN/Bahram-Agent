@@ -41,9 +41,13 @@ Bahram Agent is an advanced self-improving AI agent inspired by [Hermes Agent](h
 - **Fallback Providers** - Automatic failover to backup models
 - **Personality System** - SOUL.md and built-in personalities
 - **Silence Tokens** - [SILENT] for automated flows
+- **Mixture of Agents** - Orchestrate multiple LLMs for better results
+- **Learning Journey** - Timeline visualization of skills and memories
+- **Background Review** - Auto-review conversations for learning
+- **Cursor Rules** - .cursorrules and context file support
 
 ### 🛠️ Tools & Capabilities
-- **15+ Built-in Tools** - Bash, files, web search, code analysis, browser, image gen
+- **20+ Built-in Tools** - Bash, files, web search, code analysis, browser, image gen
 - **Terminal Backends** - Local, Docker, SSH, Singularity, Modal, Daytona, Vercel
 - **Background Process Management** - Start, poll, wait, kill background processes
 - **Execute Code** - Run Python/bash in sandboxed environment
@@ -53,6 +57,8 @@ Bahram Agent is an advanced self-improving AI agent inspired by [Hermes Agent](h
 - **Document Extraction** - PDF, DOCX, XLSX, PPTX support
 - **Browser Automation** - Navigate, click, type, screenshot
 - **Image Generation** - DALL-E, Stability, FAL integration
+- **LSP Integration** - Language Server Protocol for code diagnostics
+- **Tool Search** - Find tools by description and category
 - **MCP Integration** - Connect to external tool servers
 - **Plugin System** - Extend with custom tools and hooks
 - **Batch Processing** - Process multiple prompts efficiently
@@ -64,19 +70,30 @@ Bahram Agent is an advanced self-improving AI agent inspired by [Hermes Agent](h
 - **SSRF Protection** - Block private network access
 - **Context File Scanning** - Prompt injection detection
 - **File Write Safety** - Protected paths and sandbox
+- **DM Pairing** - Code-based authorization for messaging
+- **Admin/User Split** - Role-based access control
+- **Website Access Policy** - URL blocklist and allowlist
+- **Supply-chain Advisory** - Check for compromised packages
+- **Write Approval Gates** - Stage memory/skill writes for review
 
 ### 💾 Memory & Learning
 - **3 Memory Systems** - Conversation, episodic, and semantic memory
+- **External Memory Providers** - Honcho, Mem0, and more
 - **Honcho User Modeling** - Dialectic user profiling across sessions
 - **Memory Nudge** - Periodic reminders for knowledge persistence
 - **Session Search** - Full-text search across past conversations
 - **Trajectory Generation** - Export training data for model improvement
+- **Write Approval Gates** - Stage memory/skill writes for review
 
 ### 🎯 Skills & Automation
 - **Skills System** - Auto-triggering, reusable capabilities
+- **Skill Bundles** - Group skills under one command
 - **Skill Hub** - Browse, install, and manage skills from registries
+- **Skill Curator** - Auto-curation and maintenance
 - **Cron Scheduler** - Automated task execution with natural language
 - **Context Files** - Project-specific instructions (.bahram.md, AGENTS.md, SOUL.md)
+- **External Skill Directories** - Multiple skill sources
+- **Project-Local Skills** - Repo-specific skills
 
 ### 🌐 Platform Support
 - **Telegram Bot** - Full-featured with inline keyboards
@@ -85,8 +102,21 @@ Bahram Agent is an advanced self-improving AI agent inspired by [Hermes Agent](h
 - **WhatsApp** - Baileys/Cloud API bridge
 - **Signal** - Via signal-cli
 - **Email** - IMAP/SMTP support
-- **Home Assistant** - Smart home control
+- **Home Assistant** - Smart home control (basic + advanced)
 - **Rich CLI** - Beautiful terminal interface with markdown
+- **Web Dashboard** - Monitor and manage via web UI
+
+### 🏗️ Infrastructure
+- **Gateway Service** - Install as systemd/launchd service
+- **Checkpoints/Rollback** - Filesystem snapshots for undo
+- **Delivery Ledger** - Crash recovery for message delivery
+- **DM Pairing** - Code-based authorization
+- **Per-Channel Overrides** - Different models per channel
+- **Busy Input Modes** - Queue/interrupt/steer
+- **Typing Indicators** - Per-platform typing status
+- **Progress Bubble Cleanup** - Auto-delete progress messages
+- **Message Timestamps** - In model context
+- **Status Phrases** - Configurable status messages
 
 ### 🎙️ Voice & Media
 - **Voice Transcription** - Whisper API integration
@@ -486,26 +516,37 @@ mypy .
 |---------|--------|--------|
 | Core Engine | ✅ | ✅ |
 | 17+ LLM Providers | ✅ | ✅ |
-| 15+ Tools | ✅ | ✅ |
+| 20+ Built-in Tools | ✅ | ✅ |
 | Terminal Backends | ✅ | ✅ |
 | Background Processes | ✅ | ✅ |
 | Security/Approval | ✅ | ✅ |
 | Memory Systems | ✅ | ✅ |
+| External Memory Providers | ✅ | ✅ |
 | Skills System | ✅ | ✅ |
+| Skill Bundles | ✅ | ✅ |
+| Skill Curator | ✅ | ✅ |
 | MCP Integration | ✅ | ✅ |
 | Plugin System | ✅ | ✅ |
+| Built-in Plugins | ✅ | ✅ |
 | Skill Hub | ✅ | ✅ |
 | Voice Transcription | ✅ | ✅ |
 | Text-to-Speech | ✅ | ✅ |
 | Image Generation | ✅ | ✅ |
 | Browser Automation | ✅ | ✅ |
 | Document Extraction | ✅ | ✅ |
+| LSP Integration | ✅ | ✅ |
+| Tool Search | ✅ | ✅ |
+| Mixture of Agents | ✅ | ✅ |
+| Learning Journey | ✅ | ✅ |
+| Background Review | ✅ | ✅ |
 | Telegram Bot | ✅ | ✅ |
 | Discord/Slack | ✅ | ✅ |
 | WhatsApp/Signal | ✅ | ✅ |
 | Email | ✅ | ✅ |
 | Home Assistant | ✅ | ✅ |
 | CLI Interface | ✅ | ✅ |
+| Web Dashboard | ✅ | ✅ |
+| Gateway Service | ✅ | ✅ |
 | Cron Scheduler | ✅ | ✅ |
 | Honcho Modeling | ✅ | ✅ |
 | Session Search | ✅ | ✅ |
@@ -514,6 +555,8 @@ mypy .
 | Batch Processing | ✅ | ✅ |
 | Fallback Providers | ✅ | ✅ |
 | Context Files | ✅ | ✅ |
+| Cursor Rules | ✅ | ✅ |
+| Context References | ✅ | ✅ |
 | Trajectory Generation | ✅ | ✅ |
 | Personality/SOUL.md | ✅ | ✅ |
 | Silence Tokens | ✅ | ✅ |
@@ -523,6 +566,18 @@ mypy .
 | Todo/Task Planning | ✅ | ✅ |
 | SSRF Protection | ✅ | ✅ |
 | Injection Detection | ✅ | ✅ |
+| DM Pairing | ✅ | ✅ |
+| Admin/User Split | ✅ | ✅ |
+| Website Policy | ✅ | ✅ |
+| Supply-chain Advisory | ✅ | ✅ |
+| Write Approval Gates | ✅ | ✅ |
+| Checkpoints/Rollback | ✅ | ✅ |
+| Delivery Ledger | ✅ | ✅ |
+| Lazy Dependencies | ✅ | ✅ |
+| Themes/Skins | ✅ | ✅ |
+| Per-Channel Overrides | ✅ | ✅ |
+| Busy Input Modes | ✅ | ✅ |
+| Typing Indicators | ✅ | ✅ |
 
 ---
 
