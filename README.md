@@ -34,17 +34,22 @@ The name **Bahram** was chosen for this AI because:
 
 Bahram Agent is an advanced self-improving AI agent inspired by [Hermes Agent](https://github.com/NousResearch/hermes-agent) from Nous Research.
 
-### 🧠 Core Intelligence
-- **Self-Improving Learning Loop** - Creates skills from experience, improves them during use
-- **17+ LLM Providers** - Anthropic, OpenAI, OpenRouter, Nous, NVIDIA, Groq, and more
+### 🧠 Core Intelligence (Unique Features!)
+- **AI Code Generator** - Generate complete applications from descriptions
+- **Smart Context Manager** - Intelligent context window optimization
+- **Error Handler** - Automatic error diagnosis and solutions
+- **Task Planner** - Intelligent task decomposition and planning
+- **Workflow Automation** - Visual workflow builder and executor
+- **API Connector** - Smart API integration with caching
+- **Semantic Memory** - Intelligent memory search and retrieval
+- **Auto-Complete** - Context-aware code completion
+- **Smart Code Completion** - Intelligent code snippets and templates
+- **Self-Improving Learning Loop** - Creates skills from experience
+- **17+ LLM Providers** - Anthropic, OpenAI, Groq, Mistral, Google, and more
 - **Context Compression** - Intelligent context window management
 - **Fallback Providers** - Automatic failover to backup models
 - **Personality System** - SOUL.md and built-in personalities
-- **Silence Tokens** - [SILENT] for automated flows
 - **Mixture of Agents** - Orchestrate multiple LLMs for better results
-- **Learning Journey** - Timeline visualization of skills and memories
-- **Background Review** - Auto-review conversations for learning
-- **Cursor Rules** - .cursorrules and context file support
 
 ### 🛠️ Tools & Capabilities
 - **30+ Built-in Tools** - Bash, files, web search, code analysis, browser, image gen, git, database, API generator, testing, deployment, monitoring, profiler, security scanner
