@@ -1,90 +1,90 @@
-"""Tool result annotations for Bahram Agent."""
+"""Tool annotations for Bahram Agent."""
 
 from __future__ import annotations
 
 import logging
-import signal
-from typing import Any
+from dataclasses import dataclass, field
+from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
 
-class ToolResultAnnotator:
-    """Annotate tool results with helpful information."""
+@dataclass
+class ToolAnnotation:
+    """Annotation for tool output."""
 
-    @staticmethod
-    def annotate_exit_code(exit_code: int) -> str:
-        """Annotate exit code with human-readable explanation."""
-        if exit_code == 0:
-            return ""
+    key: str
+    value: Any
+    timestamp: float = 0.0
+    metadata: dict = field(default_factory=dict)
 
-        # Negative codes = signal (subprocess convention)
-        if exit_code < 0:
-            sig = -exit_code
-            signal_names = {
-                9: "SIGKILL — often OOM killer or explicit kill -9",
-                15: "SIGTERM — graceful termination",
-                6: "SIGABRT — abort called",
-                11: "SIGSEGV — segmentation fault",
-                13: "SIGPIPE — broken pipe",
-                24: "SIGXCPU — CPU time limit exceeded",
-                25: "SIGXFSZ — file size limit exceeded",
+
+class AnnotationManager:
+    """Manage tool annotations."""
+
+    def __init__(self) -> None:
+        self._annotations: dict[str, list[ToolAnnotation]] = {}
+
+    def add_annotation(
+        self,
+        tool_call_id: str,
+        key: str,
+        value: Any,
+        metadata: dict = None,
+    ) -> None:
+        """Add an annotation to a tool call."""
+        import time
+        if tool_call_id not in self._annotations:
+            self._annotations[tool_call_id] = []
+
+        self._annotations[tool_call_id].append(
+            ToolAnnotation(
+                key=key,
+                value=value,
+                timestamp=time.time(),
+                metadata=metadata or {},
+            )
+        )
+
+    def get_annotations(self, tool_call_id: str) -> list[dict]:
+        """Get annotations for a tool call."""
+        annotations = self._annotations.get(tool_call_id, [])
+        return [
+            {
+                "key": a.key,
+                "value": a.value,
+                "timestamp": a.timestamp,
             }
-            name = signal_names.get(sig, f"signal {sig}")
-            return f"Terminated by signal {sig}: {name}"
+            for a in annotations
+        ]
 
-        # Positive codes
-        code_explanations = {
-            1: "General error",
-            2: "Misuse of shell command",
-            126: "Command found but not executable",
-            127: "Command not found",
-            128: "Invalid exit argument",
-            130: "Script terminated by Ctrl+C (SIGINT)",
-            137: "Killed (SIGKILL) — often OOM killer",
-            139: "Segmentation fault (SIGSEGV)",
-            141: "Broken pipe (SIGPIPE)",
+    def get_annotation(self, tool_call_id: str, key: str) -> Optional[Any]:
+        """Get a specific annotation."""
+        annotations = self._annotations.get(tool_call_id, [])
+        for a in annotations:
+            if a.key == key:
+                return a.value
+        return None
+
+    def clear_annotations(self, tool_call_id: str) -> None:
+        """Clear annotations for a tool call."""
+        self._annotations.pop(tool_call_id, None)
+
+    def get_all_annotations(self) -> dict[str, list[dict]]:
+        """Get all annotations."""
+        return {
+            k: self.get_annotations(k)
+            for k in self._annotations.keys()
         }
-        return code_explanations.get(exit_code, f"Exit code {exit_code}")
 
-    @staticmethod
-    def detect_utf16(content: bytes) -> tuple[bool, str]:
-        """Detect UTF-16 encoding and transcode."""
-        # Check for BOM
-        if content[:2] in [b'\xff\xfe', b'\xfe\xff']:
-            try:
-                decoded = content.decode('utf-16')
-                return True, decoded
-            except Exception:
-                pass
+    def set_exit_code(self, tool_call_id: str, exit_code: int) -> None:
+        """Set exit code annotation."""
+        self.add_annotation(tool_call_id, "exit_code", exit_code)
 
-        # Check byte patterns
-        if len(content) > 2 and content[0] == 0 and content[1] != 0:
-            # Potential UTF-16LE
-            if len(content) % 2 == 0:
-                try:
-                    decoded = content.decode('utf-16-le')
-                    if '\x00' not in decoded:
-                        return True, decoded
-                except Exception:
-                    pass
+    def set_utf16_transcoded(self, tool_call_id: str, transcoded: bool) -> None:
+        """Set UTF-16 transcoding annotation."""
+        self.add_annotation(tool_call_id, "utf16_transcoded", transcoded)
 
-        return False, ""
-
-    @staticmethod
-    def annotate_result(result: dict) -> dict:
-        """Add annotations to a tool result."""
-        if "exit_code" in result:
-            annotation = ToolResultAnnotator.annotate_exit_code(result["exit_code"])
-            if annotation:
-                result["_annotation"] = annotation
-
-        if "stdout" in result:
-            content = result["stdout"]
-            if isinstance(content, bytes):
-                is_utf16, decoded = ToolResultAnnotator.detect_utf16(content)
-                if is_utf16:
-                    result["stdout"] = decoded
-                    result["_utf16_converted"] = True
-
-        return result
+    def set_output_size(self, tool_call_id: str, size: int) -> None:
+        """Set output size annotation."""
+        self.add_annotation(tool_call_id, "output_size", size)

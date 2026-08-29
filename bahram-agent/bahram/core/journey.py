@@ -1,124 +1,205 @@
-"""Learning journey visualization for Bahram Agent."""
+"""Learning journey with automatic curve detection for Bahram Agent."""
 
 from __future__ import annotations
 
 import json
 import logging
+import time
 from dataclasses import dataclass, field
-from datetime import datetime
+from enum import Enum
 from pathlib import Path
 from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
 
-@dataclass
-class JourneyNode:
-    """A node in the learning journey."""
+class CurveType(str, Enum):
+    """Learning curve types."""
 
-    id: str
-    type: str  # skill, memory
-    name: str
-    content: str = ""
-    created_at: str = field(default_factory=lambda: datetime.now().isoformat())
-    metadata: dict = field(default_factory=dict)
+    PLATEAU = "plateau"
+    CLIMBING = "climbing"
+    DECLINING = "declining"
+    MASTERY = "mastery"
+
+
+@dataclass
+class LearningPoint:
+    """A point on the learning curve."""
+
+    timestamp: float
+    metric: float
+    description: str
+    context: dict = field(default_factory=dict)
+
+
+@dataclass
+class LearningCurve:
+    """Detected learning curve."""
+
+    curve_type: CurveType
+    confidence: float
+    description: str
+    suggested_action: str
 
 
 class LearningJourney:
-    """Track and visualize the learning journey."""
+    """Track and detect learning curves automatically."""
 
-    def __init__(self, data_dir: str = "data/journey") -> None:
+    def __init__(self, data_dir: str = "data/memory") -> None:
         self.data_dir = Path(data_dir)
         self.data_dir.mkdir(parents=True, exist_ok=True)
-        self._nodes: list[JourneyNode] = []
-        self._load_journey()
+        self._points: list[LearningPoint] = []
+        self._curves: list[LearningCurve] = []
+        self._load()
 
-    def _load_journey(self) -> None:
-        """Load journey from disk."""
+    def _load(self) -> None:
+        """Load learning data from disk."""
         journey_file = self.data_dir / "journey.json"
         if journey_file.exists():
             try:
                 with open(journey_file) as f:
                     data = json.load(f)
-                self._nodes = [JourneyNode(**n) for n in data]
+                self._points = [
+                    LearningPoint(**p) for p in data.get("points", [])
+                ]
+                self._curves = [
+                    LearningCurve(**c) for c in data.get("curves", [])
+                ]
             except Exception as e:
                 logger.warning(f"Failed to load journey: {e}")
 
-    def _save_journey(self) -> None:
-        """Save journey to disk."""
+    def _save(self) -> None:
+        """Save learning data to disk."""
         journey_file = self.data_dir / "journey.json"
-        data = [
-            {
-                "id": n.id,
-                "type": n.type,
-                "name": n.name,
-                "content": n.content,
-                "created_at": n.created_at,
-                "metadata": n.metadata,
-            }
-            for n in self._nodes
-        ]
+        data = {
+            "points": [
+                {
+                    "timestamp": p.timestamp,
+                    "metric": p.metric,
+                    "description": p.description,
+                    "context": p.context,
+                }
+                for p in self._points
+            ],
+            "curves": [
+                {
+                    "curve_type": c.curve_type.value,
+                    "confidence": c.confidence,
+                    "description": c.description,
+                    "suggested_action": c.suggested_action,
+                }
+                for c in self._curves
+            ],
+        }
         with open(journey_file, "w") as f:
             json.dump(data, f, indent=2)
 
-    def add_node(
-        self,
-        node_type: str,
-        name: str,
-        content: str = "",
-        metadata: dict = None,
-    ) -> JourneyNode:
-        """Add a node to the journey."""
-        import uuid
-        node = JourneyNode(
-            id=str(uuid.uuid4())[:8],
-            type=node_type,
-            name=name,
-            content=content,
-            metadata=metadata or {},
+    def record(self, metric: float, description: str = "", context: dict = None) -> None:
+        """Record a learning point."""
+        point = LearningPoint(
+            timestamp=time.time(),
+            metric=metric,
+            description=description,
+            context=context or {},
         )
-        self._nodes.append(node)
-        self._save_journey()
-        return node
+        self._points.append(point)
+        self._save()
 
-    def delete_node(self, node_id: str) -> bool:
-        """Delete a node."""
-        for i, node in enumerate(self._nodes):
-            if node.id == node_id:
-                self._nodes.pop(i)
-                self._save_journey()
-                return True
-        return False
+        # Auto-detect curves
+        if len(self._points) >= 3:
+            curve = self._detect_curve()
+            if curve and (not self._curves or self._curves[-1].curve_type != curve.curve_type):
+                self._curves.append(curve)
+                self._save()
+                logger.info(f"Learning curve detected: {curve.curve_type.value} ({curve.confidence:.0%})")
 
-    def list_nodes(self) -> list[JourneyNode]:
-        """List all nodes."""
-        return self._nodes.copy()
+    def _detect_curve(self) -> Optional[LearningCurve]:
+        """Detect current learning curve from recent points."""
+        if len(self._points) < 3:
+            return None
 
-    def get_node(self, node_id: str) -> Optional[JourneyNode]:
-        """Get a node by ID."""
-        for node in self._nodes:
-            if node.id == node_id:
-                return node
-        return None
+        # Use last 10 points
+        recent = self._points[-10:]
+        metrics = [p.metric for p in recent]
 
-    def render_timeline(self) -> str:
-        """Render journey as a timeline."""
-        if not self._nodes:
-            return "No learning journey yet."
+        # Calculate trend
+        if len(metrics) < 2:
+            return None
 
-        parts = ["# Learning Journey\n"]
-        for node in sorted(self._nodes, key=lambda n: n.created_at):
-            icon = "🛠️" if node.type == "skill" else "💾"
-            parts.append(f"- {icon} **{node.name}** ({node.created_at[:10]})")
+        first_half = metrics[: len(metrics) // 2]
+        second_half = metrics[len(metrics) // 2:]
 
-        return "\n".join(parts)
+        avg_first = sum(first_half) / len(first_half) if first_half else 0
+        avg_second = sum(second_half) / len(second_half) if second_half else 0
 
-    def get_stats(self) -> dict:
-        """Get journey statistics."""
-        skills = sum(1 for n in self._nodes if n.type == "skill")
-        memories = sum(1 for n in self._nodes if n.type == "memory")
+        diff = avg_second - avg_first
+        total = max(abs(avg_first), abs(avg_second), 1)
+        change_pct = diff / total
+
+        # Detect curve type
+        if abs(change_pct) < 0.05:
+            curve_type = CurveType.PLATEAU
+            confidence = 0.8
+            description = "Performance is stable"
+            action = "Consider trying more challenging tasks"
+        elif change_pct > 0.2:
+            curve_type = CurveType.MASTERY
+            confidence = 0.9
+            description = "Excellent improvement!"
+            action = "Ready for advanced concepts"
+        elif change_pct > 0.05:
+            curve_type = CurveType.CLIMBING
+            confidence = 0.7
+            description = "Steady improvement"
+            action = "Continue current approach"
+        elif change_pct < -0.2:
+            curve_type = CurveType.DECLINING
+            confidence = 0.9
+            description = "Performance declining"
+            action = "Review recent mistakes and adjust"
+        else:
+            curve_type = CurveType.DECLINING
+            confidence = 0.6
+            description = "Slight decline detected"
+            action = "Monitor and consider adjustments"
+
+        return LearningCurve(
+            curve_type=curve_type,
+            confidence=confidence,
+            description=description,
+            suggested_action=action,
+        )
+
+    def get_summary(self) -> dict[str, Any]:
+        """Get journey summary."""
+        if not self._points:
+            return {"status": "no_data"}
+
+        metrics = [p.metric for p in self._points]
         return {
-            "total_nodes": len(self._nodes),
-            "skills": skills,
-            "memories": memories,
+            "total_points": len(self._points),
+            "current_metric": metrics[-1],
+            "best_metric": max(metrics),
+            "worst_metric": min(metrics),
+            "average_metric": sum(metrics) / len(metrics),
+            "current_curve": self._curves[-1].curve_type.value if self._curves else "unknown",
+            "trend": "improving" if metrics[-1] > metrics[0] else "declining" if metrics[-1] < metrics[0] else "stable",
         }
+
+    def get_curve_history(self) -> list[dict]:
+        """Get curve history."""
+        return [
+            {
+                "curve_type": c.curve_type.value,
+                "confidence": c.confidence,
+                "description": c.description,
+                "suggested_action": c.suggested_action,
+            }
+            for c in self._curves
+        ]
+
+    def reset(self) -> None:
+        """Reset journey data."""
+        self._points.clear()
+        self._curves.clear()
+        self._save()

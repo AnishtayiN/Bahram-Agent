@@ -1,117 +1,119 @@
-"""Tirith pre-execution security scanning for Bahram Agent."""
+"""Tirith-style pre-execution content scanner for Bahram Agent."""
 
 from __future__ import annotations
 
 import logging
-import subprocess
-from dataclasses import dataclass
-from typing import Optional
+import re
+from dataclasses import dataclass, field
+from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
 
 @dataclass
 class ScanResult:
-    """Result of a Tirith scan."""
+    """Result of a content scan."""
 
     safe: bool
-    severity: str = "none"  # none, low, medium, high, critical
-    title: str = ""
-    description: str = ""
-    alternatives: list[str] = None
-
-    def __post_init__(self):
-        if self.alternatives is None:
-            self.alternatives = []
+    issues: list[str] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
+    blocked: list[str] = field(default_factory=list)
 
 
 class TirithScanner:
-    """Tirith pre-execution security scanner."""
+    """Pre-execution content scanner."""
 
-    def __init__(
-        self,
-        enabled: bool = True,
-        timeout: int = 5,
-        fail_open: bool = True,
-    ) -> None:
-        self.enabled = enabled
-        self.timeout = timeout
-        self.fail_open = fail_open
-        self._binary_path: Optional[str] = None
+    def __init__(self) -> None:
+        self._dangerous_patterns: list[tuple[str, str, str]] = [
+            # (pattern, severity, description)
+            (r"rm\s+-rf\s+/", "critical", "Recursive delete from root"),
+            (r"mkfs\.", "critical", "Format filesystem"),
+            (r"dd\s+if=.*of=/dev/", "critical", "Direct disk write"),
+            (r"chmod\s+777", "high", "World-writable permissions"),
+            (r"curl.*\|\s*(ba)?sh", "high", "Pipe to shell"),
+            (r"wget.*\|\s*(ba)?sh", "high", "Pipe to shell"),
+            (r"eval\s*\(", "medium", "Dynamic code evaluation"),
+            (r"exec\s*\(", "medium", "Dynamic code execution"),
+            (r"__import__", "medium", "Dynamic import"),
+            (r"subprocess\.call.*shell=True", "medium", "Shell injection risk"),
+            (r"os\.system", "medium", "Shell injection risk"),
+        ]
+        self._blocked_patterns: list[str] = [
+            r"password\s*=\s*['\"]",
+            r"secret\s*=\s*['\"]",
+            r"api_key\s*=\s*['\"]",
+            r"token\s*=\s*['\"]",
+        ]
+
+    def scan(self, content: str) -> ScanResult:
+        """Scan content for security issues."""
+        issues = []
+        warnings = []
+        blocked = []
+
+        # Check dangerous patterns
+        for pattern, severity, description in self._dangerous_patterns:
+            if re.search(pattern, content, re.IGNORECASE):
+                if severity == "critical":
+                    blocked.append(description)
+                elif severity == "high":
+                    issues.append(description)
+                else:
+                    warnings.append(description)
+
+        # Check blocked patterns
+        for pattern in self._blocked_patterns:
+            if re.search(pattern, content, re.IGNORECASE):
+                blocked.append(f"Potential secret exposure: {pattern}")
+
+        safe = len(blocked) == 0 and len(issues) == 0
+        return ScanResult(
+            safe=safe,
+            issues=issues,
+            warnings=warnings,
+            blocked=blocked,
+        )
 
     def scan_command(self, command: str) -> ScanResult:
         """Scan a command before execution."""
-        if not self.enabled:
-            return ScanResult(safe=True)
+        return self.scan(command)
 
-        # Try tirith binary
-        if self._binary_path:
-            return self._scan_with_tirith(command)
+    def scan_code(self, code: str) -> ScanResult:
+        """Scan code before execution."""
+        return self.scan(code)
 
-        # Fallback to pattern-based scanning
-        return self._scan_patterns(command)
+    def add_dangerous_pattern(self, pattern: str, severity: str, description: str) -> None:
+        """Add a dangerous pattern."""
+        self._dangerous_patterns.append((pattern, severity, description))
 
-    def _scan_with_tirith(self, command: str) -> ScanResult:
-        """Scan using tirith binary."""
-        try:
-            result = subprocess.run(
-                [self._binary_path, "scan", "--command", command],
-                capture_output=True,
-                text=True,
-                timeout=self.timeout,
-            )
+    def add_blocked_pattern(self, pattern: str) -> None:
+        """Add a blocked pattern."""
+        self._blocked_patterns.append(pattern)
 
-            if result.returncode == 0:
-                return ScanResult(safe=True)
-            else:
-                return ScanResult(
-                    safe=False,
-                    severity="high",
-                    title="Tirith blocked command",
-                    description=result.stdout[:500],
-                )
-        except subprocess.TimeoutExpired:
-            if self.fail_open:
-                return ScanResult(safe=True)
-            return ScanResult(safe=False, severity="medium", title="Tirith timeout")
-        except Exception as e:
-            if self.fail_open:
-                return ScanResult(safe=True)
-            return ScanResult(safe=False, severity="low", title=f"Tirith error: {e}")
+    def get_scan_report(self, content: str) -> str:
+        """Get a formatted scan report."""
+        result = self.scan(content)
 
-    def _scan_patterns(self, command: str) -> ScanResult:
-        """Pattern-based scanning fallback."""
-        suspicious = [
-            (r"curl\s+.*\|\s*(bash|sh)", "Pipe remote to shell", "high"),
-            (r"wget\s+.*\|\s*(bash|sh)", "Pipe remote to shell", "high"),
-            (r"bash\s*<\s*\(", "Execute remote script", "high"),
-            (r"eval\s*\(", "Dynamic code execution", "medium"),
-            (r"exec\s*\(", "Dynamic code execution", "medium"),
-            (r"__import__\s*\(", "Dynamic import", "medium"),
-            (r"subprocess\.(call|run|Popen)\s*\(", "Subprocess execution", "medium"),
-            (r"os\.system\s*\(", "System call", "medium"),
-        ]
+        lines = ["=== Security Scan Report ===", ""]
 
-        import re
-        for pattern, title, severity in suspicious:
-            if re.search(pattern, command, re.IGNORECASE):
-                return ScanResult(
-                    safe=False,
-                    severity=severity,
-                    title=title,
-                    description=f"Pattern matched: {pattern}",
-                    alternatives=["Use a safer alternative"],
-                )
+        if result.safe:
+            lines.append("Status: SAFE")
+        else:
+            lines.append("Status: UNSAFE")
 
-        return ScanResult(safe=True)
+        if result.blocked:
+            lines.append("\nBLOCKED:")
+            for item in result.blocked:
+                lines.append(f"  - {item}")
 
-    def install_binary(self) -> bool:
-        """Try to install tirith binary."""
-        try:
-            # Download from GitHub releases
-            logger.info("Installing tirith...")
-            # Placeholder - actual implementation would download binary
-            return False
-        except Exception as e:
-            logger.error(f"Failed to install tirith: {e}")
-            return False
+        if result.issues:
+            lines.append("\nISSUES:")
+            for item in result.issues:
+                lines.append(f"  - {item}")
+
+        if result.warnings:
+            lines.append("\nWARNINGS:")
+            for item in result.warnings:
+                lines.append(f"  - {item}")
+
+        return "\n".join(lines)

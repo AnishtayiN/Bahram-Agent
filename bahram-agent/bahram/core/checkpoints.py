@@ -1,12 +1,12 @@
-"""Checkpoints and rollback for Bahram Agent."""
+"""Filesystem snapshots and checkpoints for Bahram Agent."""
 
 from __future__ import annotations
 
 import json
 import logging
 import shutil
+import time
 from dataclasses import dataclass, field
-from datetime import datetime
 from pathlib import Path
 from typing import Any, Optional
 
@@ -18,106 +18,150 @@ class Checkpoint:
     """A filesystem checkpoint."""
 
     id: str
-    path: str
-    description: str = ""
-    created_at: str = field(default_factory=lambda: datetime.now().isoformat())
+    name: str
+    timestamp: float
+    description: str
     files: list[str] = field(default_factory=list)
+    metadata: dict = field(default_factory=dict)
 
 
 class CheckpointManager:
-    """Create and manage filesystem checkpoints."""
+    """Manage filesystem checkpoints for rollback."""
 
-    def __init__(self, data_dir: str = "data/checkpoints") -> None:
+    def __init__(self, data_dir: str = "data/checkpoints", max_checkpoints: int = 10) -> None:
         self.data_dir = Path(data_dir)
         self.data_dir.mkdir(parents=True, exist_ok=True)
-        self._checkpoints: dict[str, Checkpoint] = {}
-        self._load_checkpoints()
+        self._max_checkpoints = max_checkpoints
+        self._checkpoints: list[Checkpoint] = []
+        self._snapshots_dir = self.data_dir / "snapshots"
+        self._snapshots_dir.mkdir(exist_ok=True)
+        self._load()
 
-    def _load_checkpoints(self) -> None:
+    def _load(self) -> None:
         """Load checkpoints from disk."""
-        for cp_file in self.data_dir.glob("*.json"):
+        checkpoints_file = self.data_dir / "checkpoints.json"
+        if checkpoints_file.exists():
             try:
-                with open(cp_file) as f:
+                with open(checkpoints_file) as f:
                     data = json.load(f)
-                cp = Checkpoint(**data)
-                self._checkpoints[cp.id] = cp
+                self._checkpoints = [Checkpoint(**c) for c in data]
             except Exception as e:
-                logger.warning(f"Failed to load checkpoint {cp_file}: {e}")
+                logger.warning(f"Failed to load checkpoints: {e}")
+
+    def _save(self) -> None:
+        """Save checkpoints to disk."""
+        checkpoints_file = self.data_dir / "checkpoints.json"
+        data = [
+            {
+                "id": c.id,
+                "name": c.name,
+                "timestamp": c.timestamp,
+                "description": c.description,
+                "files": c.files,
+                "metadata": c.metadata,
+            }
+            for c in self._checkpoints
+        ]
+        with open(checkpoints_file, "w") as f:
+            json.dump(data, f, indent=2)
 
     def create_checkpoint(
         self,
-        path: str,
+        name: str,
+        files: list[str],
         description: str = "",
+        metadata: dict = None,
     ) -> Checkpoint:
-        """Create a checkpoint of a directory."""
-        import uuid
+        """Create a checkpoint."""
+        checkpoint_id = f"cp_{int(time.time() * 1000)}"
+        snapshot_dir = self._snapshots_dir / checkpoint_id
+        snapshot_dir.mkdir(exist_ok=True)
 
-        cp_id = str(uuid.uuid4())[:8]
-        cp_dir = self.data_dir / cp_id
-        cp_dir.mkdir(parents=True, exist_ok=True)
+        # Copy files to snapshot
+        copied_files = []
+        for file_path in files:
+            src = Path(file_path)
+            if src.exists():
+                dst = snapshot_dir / src.name
+                if src.is_file():
+                    shutil.copy2(src, dst)
+                    copied_files.append(str(src))
+                elif src.is_dir():
+                    shutil.copytree(src, dst, dirs_exist_ok=True)
+                    copied_files.append(str(src))
 
-        # Copy files
-        source = Path(path)
-        files = []
-        if source.exists():
-            if source.is_dir():
-                shutil.copytree(source, cp_dir / "files", dirs_exist_ok=True)
-                files = [str(f.relative_to(source)) for f in source.rglob("*") if f.is_file()]
-            else:
-                shutil.copy2(source, cp_dir / "files")
-                files = [source.name]
-
-        cp = Checkpoint(
-            id=cp_id,
-            path=path,
+        checkpoint = Checkpoint(
+            id=checkpoint_id,
+            name=name,
+            timestamp=time.time(),
             description=description,
-            files=files,
+            files=copied_files,
+            metadata=metadata or {},
         )
-        self._checkpoints[cp_id] = cp
 
-        # Save metadata
-        meta_file = self.data_dir / f"{cp_id}.json"
-        with open(meta_file, "w") as f:
-            json.dump({
-                "id": cp.id,
-                "path": cp.path,
-                "description": cp.description,
-                "created_at": cp.created_at,
-                "files": cp.files,
-            }, f, indent=2)
+        self._checkpoints.append(checkpoint)
 
-        return cp
+        # Trim old checkpoints
+        if len(self._checkpoints) > self._max_checkpoints:
+            removed = self._checkpoints[: len(self._checkpoints) - self._max_checkpoints]
+            for old in removed:
+                old_snapshot = self._snapshots_dir / old.id
+                if old_snapshot.exists():
+                    shutil.rmtree(old_snapshot)
+            self._checkpoints = self._checkpoints[-self._max_checkpoints:]
 
-    def restore_checkpoint(self, cp_id: str) -> bool:
-        """Restore a checkpoint."""
-        cp = self._checkpoints.get(cp_id)
-        if not cp:
+        self._save()
+        return checkpoint
+
+    def rollback(self, checkpoint_id: str) -> bool:
+        """Rollback to a checkpoint."""
+        checkpoint = next(
+            (c for c in self._checkpoints if c.id == checkpoint_id), None
+        )
+        if not checkpoint:
             return False
 
-        cp_dir = self.data_dir / cp_id / "files"
-        if not cp_dir.exists():
+        snapshot_dir = self._snapshots_dir / checkpoint_id
+        if not snapshot_dir.exists():
             return False
 
-        target = Path(cp.path)
-        if target.is_dir():
-            shutil.copytree(cp_dir, target, dirs_exist_ok=True)
-        else:
-            target.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(cp_dir, target)
+        # Restore files
+        for file_path in checkpoint.files:
+            src = Path(file_path)
+            snapshot_file = snapshot_dir / src.name
+            if snapshot_file.exists():
+                if snapshot_file.is_file():
+                    shutil.copy2(snapshot_file, src)
+                elif snapshot_file.is_dir():
+                    shutil.copytree(snapshot_file, src, dirs_exist_ok=True)
 
         return True
 
-    def list_checkpoints(self) -> list[Checkpoint]:
-        """List all checkpoints."""
-        return list(self._checkpoints.values())
+    def list_checkpoints(self) -> list[dict]:
+        """List checkpoints."""
+        return [
+            {
+                "id": c.id,
+                "name": c.name,
+                "timestamp": c.timestamp,
+                "description": c.description,
+                "file_count": len(c.files),
+            }
+            for c in self._checkpoints
+        ]
 
-    def delete_checkpoint(self, cp_id: str) -> bool:
+    def delete_checkpoint(self, checkpoint_id: str) -> bool:
         """Delete a checkpoint."""
-        if cp_id in self._checkpoints:
-            cp_dir = self.data_dir / cp_id
-            shutil.rmtree(cp_dir, ignore_errors=True)
-            meta_file = self.data_dir / f"{cp_id}.json"
-            meta_file.unlink(missing_ok=True)
-            del self._checkpoints[cp_id]
-            return True
-        return False
+        checkpoint = next(
+            (c for c in self._checkpoints if c.id == checkpoint_id), None
+        )
+        if not checkpoint:
+            return False
+
+        snapshot_dir = self._snapshots_dir / checkpoint_id
+        if snapshot_dir.exists():
+            shutil.rmtree(snapshot_dir)
+
+        self._checkpoints.remove(checkpoint)
+        self._save()
+        return True

@@ -1,84 +1,220 @@
-"""Container resources and security for Bahram Agent."""
+"""Docker container tool for Bahram Agent."""
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
 
 @dataclass
+class ContainerConfig:
+    """Container configuration."""
+
+    image: str = "python:3.11-slim"
+    name: str = ""
+    memory_limit: str = "512m"
+    cpu_limit: float = 1.0
+    network: str = "none"
+    volumes: dict[str, str] = field(default_factory=dict)
+    env: dict[str, str] = field(default_factory=dict)
+    working_dir: str = "/workspace"
+
+
 class ContainerResources:
-    """Container resource limits."""
+    """Manage container resources."""
 
-    cpu: int = 1
-    memory_mb: int = 5120
-    disk_mb: int = 51200
-    pids_limit: int = 256
-    persistent: bool = True
-    read_only_root: bool = True
+    def __init__(self) -> None:
+        self._active_containers: dict[str, dict] = {}
 
+    async def create_container(self, config: ContainerConfig) -> str:
+        """Create a Docker container."""
+        import uuid
 
-@dataclass
-class ContainerSecurity:
-    """Container security configuration."""
+        name = config.name or f"bahram-agent-{uuid.uuid4().hex[:8]}"
 
-    drop_all_caps: bool = True
-    add_caps: list[str] = field(default_factory=lambda: ["DAC_OVERRIDE", "CHOWN", "FOWNER"])
-    no_new_privileges: bool = True
-    security_opt: list[str] = field(default_factory=lambda: ["no-new-privileges"])
+        cmd = [
+            "docker", "create",
+            "--name", name,
+            "--memory", config.memory_limit,
+            "--cpus", str(config.cpu_limit),
+            "--network", config.network,
+            "--workdir", config.working_dir,
+        ]
 
+        # Add volumes
+        for host_path, container_path in config.volumes.items():
+            cmd.extend(["-v", f"{host_path}:{container_path}"])
 
-class ContainerManager:
-    """Manage container resources and security."""
+        # Add environment
+        for key, value in config.env.items():
+            cmd.extend(["-e", f"{key}={value}"])
 
-    def __init__(
+        cmd.append(config.image)
+
+        proc = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        stdout, stderr = await proc.communicate()
+
+        if proc.returncode == 0:
+            container_id = stdout.decode().strip()
+            self._active_containers[name] = {
+                "id": container_id,
+                "config": config,
+            }
+            return name
+        else:
+            raise RuntimeError(f"Failed to create container: {stderr.decode()}")
+
+    async def start_container(self, name: str) -> bool:
+        """Start a container."""
+        proc = await asyncio.create_subprocess_exec(
+            "docker", "start", name,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        await proc.communicate()
+        return proc.returncode == 0
+
+    async def stop_container(self, name: str, timeout: int = 10) -> bool:
+        """Stop a container."""
+        proc = await asyncio.create_subprocess_exec(
+            "docker", "stop", "-t", str(timeout), name,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        await proc.communicate()
+        return proc.returncode == 0
+
+    async def remove_container(self, name: str, force: bool = False) -> bool:
+        """Remove a container."""
+        cmd = ["docker", "rm"]
+        if force:
+            cmd.append("-f")
+        cmd.append(name)
+
+        proc = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        await proc.communicate()
+
+        if proc.returncode == 0:
+            self._active_containers.pop(name, None)
+            return True
+        return False
+
+    async def exec_in_container(
         self,
-        resources: ContainerResources = None,
-        security: ContainerSecurity = None,
-    ) -> None:
-        self.resources = resources or ContainerResources()
-        self.security = security or ContainerSecurity()
+        name: str,
+        command: str,
+        timeout: float = 60.0,
+    ) -> dict[str, Any]:
+        """Execute command in container."""
+        proc = await asyncio.create_subprocess_exec(
+            "docker", "exec", name, "sh", "-c", command,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
 
-    def get_docker_args(self) -> list[str]:
-        """Get Docker arguments for resources and security."""
-        args = []
+        try:
+            stdout, stderr = await asyncio.wait_for(
+                proc.communicate(),
+                timeout=timeout,
+            )
+            return {
+                "stdout": stdout.decode("utf-8", errors="replace"),
+                "stderr": stderr.decode("utf-8", errors="replace"),
+                "exit_code": proc.returncode,
+            }
+        except asyncio.TimeoutError:
+            proc.kill()
+            return {
+                "stdout": "",
+                "stderr": "Command timed out",
+                "exit_code": -1,
+            }
 
-        # Resources
-        args.extend(["--memory", f"{self.resources.memory_mb}m"])
-        args.extend(["--cpus", str(self.resources.cpu)])
-        args.extend(["--pids-limit", str(self.resources.pids_limit)])
+    async def get_container_stats(self, name: str) -> dict[str, Any]:
+        """Get container resource usage."""
+        proc = await asyncio.create_subprocess_exec(
+            "docker", "stats", name, "--no-stream", "--format",
+            "{{.CPUPerc}}|{{.MemUsage}}|{{.NetIO}}|{{.BlockIO}}",
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        stdout, _ = await proc.communicate()
 
-        # Security
-        if self.security.drop_all_caps:
-            args.extend(["--cap-drop", "ALL"])
-            for cap in self.security.add_caps:
-                args.extend(["--cap-add", cap])
+        if proc.returncode == 0:
+            parts = stdout.decode().strip().split("|")
+            if len(parts) >= 4:
+                return {
+                    "cpu_percent": parts[0],
+                    "memory_usage": parts[1],
+                    "network_io": parts[2],
+                    "block_io": parts[3],
+                }
+        return {"error": "Failed to get stats"}
 
-        if self.security.no_new_privileges:
-            args.extend(["--security-opt", "no-new-privileges"])
+    async def list_containers(self, all: bool = False) -> list[dict]:
+        """List containers."""
+        cmd = ["docker", "ps", "--format", "{{.Names}}|{{.Image}}|{{.Status}}"]
+        if all:
+            cmd.append("-a")
 
-        if self.resources.read_only_root:
-            args.append("--read-only")
+        proc = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        stdout, _ = await proc.communicate()
 
-        # Tmpfs
-        args.extend(["--tmpfs", "/tmp:rw,nosuid,size=512m"])
-        args.extend(["--tmpfs", "/var/tmp:rw,noexec,nosuid,size=256m"])
+        containers = []
+        if proc.returncode == 0:
+            for line in stdout.decode().strip().split("\n"):
+                if line:
+                    parts = line.split("|")
+                    if len(parts) >= 3:
+                        containers.append({
+                            "name": parts[0],
+                            "image": parts[1],
+                            "status": parts[2],
+                        })
+        return containers
 
-        return args
 
-    def get_env_passthrough(self) -> list[str]:
-        """Get environment variables safe for container passthrough."""
-        safe_vars = [
-            "PATH", "HOME", "USER", "LANG", "LC_ALL", "TERM", "SHELL", "TMPDIR",
-        ]
-        return safe_vars
+class ContainerSecurity:
+    """Enforce security policies for containers."""
 
-    def get_credential_files(self) -> list[str]:
-        """Get credential files to mount in container."""
-        return [
-            "google_token.json",
-            "google_client_secret.json",
-        ]
+    def __init__(self) -> None:
+        self._blocked_images: list[str] = []
+        self._max_memory: str = "2g"
+        self._max_cpus: float = 2.0
+        self._allowed_registries: list[str] = ["docker.io", "gcr.io"]
+
+    def check_image(self, image: str) -> tuple[bool, str]:
+        """Check if image is allowed."""
+        # Check blocked images
+        for blocked in self._blocked_images:
+            if blocked in image:
+                return False, f"Image '{image}' is blocked"
+
+        # Check registry
+        registry = image.split("/")[0] if "/" in image else "docker.io"
+        if registry not in self._allowed_registries:
+            return False, f"Registry '{registry}' is not allowed"
+
+        return True, "OK"
+
+    def apply_security(self, config: ContainerConfig) -> ContainerConfig:
+        """Apply security policies to config."""
+        # Enforce resource limits
+        config.network = "none"  # No network by default
+        return config

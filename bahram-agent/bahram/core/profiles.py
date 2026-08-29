@@ -12,17 +12,20 @@ logger = logging.getLogger(__name__)
 
 
 @dataclass
-class Profile:
+class AgentProfile:
     """An agent profile."""
 
     name: str
+    display_name: str
     description: str = ""
+    system_prompt: str = ""
+    personality: str = ""
     model: str = ""
     provider: str = ""
-    personality: str = "default"
-    config: dict = field(default_factory=dict)
-    skills: list[str] = field(default_factory=list)
-    mcp_servers: dict = field(default_factory=dict)
+    temperature: float = 0.7
+    max_tokens: int = 4096
+    is_default: bool = False
+    metadata: dict = field(default_factory=dict)
 
 
 class ProfileManager:
@@ -31,62 +34,98 @@ class ProfileManager:
     def __init__(self, data_dir: str = "data/profiles") -> None:
         self.data_dir = Path(data_dir)
         self.data_dir.mkdir(parents=True, exist_ok=True)
-        self._profiles: dict[str, Profile] = {}
-        self._active: str = "default"
-        self._load_profiles()
+        self._profiles: dict[str, AgentProfile] = {}
+        self._current_profile: str = "default"
+        self._load()
 
-    def _load_profiles(self) -> None:
+    def _load(self) -> None:
         """Load profiles from disk."""
-        for profile_file in self.data_dir.glob("*.json"):
+        profiles_file = self.data_dir / "profiles.json"
+        if profiles_file.exists():
             try:
-                with open(profile_file) as f:
+                with open(profiles_file) as f:
                     data = json.load(f)
-                profile = Profile(**data)
-                self._profiles[profile.name] = profile
+                for profile_data in data:
+                    profile = AgentProfile(**profile_data)
+                    self._profiles[profile.name] = profile
             except Exception as e:
-                logger.warning(f"Failed to load profile {profile_file}: {e}")
+                logger.warning(f"Failed to load profiles: {e}")
 
-    def _save_profile(self, profile: Profile) -> None:
-        """Save a profile."""
-        profile_file = self.data_dir / f"{profile.name}.json"
-        with open(profile_file, "w") as f:
-            json.dump({
-                "name": profile.name,
-                "description": profile.description,
-                "model": profile.model,
-                "provider": profile.provider,
-                "personality": profile.personality,
-                "config": profile.config,
-                "skills": profile.skills,
-                "mcp_servers": profile.mcp_servers,
-            }, f, indent=2)
+    def _save(self) -> None:
+        """Save profiles to disk."""
+        profiles_file = self.data_dir / "profiles.json"
+        data = [
+            {
+                "name": p.name,
+                "display_name": p.display_name,
+                "description": p.description,
+                "system_prompt": p.system_prompt,
+                "personality": p.personality,
+                "model": p.model,
+                "provider": p.provider,
+                "temperature": p.temperature,
+                "max_tokens": p.max_tokens,
+                "is_default": p.is_default,
+                "metadata": p.metadata,
+            }
+            for p in self._profiles.values()
+        ]
+        with open(profiles_file, "w") as f:
+            json.dump(data, f, indent=2)
 
-    def create_profile(self, name: str, **kwargs) -> Profile:
+    def create_profile(
+        self,
+        name: str,
+        display_name: str,
+        description: str = "",
+        system_prompt: str = "",
+        personality: str = "",
+        model: str = "",
+        provider: str = "",
+        temperature: float = 0.7,
+        max_tokens: int = 4096,
+    ) -> AgentProfile:
         """Create a new profile."""
-        profile = Profile(name=name, **kwargs)
+        profile = AgentProfile(
+            name=name,
+            display_name=display_name,
+            description=description,
+            system_prompt=system_prompt,
+            personality=personality,
+            model=model,
+            provider=provider,
+            temperature=temperature,
+            max_tokens=max_tokens,
+        )
         self._profiles[name] = profile
-        self._save_profile(profile)
+        self._save()
         return profile
 
-    def get_profile(self, name: str) -> Optional[Profile]:
-        """Get a profile by name."""
+    def get_profile(self, name: str) -> Optional[AgentProfile]:
+        """Get a profile."""
         return self._profiles.get(name)
 
-    def set_active(self, name: str) -> bool:
-        """Set the active profile."""
+    def set_current(self, name: str) -> bool:
+        """Set current profile."""
         if name in self._profiles:
-            self._active = name
+            self._current_profile = name
             return True
         return False
 
-    def get_active(self) -> Profile:
-        """Get the active profile."""
-        return self._profiles.get(self._active, Profile(name="default"))
+    def get_current(self) -> AgentProfile:
+        """Get current profile."""
+        return self._profiles.get(self._current_profile, self._profiles.get("default"))
 
     def list_profiles(self) -> list[dict]:
         """List all profiles."""
         return [
-            {"name": p.name, "description": p.description, "active": p.name == self._active}
+            {
+                "name": p.name,
+                "display_name": p.display_name,
+                "description": p.description,
+                "is_default": p.is_default,
+                "is_current": p.name == self._current_profile,
+            }
             for p in self._profiles.values()
         ]
 
@@ -94,34 +133,19 @@ class ProfileManager:
         """Delete a profile."""
         if name in self._profiles and name != "default":
             del self._profiles[name]
-            profile_file = self.data_dir / f"{name}.json"
-            profile_file.unlink(missing_ok=True)
+            if self._current_profile == name:
+                self._current_profile = "default"
+            self._save()
             return True
         return False
 
-    def export_profile(self, name: str) -> Optional[str]:
-        """Export profile as JSON."""
+    def update_profile(self, name: str, **kwargs) -> bool:
+        """Update a profile."""
         profile = self._profiles.get(name)
         if profile:
-            return json.dumps({
-                "name": profile.name,
-                "description": profile.description,
-                "model": profile.model,
-                "provider": profile.provider,
-                "personality": profile.personality,
-                "config": profile.config,
-                "skills": profile.skills,
-            }, indent=2)
-        return None
-
-    def import_profile(self, data: str) -> Optional[Profile]:
-        """Import profile from JSON."""
-        try:
-            profile_data = json.loads(data)
-            profile = Profile(**profile_data)
-            self._profiles[profile.name] = profile
-            self._save_profile(profile)
-            return profile
-        except Exception as e:
-            logger.error(f"Failed to import profile: {e}")
-            return None
+            for key, value in kwargs.items():
+                if hasattr(profile, key):
+                    setattr(profile, key, value)
+            self._save()
+            return True
+        return False

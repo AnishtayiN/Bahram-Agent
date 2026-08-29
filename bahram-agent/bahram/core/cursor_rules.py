@@ -1,95 +1,77 @@
-"""Cursor rules and context file system for Bahram Agent."""
+"""Cursor rules integration for Bahram Agent."""
 
 from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
 
-# Standard context file names (priority order)
-CONTEXT_FILE_NAMES = [
-    ".bahram.md",
-    "AGENTS.md",
-    "CLAUDE.md",
-    "SOUL.md",
-    ".cursorrules",
-    "CONTEXT.md",
-    "INSTRUCTIONS.md",
-    ".opencode",
-    "RULES.md",
-    "PROMPT.md",
-    "SYSTEM.md",
-]
-
-
 class CursorRules:
-    """Manage .cursorrules and similar context files."""
+    """Load and apply .cursorrules files."""
 
-    def __init__(self, project_dir: str = ".") -> None:
-        self.project_dir = Path(project_dir)
-        self._rules_content: Optional[str] = None
+    def __init__(self, project_root: str = ".") -> None:
+        self.project_root = Path(project_root)
+        self._rules: list[str] = []
+        self._loaded = False
 
-    def discover_rules_files(self) -> list[Path]:
-        """Discover all rules/context files."""
-        found = []
+    def load(self) -> None:
+        """Load .cursorrules from project root."""
+        if self._loaded:
+            return
 
-        for filename in CONTEXT_FILE_NAMES:
-            filepath = self.project_dir / filename
-            if filepath.exists():
-                found.append(filepath)
-                logger.debug(f"Found rules file: {filepath}")
-
-        # Check .bahram/ directory
-        bahram_dir = self.project_dir / ".bahram"
-        if bahram_dir.exists():
-            for md_file in bahram_dir.glob("*.md"):
-                found.append(md_file)
-
-        # Check .cursor/ directory
-        cursor_dir = self.project_dir / ".cursor"
-        if cursor_dir.exists():
-            for md_file in cursor_dir.glob("*.md"):
-                found.append(md_file)
-
-        # Check .claude/ directory
-        claude_dir = self.project_dir / ".claude"
-        if claude_dir.exists():
-            for md_file in claude_dir.glob("*.md"):
-                found.append(md_file)
-
-        return found
-
-    def load_rules(self) -> str:
-        """Load and combine all rules files."""
-        if self._rules_content is not None:
-            return self._rules_content
-
-        rules_files = self.discover_rules_files()
-
-        if not rules_files:
-            return ""
-
-        parts = []
-        for filepath in rules_files:
+        rules_file = self.project_root / ".cursorrules"
+        if rules_file.exists():
             try:
-                content = filepath.read_text(encoding="utf-8")
-                parts.append(f"## From {filepath.name}\n\n{content}")
+                content = rules_file.read_text()
+                self._rules = [line.strip() for line in content.split("\n") if line.strip()]
+                logger.info(f"Loaded {len(self._rules)} cursor rules")
             except Exception as e:
-                logger.warning(f"Failed to read {filepath}: {e}")
+                logger.warning(f"Failed to load .cursorrules: {e}")
 
-        self._rules_content = "\n\n---\n\n".join(parts)
-        return self._rules_content
+        self._loaded = True
 
-    def get_system_prompt_addition(self) -> str:
-        """Get rules to add to system prompt."""
-        rules = self.load_rules()
+    def get_rules(self) -> list[str]:
+        """Get loaded rules."""
+        self.load()
+        return self._rules.copy()
+
+    def get_rules_text(self) -> str:
+        """Get rules as formatted text."""
+        rules = self.get_rules()
         if not rules:
             return ""
-        return f"\n\n## Project Rules\n\n{rules}"
 
-    def clear_cache(self) -> None:
-        """Clear cached rules."""
-        self._rules_content = None
+        lines = ["## Cursor Rules", ""]
+        for rule in rules:
+            lines.append(f"- {rule}")
+        return "\n".join(lines)
+
+    def add_rule(self, rule: str) -> None:
+        """Add a rule."""
+        self.load()
+        if rule not in self._rules:
+            self._rules.append(rule)
+            self._save()
+
+    def remove_rule(self, rule: str) -> bool:
+        """Remove a rule."""
+        self.load()
+        if rule in self._rules:
+            self._rules.remove(rule)
+            self._save()
+            return True
+        return False
+
+    def _save(self) -> None:
+        """Save rules to file."""
+        rules_file = self.project_root / ".cursorrules"
+        content = "\n".join(self._rules)
+        rules_file.write_text(content)
+
+    def has_rules(self) -> bool:
+        """Check if rules exist."""
+        self.load()
+        return len(self._rules) > 0

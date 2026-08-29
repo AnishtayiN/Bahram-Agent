@@ -5,101 +5,92 @@ from __future__ import annotations
 import logging
 import time
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
 
 @dataclass
-class CircuitBreakerState:
-    """State of a circuit breaker."""
+class CircuitState:
+    """Circuit breaker state."""
 
     platform: str
+    failures: int = 0
+    successes: int = 0
+    last_failure: float = 0.0
     state: str = "closed"  # closed, open, half-open
-    failure_count: int = 0
-    last_failure: float = 0
-    last_success: float = 0
-    trip_count: int = 0
+    failure_threshold: int = 5
+    recovery_timeout: float = 300.0  # 5 minutes
 
 
 class CircuitBreaker:
     """Circuit breaker for platform adapters."""
 
-    def __init__(
-        self,
-        failure_threshold: int = 5,
-        recovery_timeout: int = 300,  # 5 minutes
-        half_open_max: int = 3,
-    ) -> None:
-        self.failure_threshold = failure_threshold
-        self.recovery_timeout = recovery_timeout
-        self.half_open_max = half_open_max
-        self._breakers: dict[str, CircuitBreakerState] = {}
+    def __init__(self) -> None:
+        self._circuits: dict[str, CircuitState] = {}
+        self._failure_threshold = 5
+        self._recovery_timeout = 300.0
 
-    def _get_breaker(self, platform: str) -> CircuitBreakerState:
-        """Get or create breaker for platform."""
-        if platform not in self._breakers:
-            self._breakers[platform] = CircuitBreakerState(platform=platform)
-        return self._breakers[platform]
+    def get_circuit(self, platform: str) -> CircuitState:
+        """Get circuit state for platform."""
+        if platform not in self._circuits:
+            self._circuits[platform] = CircuitState(platform=platform)
+        return self._circuits[platform]
 
     def record_success(self, platform: str) -> None:
-        """Record a success."""
-        breaker = self._get_breaker(platform)
-        breaker.last_success = time.time()
+        """Record a successful call."""
+        circuit = self.get_circuit(platform)
+        circuit.successes += 1
 
-        if breaker.state == "half-open":
-            breaker.state = "closed"
-            breaker.failure_count = 0
-            logger.info(f"Circuit breaker closed for {platform}")
+        if circuit.state == "half-open":
+            circuit.state = "closed"
+            circuit.failures = 0
+            logger.info(f"Circuit closed for {platform}")
 
     def record_failure(self, platform: str) -> None:
-        """Record a failure."""
-        breaker = self._get_breaker(platform)
-        breaker.failure_count += 1
-        breaker.last_failure = time.time()
+        """Record a failed call."""
+        circuit = self.get_circuit(platform)
+        circuit.failures += 1
+        circuit.last_failure = time.time()
 
-        if breaker.failure_count >= self.failure_threshold:
-            if breaker.state != "open":
-                breaker.state = "open"
-                breaker.trip_count += 1
-                logger.warning(f"Circuit breaker tripped for {platform}")
+        if circuit.failures >= circuit.failure_threshold:
+            circuit.state = "open"
+            logger.warning(f"Circuit opened for {platform} after {circuit.failures} failures")
 
-    def should_allow(self, platform: str) -> bool:
-        """Check if request should be allowed."""
-        breaker = self._get_breaker(platform)
+    def can_execute(self, platform: str) -> tuple[bool, str]:
+        """Check if execution is allowed."""
+        circuit = self.get_circuit(platform)
 
-        if breaker.state == "closed":
-            return True
+        if circuit.state == "closed":
+            return True, "Circuit closed"
 
-        if breaker.state == "open":
+        if circuit.state == "open":
             # Check if recovery timeout has passed
-            if time.time() - breaker.last_failure > self.recovery_timeout:
-                breaker.state = "half-open"
-                logger.info(f"Circuit breaker half-open for {platform}")
-                return True
-            return False
+            if time.time() - circuit.last_failure > circuit.recovery_timeout:
+                circuit.state = "half-open"
+                logger.info(f"Circuit half-open for {platform}")
+                return True, "Circuit half-open"
+            else:
+                remaining = circuit.recovery_timeout - (time.time() - circuit.last_failure)
+                return False, f"Circuit open, retry in {remaining:.0f}s"
 
-        if breaker.state == "half-open":
-            # Allow limited requests
-            return True
-
-        return False
-
-    def get_state(self, platform: str) -> dict:
-        """Get breaker state."""
-        breaker = self._get_breaker(platform)
-        return {
-            "platform": breaker.platform,
-            "state": breaker.state,
-            "failure_count": breaker.failure_count,
-            "trip_count": breaker.trip_count,
-        }
+        # Half-open: allow one request
+        return True, "Circuit half-open"
 
     def reset(self, platform: str) -> None:
-        """Reset breaker for platform."""
-        if platform in self._breakers:
-            self._breakers[platform] = CircuitBreakerState(platform=platform)
+        """Reset circuit for platform."""
+        if platform in self._circuits:
+            del self._circuits[platform]
+            logger.info(f"Circuit reset for {platform}")
 
-    def get_all_states(self) -> list[dict]:
-        """Get all breaker states."""
-        return [self.get_state(p) for p in self._breakers]
+    def get_status(self) -> dict[str, dict]:
+        """Get status of all circuits."""
+        return {
+            platform: {
+                "state": circuit.state,
+                "failures": circuit.failures,
+                "successes": circuit.successes,
+                "last_failure": circuit.last_failure,
+            }
+            for platform, circuit in self._circuits.items()
+        }

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import logging
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -11,68 +12,108 @@ logger = logging.getLogger(__name__)
 
 
 @dataclass
-class ContextReference:
-    """A reference to context from another file/source."""
+class ContextRef:
+    """A reference to context content."""
 
     id: str
-    source: str  # file, url, skill
-    path: str
-    description: str = ""
-    content: str = ""
+    content: str
+    source: str
     metadata: dict = field(default_factory=dict)
 
 
-class ContextReferenceManager:
-    """Manage context references."""
+class ContextRefs:
+    """Manage context references for message enhancement."""
 
-    def __init__(self) -> None:
-        self._references: dict[str, ContextReference] = {}
-        self._counter = 0
+    def __init__(self, data_dir: str = "data/context") -> None:
+        self.data_dir = Path(data_dir)
+        self.data_dir.mkdir(parents=True, exist_ok=True)
+        self._refs: dict[str, ContextRef] = {}
+        self._load()
 
-    def add_reference(
-        self,
-        source: str,
-        path: str,
-        description: str = "",
-        content: str = "",
-    ) -> ContextReference:
+    def _load(self) -> None:
+        """Load refs from disk."""
+        refs_file = self.data_dir / "context_refs.json"
+        if refs_file.exists():
+            try:
+                with open(refs_file) as f:
+                    data = json.load(f)
+                for ref_data in data:
+                    ref = ContextRef(**ref_data)
+                    self._refs[ref.id] = ref
+            except Exception as e:
+                logger.warning(f"Failed to load context refs: {e}")
+
+    def _save(self) -> None:
+        """Save refs to disk."""
+        refs_file = self.data_dir / "context_refs.json"
+        data = [
+            {
+                "id": r.id,
+                "content": r.content,
+                "source": r.source,
+                "metadata": r.metadata,
+            }
+            for r in self._refs.values()
+        ]
+        with open(refs_file, "w") as f:
+            json.dump(data, f, indent=2)
+
+    def add_ref(self, content: str, source: str = "", metadata: dict = None) -> ContextRef:
         """Add a context reference."""
-        self._counter += 1
-        ref = ContextReference(
-            id=f"ref_{self._counter}",
-            source=source,
-            path=path,
-            description=description,
+        import hashlib
+        import time
+
+        ref_id = hashlib.md5(f"{content}{time.time()}".encode()).hexdigest()[:12]
+        ref = ContextRef(
+            id=ref_id,
             content=content,
+            source=source,
+            metadata=metadata or {},
         )
-        self._references[ref.id] = ref
+        self._refs[ref_id] = ref
+        self._save()
         return ref
 
-    def remove_reference(self, ref_id: str) -> bool:
-        """Remove a reference."""
-        if ref_id in self._references:
-            del self._references[ref_id]
+    def get_ref(self, ref_id: str) -> Optional[ContextRef]:
+        """Get a context reference."""
+        return self._refs.get(ref_id)
+
+    def search_refs(self, query: str) -> list[ContextRef]:
+        """Search context references."""
+        query_lower = query.lower()
+        results = []
+        for ref in self._refs.values():
+            if query_lower in ref.content.lower() or query_lower in ref.source.lower():
+                results.append(ref)
+        return results
+
+    def delete_ref(self, ref_id: str) -> bool:
+        """Delete a context reference."""
+        if ref_id in self._refs:
+            del self._refs[ref_id]
+            self._save()
             return True
         return False
 
-    def get_reference(self, ref_id: str) -> Optional[ContextReference]:
-        """Get a reference by ID."""
-        return self._references.get(ref_id)
+    def get_context_for_message(self, message: str, max_refs: int = 5) -> str:
+        """Get relevant context for a message."""
+        refs = self.search_refs(message)[:max_refs]
+        if not refs:
+            return ""
 
-    def list_references(self) -> list[ContextReference]:
+        context_parts = []
+        for ref in refs:
+            context_parts.append(f"[{ref.source}] {ref.content[:200]}")
+
+        return "\n".join(context_parts)
+
+    def list_refs(self) -> list[dict]:
         """List all references."""
-        return list(self._references.values())
-
-    def resolve_references(self) -> str:
-        """Resolve all references and return combined content."""
-        parts = []
-        for ref in self._references.values():
-            if ref.content:
-                parts.append(f"## {ref.description or ref.path}\n\n{ref.content}")
-            elif ref.source == "file":
-                try:
-                    content = Path(ref.path).read_text(encoding="utf-8")
-                    parts.append(f"## {ref.description or ref.path}\n\n{content}")
-                except Exception as e:
-                    logger.warning(f"Failed to read {ref.path}: {e}")
-        return "\n\n---\n\n".join(parts)
+        return [
+            {
+                "id": r.id,
+                "source": r.source,
+                "content_preview": r.content[:100],
+            }
+            for r in self._refs.values()
+        ]

@@ -2,171 +2,130 @@
 
 from __future__ import annotations
 
+import json
 import logging
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import Any, Optional, Callable
 
 logger = logging.getLogger(__name__)
 
 
 @dataclass
-class CompressionConfig:
-    """Compression configuration."""
+class CompressionResult:
+    """Result of context compression."""
 
-    enabled: bool = True
-    threshold: float = 0.5  # 50% of context window
-    target_ratio: float = 0.2  # Keep 20% of threshold
-    tail_mode: str = "lean"  # lean or legacy
-    protect_last_n: int = 20
-    min_tail_user_messages: int = 1
-    in_place: bool = True
+    compressed: str
+    original_tokens: int
+    compressed_tokens: int
+    ratio: float
 
 
 class ContextCompressor:
-    """Context compression system."""
+    """Compress context to reduce token usage."""
 
-    def __init__(self, config: CompressionConfig = None) -> None:
-        self.config = config or CompressionConfig()
-        self._previous_summary: Optional[str] = None
+    def __init__(self) -> None:
+        self._compression_level = 0.5  # 0-1, higher = more compression
+        self._enabled = True
 
-    def should_compress(self, token_count: int, max_tokens: int) -> bool:
-        """Check if context should be compressed."""
-        if not self.config.enabled:
-            return False
-
-        usage_ratio = token_count / max_tokens
-        return usage_ratio >= self.config.threshold
-
-    def compress(
+    async def compress(
         self,
         messages: list[dict],
-        token_count: int,
-        max_tokens: int,
-        summary_model: Any = None,
-    ) -> tuple[list[dict], str]:
-        """Compress messages.
+        model_fn: Callable = None,
+        target_tokens: int = 4000,
+    ) -> CompressionResult:
+        """Compress conversation context."""
+        if not self._enabled or not messages:
+            return CompressionResult(
+                compressed=json.dumps(messages),
+                original_tokens=0,
+                compressed_tokens=0,
+                ratio=1.0,
+            )
 
-        Returns:
-            Tuple of (compressed_messages, summary)
-        """
-        if not self.should_compress(token_count, max_tokens):
-            return messages, ""
+        # Estimate original tokens
+        original_text = json.dumps(messages)
+        original_tokens = len(original_text) // 4  # Rough estimate
 
-        logger.info(f"Compressing context: {token_count} tokens")
+        if original_tokens <= target_tokens:
+            return CompressionResult(
+                compressed=original_text,
+                original_tokens=original_tokens,
+                compressed_tokens=original_tokens,
+                ratio=1.0,
+            )
 
-        # Calculate how many messages to keep
-        total_messages = len(messages)
-        keep_count = max(
-            self.config.protect_last_n,
-            int(total_messages * self.config.target_ratio),
-        )
-
-        # Ensure we keep enough user messages
-        user_messages = [m for m in messages if m.get("role") == "user"]
-        kept_user = [m for m in messages[-keep_count:] if m.get("role") == "user"]
-
-        if len(kept_user) < self.config.min_tail_user_messages:
-            # Adjust keep_count to ensure minimum user messages
-            keep_count = min(keep_count + self.config.min_tail_user_messages, total_messages)
-
-        # Split messages
-        middle = messages[:-keep_count]
-        tail = messages[-keep_count:]
-
-        # Generate summary of middle section
-        summary = self._generate_summary(middle, summary_model, token_count)
-
-        # Assemble compressed messages
-        if self.config.in_place:
-            # Keep system message if present
-            system_msg = [m for m in messages if m.get("role") == "system"]
-            compressed = system_msg + [{"role": "summary", "content": summary}] + tail
+        # Use model-based compression if available
+        if model_fn:
+            compressed = await self._model_compress(messages, model_fn, target_tokens)
         else:
-            compressed = [{"role": "summary", "content": summary}] + tail
+            compressed = self._heuristic_compress(messages, target_tokens)
 
-        logger.info(
-            f"Compressed: {total_messages} -> {len(compressed)} messages "
-            f"(summary: {len(summary)} chars)"
+        compressed_tokens = len(compressed) // 4
+        ratio = compressed_tokens / original_tokens if original_tokens > 0 else 1.0
+
+        return CompressionResult(
+            compressed=compressed,
+            original_tokens=original_tokens,
+            compressed_tokens=compressed_tokens,
+            ratio=ratio,
         )
 
-        return compressed, summary
-
-    def _generate_summary(
+    async def _model_compress(
         self,
         messages: list[dict],
-        model: Any,
-        token_count: int,
+        model_fn: Callable,
+        target_tokens: int,
     ) -> str:
-        """Generate a summary of messages."""
-        # If we have a previous summary, update it
-        if self._previous_summary:
-            return self._update_summary(messages, model)
+        """Use LLM to compress context."""
+        full_context = json.dumps(messages)
+        prompt = f"""Compress this conversation context to approximately {target_tokens} tokens.
+Keep the most important information, key decisions, and recent context.
+Remove redundant, repetitive, or less important parts.
 
-        # Generate new summary
-        if model:
-            try:
-                content = "\n".join(
-                    f"{m.get('role', 'unknown')}: {m.get('content', '')}"
-                    for m in messages
-                    if m.get('content')
-                )
+Context:
+{full_context[:8000]}
 
-                # Use model to summarize
-                prompt = f"""Summarize this conversation concisely, preserving key information:
+Return the compressed context as JSON:"""
 
-{content[:8000]}
+        try:
+            response = await model_fn([{"role": "user", "content": prompt}])
+            return response
+        except Exception as e:
+            logger.warning(f"Model compression failed: {e}")
+            return self._heuristic_compress(messages, target_tokens)
 
-Provide a structured summary with:
-- Main topics discussed
-- Key decisions made
-- Important information
-- Current state"""
+    def _heuristic_compress(self, messages: list[dict], target_tokens: int) -> str:
+        """Heuristic compression."""
+        if not messages:
+            return "[]"
 
-                # This is a placeholder - use actual model in production
-                summary = f"[Summary of {len(messages)} messages, ~{token_count} tokens]"
-                self._previous_summary = summary
-                return summary
+        # Keep system message
+        result = []
+        if messages[0].get("role") == "system":
+            result.append(messages[0])
+            messages = messages[1:]
 
-            except Exception as e:
-                logger.error(f"Summary generation failed: {e}")
+        # Keep last N messages
+        target_count = min(len(messages), target_tokens // 200)
+        if target_count < len(messages):
+            result.extend(messages[-target_count:])
+        else:
+            result.extend(messages)
 
-        # Fallback summary
-        summary = f"[Conversation summary: {len(messages)} messages]"
-        self._previous_summary = summary
-        return summary
+        # Add compression marker
+        if len(messages) > target_count:
+            skipped = len(messages) - target_count
+            result.insert(1, {
+                "role": "system",
+                "content": f"[Context compressed: {skipped} earlier messages summarized]",
+            })
 
-    def _update_summary(self, new_messages: list[dict], model: Any) -> str:
-        """Update existing summary with new messages."""
-        if model:
-            try:
-                prompt = f"""Update this summary with new information:
+        return json.dumps(result)
 
-Previous summary:
-{self._previous_summary}
+    def set_level(self, level: float) -> None:
+        """Set compression level (0-1)."""
+        self._compression_level = max(0, min(1, level))
 
-New messages:
-{chr(10).join(m.get('content', '')[:500] for m in new_messages if m.get('content'))[:2000]}
-
-Provide an updated summary:"""
-
-                # Placeholder - use actual model in production
-                updated = f"{self._previous_summary} [Updated with {len(new_messages)} new messages]"
-                self._previous_summary = updated
-                return updated
-
-            except Exception as e:
-                logger.error(f"Summary update failed: {e}")
-
-        return self._previous_summary or ""
-
-    def clear_cache(self) -> None:
-        """Clear the summary cache."""
-        self._previous_summary = None
-
-    def get_stats(self) -> dict:
-        """Get compression statistics."""
-        return {
-            "enabled": self.config.enabled,
-            "threshold": self.config.threshold,
-            "has_cached_summary": self._previous_summary is not None,
-        }
+    def set_enabled(self, enabled: bool) -> None:
+        """Enable/disable compression."""
+        self._enabled = enabled

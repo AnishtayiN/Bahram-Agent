@@ -4,10 +4,10 @@ from __future__ import annotations
 
 import json
 import logging
+import time
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -16,130 +16,137 @@ logger = logging.getLogger(__name__)
 class DeliveryEntry:
     """A delivery ledger entry."""
 
-    id: str
+    message_id: str
     platform: str
     chat_id: str
-    response: str
-    status: str = "pending"  # pending, sent, failed, recovered
-    created_at: str = field(default_factory=lambda: datetime.now().isoformat())
-    sent_at: Optional[str] = None
+    content: str
+    status: str  # "pending", "sent", "failed"
+    timestamp: float
     attempts: int = 0
+    max_attempts: int = 3
+    error: str = ""
 
 
 class DeliveryLedger:
     """Track message delivery for crash recovery."""
 
-    MAX_ATTEMPTS = 3
-    MAX_AGE_HOURS = 24
-    RETENTION_DAYS = 7
-
-    def __init__(self, data_dir: str = "data/delivery") -> None:
+    def __init__(self, data_dir: str = "data/gateway") -> None:
         self.data_dir = Path(data_dir)
         self.data_dir.mkdir(parents=True, exist_ok=True)
         self._entries: dict[str, DeliveryEntry] = {}
-        self._load_entries()
+        self._load()
 
-    def _load_entries(self) -> None:
-        """Load entries from disk."""
-        ledger_file = self.data_dir / "ledger.json"
+    def _load(self) -> None:
+        """Load ledger from disk."""
+        ledger_file = self.data_dir / "delivery_ledger.json"
         if ledger_file.exists():
             try:
                 with open(ledger_file) as f:
                     data = json.load(f)
-                for item in data:
-                    entry = DeliveryEntry(**item)
-                    self._entries[entry.id] = entry
+                for entry_data in data:
+                    entry = DeliveryEntry(**entry_data)
+                    self._entries[entry.message_id] = entry
             except Exception as e:
-                logger.warning(f"Failed to load ledger: {e}")
+                logger.warning(f"Failed to load delivery ledger: {e}")
 
-    def _save_entries(self) -> None:
-        """Save entries to disk."""
-        ledger_file = self.data_dir / "ledger.json"
+    def _save(self) -> None:
+        """Save ledger to disk."""
+        ledger_file = self.data_dir / "delivery_ledger.json"
         data = [
             {
-                "id": e.id,
+                "message_id": e.message_id,
                 "platform": e.platform,
                 "chat_id": e.chat_id,
-                "response": e.response,
+                "content": e.content,
                 "status": e.status,
-                "created_at": e.created_at,
-                "sent_at": e.sent_at,
+                "timestamp": e.timestamp,
                 "attempts": e.attempts,
+                "max_attempts": e.max_attempts,
+                "error": e.error,
             }
             for e in self._entries.values()
         ]
         with open(ledger_file, "w") as f:
             json.dump(data, f, indent=2)
 
-    def record_delivery(
+    def record_send(
         self,
-        entry_id: str,
+        message_id: str,
         platform: str,
         chat_id: str,
-        response: str,
+        content: str,
     ) -> DeliveryEntry:
-        """Record a delivery attempt."""
+        """Record a pending send."""
         entry = DeliveryEntry(
-            id=entry_id,
+            message_id=message_id,
             platform=platform,
             chat_id=chat_id,
-            response=response,
+            content=content,
+            status="pending",
+            timestamp=time.time(),
         )
-        self._entries[entry_id] = entry
-        self._save_entries()
+        self._entries[message_id] = entry
+        self._save()
         return entry
 
-    def mark_sent(self, entry_id: str) -> None:
-        """Mark delivery as successful."""
-        entry = self._entries.get(entry_id)
-        if entry:
-            entry.status = "sent"
-            entry.sent_at = datetime.now().isoformat()
-            self._save_entries()
+    def mark_sent(self, message_id: str) -> bool:
+        """Mark a message as sent."""
+        if message_id in self._entries:
+            self._entries[message_id].status = "sent"
+            self._save()
+            return True
+        return False
 
-    def mark_failed(self, entry_id: str) -> None:
-        """Mark delivery as failed."""
-        entry = self._entries.get(entry_id)
-        if entry:
+    def mark_failed(self, message_id: str, error: str) -> bool:
+        """Mark a message as failed."""
+        if message_id in self._entries:
+            entry = self._entries[message_id]
             entry.attempts += 1
-            if entry.attempts >= self.MAX_ATTEMPTS:
+            entry.error = error
+            if entry.attempts >= entry.max_attempts:
                 entry.status = "failed"
-            self._save_entries()
+            self._save()
+            return True
+        return False
 
-    def get_recoverable(self) -> list[DeliveryEntry]:
-        """Get entries that need recovery."""
-        now = datetime.now()
-        recoverable = []
+    def get_pending(self) -> list[dict]:
+        """Get pending messages."""
+        return [
+            {
+                "message_id": e.message_id,
+                "platform": e.platform,
+                "chat_id": e.chat_id,
+                "content": e.content[:100],
+                "attempts": e.attempts,
+            }
+            for e in self._entries.values()
+            if e.status == "pending"
+        ]
 
-        for entry in self._entries.values():
-            if entry.status == "sent":
-                continue
+    def get_retryable(self) -> list[dict]:
+        """Get messages that can be retried."""
+        return [
+            {
+                "message_id": e.message_id,
+                "platform": e.platform,
+                "chat_id": e.chat_id,
+                "content": e.content,
+            }
+            for e in self._entries.values()
+            if e.status == "pending" and e.attempts < e.max_attempts
+        ]
 
-            created = datetime.fromisoformat(entry.created_at)
-            age = now - created
-
-            if age > timedelta(hours=self.MAX_AGE_HOURS):
-                continue
-
-            if entry.attempts < self.MAX_ATTEMPTS:
-                recoverable.append(entry)
-
-        return recoverable
-
-    def cleanup_old(self) -> int:
-        """Clean up old entries."""
-        cutoff = datetime.now() - timedelta(days=self.RETENTION_DAYS)
-        to_delete = []
-
-        for entry_id, entry in self._entries.items():
-            created = datetime.fromisoformat(entry.created_at)
-            if created < cutoff:
-                to_delete.append(entry_id)
-
-        for entry_id in to_delete:
-            del self._entries[entry_id]
-
-        if to_delete:
-            self._save_entries()
-
-        return len(to_delete)
+    def cleanup(self, max_age_seconds: int = 86400) -> int:
+        """Cleanup old entries."""
+        now = time.time()
+        to_remove = [
+            msg_id
+            for msg_id, entry in self._entries.items()
+            if entry.status in ("sent", "failed")
+            and (now - entry.timestamp) > max_age_seconds
+        ]
+        for msg_id in to_remove:
+            del self._entries[msg_id]
+        if to_remove:
+            self._save()
+        return len(to_remove)

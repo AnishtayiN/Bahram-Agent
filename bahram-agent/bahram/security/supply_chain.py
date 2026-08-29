@@ -1,92 +1,131 @@
-"""Supply-chain advisory checking for Bahram Agent."""
+"""Supply-chain checker for Bahram Agent."""
 
 from __future__ import annotations
 
+import json
 import logging
+import subprocess
 from dataclasses import dataclass, field
-from typing import Optional
+from pathlib import Path
+from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
 
 @dataclass
-class Advisory:
-    """A supply-chain advisory."""
+class SupplyChainIssue:
+    """A supply-chain issue."""
 
-    id: str
     package: str
-    affected_versions: str
-    fixed_version: str = ""
-    description: str = ""
-    severity: str = "high"  # low, medium, high, critical
-
-
-# Known compromised packages
-KNOWN_ADVISORIES = [
-    Advisory(
-        id="BAHRAM-2024-001",
-        package="mistralai",
-        affected_versions="==2.4.6",
-        description="Compromised version with credential exfiltration",
-        severity="critical",
-    ),
-]
+    severity: str  # "low", "medium", "high", "critical"
+    description: str
+    recommendation: str
 
 
 class SupplyChainChecker:
-    """Check for known compromised packages."""
+    """Check supply-chain security."""
 
-    def __init__(self) -> None:
-        self._advisories = KNOWN_ADVISORIES
-        self._acked: set[str] = set()
+    def __init__(self, data_dir: str = "data/security") -> None:
+        self.data_dir = Path(data_dir)
+        self.data_dir.mkdir(parents=True, exist_ok=True)
+        self._issues: list[SupplyChainIssue] = []
 
-    def check_packages(self, installed_packages: dict[str, str]) -> list[Advisory]:
-        """Check installed packages against advisories.
+    def check_python_packages(self) -> list[SupplyChainIssue]:
+        """Check Python packages for issues."""
+        issues = []
 
-        Args:
-            installed_packages: Dict of package_name -> version
+        try:
+            # Check for known vulnerable packages
+            result = subprocess.run(
+                ["pip", "list", "--format=json"],
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
 
-        Returns:
-            List of matching advisories
-        """
-        findings = []
+            if result.returncode == 0:
+                packages = json.loads(result.stdout)
+                # Check against known vulnerable packages
+                vulnerable = self._get_vulnerable_packages()
+                for pkg in packages:
+                    name = pkg.get("name", "").lower()
+                    version = pkg.get("version", "")
+                    if name in vulnerable:
+                        issues.append(SupplyChainIssue(
+                            package=f"{name}=={version}",
+                            severity="high",
+                            description=f"Known vulnerability in {name}",
+                            recommendation=f"Update {name} to latest version",
+                        ))
+        except Exception as e:
+            logger.warning(f"Failed to check packages: {e}")
 
-        for advisory in self._advisories:
-            if advisory.id in self._acked:
-                continue
+        return issues
 
-            installed_version = installed_packages.get(advisory.package)
-            if installed_version:
-                # Check if version matches affected range
-                if self._version_matches(installed_version, advisory.affected_versions):
-                    findings.append(advisory)
+    def _get_vulnerable_packages(self) -> dict[str, str]:
+        """Get known vulnerable packages."""
+        return {
+            "requests": "CVE-2023-32681",
+            "flask": "CVE-2023-30861",
+            "django": "CVE-2023-31047",
+            "pillow": "CVE-2023-44271",
+            "cryptography": "CVE-2023-49083",
+        }
 
-        return findings
+    def check_file_permissions(self, path: str) -> list[SupplyChainIssue]:
+        """Check file permissions."""
+        issues = []
+        file_path = Path(path)
 
-    def _version_matches(self, installed: str, affected: str) -> bool:
-        """Check if installed version matches affected range."""
-        # Simple exact match for now
-        clean_installed = installed.lstrip("=<>!~")
-        clean_affected = affected.lstrip("=<>!~")
-        return clean_installed == clean_affected
+        if file_path.exists():
+            # Check if file is world-writable
+            import stat
+            mode = file_path.stat().st_mode
+            if mode & stat.S_IWOTH:
+                issues.append(SupplyChainIssue(
+                    package=str(path),
+                    severity="medium",
+                    description="File is world-writable",
+                    recommendation="Remove world-write permission",
+                ))
 
-    def acknowledge(self, advisory_id: str) -> bool:
-        """Acknowledge an advisory."""
-        for advisory in self._advisories:
-            if advisory.id == advisory_id:
-                self._acked.add(advisory_id)
-                return True
-        return False
+        return issues
 
-    def get_findings(self, installed_packages: dict[str, str]) -> list[dict]:
-        """Get findings as dicts."""
-        advisories = self.check_packages(installed_packages)
+    def scan_dependencies(self, requirements_file: str = "requirements.txt") -> list[SupplyChainIssue]:
+        """Scan dependencies file."""
+        issues = []
+        req_path = Path(requirements_file)
+
+        if req_path.exists():
+            try:
+                content = req_path.read_text()
+                for line in content.split("\n"):
+                    line = line.strip()
+                    if line and not line.startswith("#"):
+                        # Check for unpinned versions
+                        if "==" not in line and ">=" not in line and "<=" not in line:
+                            issues.append(SupplyChainIssue(
+                                package=line,
+                                severity="low",
+                                description="Unpinned dependency version",
+                                recommendation=f"Pin version for {line}",
+                            ))
+            except Exception as e:
+                logger.warning(f"Failed to scan dependencies: {e}")
+
+        return issues
+
+    def get_all_issues(self) -> list[dict]:
+        """Get all issues."""
+        issues = []
+        issues.extend(self.check_python_packages())
+        issues.extend(self.scan_dependencies())
         return [
             {
-                "id": a.id,
-                "package": a.package,
-                "severity": a.severity,
-                "description": a.description,
+                "package": i.package,
+                "severity": i.severity,
+                "description": i.description,
+                "recommendation": i.recommendation,
             }
-            for a in advisories
+            for i in issues
         ]

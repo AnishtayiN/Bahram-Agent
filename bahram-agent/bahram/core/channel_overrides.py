@@ -88,17 +88,7 @@ class ChannelOverrideManager:
 
     def get_override(self, platform: str, channel_id: str) -> Optional[ChannelOverride]:
         """Get override for a channel."""
-        # Try exact match first
-        override = self._overrides.get(platform, {}).get(channel_id)
-        if override:
-            return override
-
-        # Try parent channel (for threads)
-        parent_id = channel_id.rsplit("-", 1)[0] if "-" in channel_id else None
-        if parent_id:
-            return self._overrides.get(platform, {}).get(parent_id)
-
-        return None
+        return self._overrides.get(platform, {}).get(channel_id)
 
     def remove_override(self, platform: str, channel_id: str) -> bool:
         """Remove a channel override."""

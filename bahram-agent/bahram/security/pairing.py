@@ -1,4 +1,4 @@
-"""DM pairing authorization for Bahram Agent."""
+"""DM pairing for Bahram Agent."""
 
 from __future__ import annotations
 
@@ -8,151 +8,116 @@ import secrets
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
 
 @dataclass
 class PairingRequest:
-    """A pending pairing request."""
+    """A DM pairing request."""
 
+    code: str
     platform: str
     user_id: str
-    code: str
-    created_at: float = field(default_factory=time.time)
-    attempts: int = 0
+    timestamp: float
+    expires_at: float
+    used: bool = False
 
 
-class PairingManager:
-    """Manage DM pairing authorization."""
+class DMPairingManager:
+    """Manage DM pairing for authorization."""
 
-    CODE_LENGTH = 8
-    CODE_TTL = 3600  # 1 hour
-    MAX_ATTEMPTS = 5
-    LOCKOUT_DURATION = 3600  # 1 hour
-    RATE_LIMIT = 600  # 10 minutes
-
-    def __init__(self, data_dir: str = "data/pairing") -> None:
+    def __init__(self, data_dir: str = "data/security") -> None:
         self.data_dir = Path(data_dir)
         self.data_dir.mkdir(parents=True, exist_ok=True)
-        self._pending: dict[str, PairingRequest] = {}
-        self._approved: dict[str, set[str]] = {}
-        self._rate_limits: dict[str, float] = {}
-        self._lockouts: dict[str, float] = {}
-        self._load_data()
+        self._requests: list[PairingRequest] = []
+        self._paired_users: dict[str, dict] = {}
+        self._code_length = 8
+        self._expiry_seconds = 300  # 5 minutes
+        self._load()
 
-    def _load_data(self) -> None:
-        """Load pairing data."""
-        pending_file = self.data_dir / "pending.json"
-        if pending_file.exists():
+    def _load(self) -> None:
+        """Load pairing data from disk."""
+        pairing_file = self.data_dir / "dm_pairing.json"
+        if pairing_file.exists():
             try:
-                with open(pending_file) as f:
+                with open(pairing_file) as f:
                     data = json.load(f)
-                for item in data:
-                    pr = PairingRequest(**item)
-                    key = f"{pr.platform}:{pr.user_id}"
-                    self._pending[key] = pr
+                self._paired_users = data.get("paired_users", {})
             except Exception as e:
-                logger.warning(f"Failed to load pending: {e}")
+                logger.warning(f"Failed to load pairing data: {e}")
 
-        approved_file = self.data_dir / "approved.json"
-        if approved_file.exists():
-            try:
-                with open(approved_file) as f:
-                    data = json.load(f)
-                for platform, users in data.items():
-                    self._approved[platform] = set(users)
-            except Exception as e:
-                logger.warning(f"Failed to load approved: {e}")
-
-    def _save_data(self) -> None:
-        """Save pairing data."""
-        # Save pending
-        pending_file = self.data_dir / "pending.json"
-        data = [
-            {
-                "platform": pr.platform,
-                "user_id": pr.user_id,
-                "code": pr.code,
-                "created_at": pr.created_at,
-                "attempts": pr.attempts,
-            }
-            for pr in self._pending.values()
-        ]
-        with open(pending_file, "w") as f:
+    def _save(self) -> None:
+        """Save pairing data to disk."""
+        pairing_file = self.data_dir / "dm_pairing.json"
+        data = {"paired_users": self._paired_users}
+        with open(pairing_file, "w") as f:
             json.dump(data, f, indent=2)
 
-        # Save approved
-        approved_file = self.data_dir / "approved.json"
-        data = {platform: list(users) for platform, users in self._approved.items()}
-        with open(approved_file, "w") as f:
-            json.dump(data, f, indent=2)
-
-    def request_pairing(self, platform: str, user_id: str) -> Optional[str]:
-        """Request a pairing code."""
-        key = f"{platform}:{user_id}"
-
-        # Check rate limit
-        if key in self._rate_limits:
-            if time.time() - self._rate_limits[key] < self.RATE_LIMIT:
-                return None
-
-        # Check lockout
-        if key in self._lockouts:
-            if time.time() - self._lockouts[key] < self.LOCKOUT_DURATION:
-                return None
-            del self._lockouts[key]
-
-        # Generate code
-        code = secrets.token_urlsafe(self.CODE_LENGTH)[:self.CODE_LENGTH].upper()
-        self._pending[key] = PairingRequest(
+    def generate_code(self, platform: str, user_id: str) -> str:
+        """Generate a pairing code."""
+        code = secrets.token_urlsafe(self._code_length)[: self._code_length]
+        request = PairingRequest(
+            code=code,
             platform=platform,
             user_id=user_id,
-            code=code,
+            timestamp=time.time(),
+            expires_at=time.time() + self._expiry_seconds,
         )
-        self._rate_limits[key] = time.time()
-        self._save_data()
+        self._requests.append(request)
         return code
 
-    def approve_pairing(self, platform: str, code: str) -> bool:
-        """Approve a pairing code."""
-        for key, pr in self._pending.items():
-            if pr.platform == platform and pr.code == code:
-                # Check expiry
-                if time.time() - pr.created_at > self.CODE_TTL:
-                    del self._pending[key]
-                    self._save_data()
-                    return False
+    def verify_code(self, code: str) -> Optional[dict]:
+        """Verify a pairing code."""
+        for request in self._requests:
+            if (
+                request.code == code
+                and not request.used
+                and time.time() < request.expires_at
+            ):
+                request.used = True
+                # Mark user as paired
+                user_key = f"{request.platform}:{request.user_id}"
+                self._paired_users[user_key] = {
+                    "platform": request.platform,
+                    "user_id": request.user_id,
+                    "paired_at": time.time(),
+                }
+                self._save()
+                return self._paired_users[user_key]
 
-                # Approve
-                if platform not in self._approved:
-                    self._approved[platform] = set()
-                self._approved[platform].add(pr.user_id)
-                del self._pending[key]
-                self._save_data()
-                return True
-        return False
+        return None
 
-    def is_approved(self, platform: str, user_id: str) -> bool:
-        """Check if a user is approved."""
-        return user_id in self._approved.get(platform, set())
+    def is_paired(self, platform: str, user_id: str) -> bool:
+        """Check if a user is paired."""
+        user_key = f"{platform}:{user_id}"
+        return user_key in self._paired_users
 
-    def revoke_access(self, platform: str, user_id: str) -> bool:
-        """Revoke a user's access."""
-        if platform in self._approved:
-            self._approved[platform].discard(user_id)
-            self._save_data()
+    def unpair(self, platform: str, user_id: str) -> bool:
+        """Unpair a user."""
+        user_key = f"{platform}:{user_id}"
+        if user_key in self._paired_users:
+            del self._paired_users[user_key]
+            self._save()
             return True
         return False
 
-    def list_pending(self) -> list[dict]:
-        """List pending pairing requests."""
+    def list_paired(self) -> list[dict]:
+        """List paired users."""
         return [
-            {"platform": pr.platform, "user_id": pr.user_id, "code": pr.code}
-            for pr in self._pending.values()
+            {
+                "platform": v["platform"],
+                "user_id": v["user_id"],
+                "paired_at": v["paired_at"],
+            }
+            for v in self._paired_users.values()
         ]
 
-    def list_approved(self) -> dict[str, list[str]]:
-        """List approved users."""
-        return {p: list(u) for p, u in self._approved.items()}
+    def cleanup_expired(self) -> int:
+        """Cleanup expired pairing requests."""
+        now = time.time()
+        expired = [r for r in self._requests if r.expires_at < now or r.used]
+        for r in expired:
+            self._requests.remove(r)
+        return len(expired)

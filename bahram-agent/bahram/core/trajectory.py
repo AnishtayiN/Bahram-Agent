@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import json
 import logging
+import time
 from dataclasses import dataclass, field
-from datetime import datetime
 from pathlib import Path
 from typing import Any, Optional
 
@@ -14,164 +14,136 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class TrajectoryStep:
-    """A single step in a trajectory."""
+    """A step in a trajectory."""
 
-    role: str  # user, assistant, tool
-    content: str
-    tool_call: Optional[dict] = None
-    tool_result: Optional[str] = None
-    timestamp: str = field(default_factory=lambda: datetime.now().isoformat())
-    metadata: dict[str, Any] = field(default_factory=dict)
+    step_id: int
+    action: str
+    input: str
+    output: str
+    timestamp: float
+    duration: float = 0.0
 
 
 @dataclass
 class Trajectory:
-    """A complete trajectory of an agent interaction."""
+    """A complete trajectory."""
 
     id: str
+    name: str
     steps: list[TrajectoryStep] = field(default_factory=list)
-    model: str = ""
-    created_at: str = field(default_factory=lambda: datetime.now().isoformat())
-    metadata: dict[str, Any] = field(default_factory=dict)
+    start_time: float = 0.0
+    end_time: float = 0.0
+    status: str = "running"
 
 
 class TrajectoryGenerator:
-    """Generate and manage trajectories for training."""
+    """Generate and track trajectories."""
 
-    def __init__(self, output_dir: str = "data/trajectories") -> None:
-        self.output_dir = Path(output_dir)
-        self.output_dir.mkdir(parents=True, exist_ok=True)
-        self.trajectories: dict[str, Trajectory] = {}
+    def __init__(self, data_dir: str = "data/trajectories") -> None:
+        self.data_dir = Path(data_dir)
+        self.data_dir.mkdir(parents=True, exist_ok=True)
+        self._trajectories: dict[str, Trajectory] = {}
+        self._current: Optional[Trajectory] = None
 
-    def start_trajectory(self, trajectory_id: str, model: str = "") -> Trajectory:
+    def start(self, name: str) -> Trajectory:
         """Start a new trajectory."""
-        trajectory = Trajectory(id=trajectory_id, model=model)
-        self.trajectories[trajectory_id] = trajectory
+        import hashlib
+        traj_id = hashlib.md5(f"{name}{time.time()}".encode()).hexdigest()[:12]
+
+        trajectory = Trajectory(
+            id=traj_id,
+            name=name,
+            start_time=time.time(),
+        )
+        self._trajectories[traj_id] = trajectory
+        self._current = trajectory
         return trajectory
 
-    def add_step(
-        self,
-        trajectory_id: str,
-        role: str,
-        content: str,
-        tool_call: dict = None,
-        tool_result: str = None,
-    ) -> None:
-        """Add a step to a trajectory."""
-        trajectory = self.trajectories.get(trajectory_id)
-        if trajectory:
-            step = TrajectoryStep(
-                role=role,
-                content=content,
-                tool_call=tool_call,
-                tool_result=tool_result,
-            )
-            trajectory.steps.append(step)
+    def add_step(self, action: str, input_text: str, output: str) -> None:
+        """Add a step to current trajectory."""
+        if not self._current:
+            return
 
-    def end_trajectory(self, trajectory_id: str) -> Optional[Trajectory]:
-        """End and save a trajectory."""
-        trajectory = self.trajectories.get(trajectory_id)
-        if trajectory:
-            self._save_trajectory(trajectory)
-            return trajectory
-        return None
+        step = TrajectoryStep(
+            step_id=len(self._current.steps),
+            action=action,
+            input=input_text,
+            output=output,
+            timestamp=time.time(),
+        )
+        self._current.steps.append(step)
 
-    def _save_trajectory(self, trajectory: Trajectory) -> None:
-        """Save trajectory to file."""
-        output_file = self.output_dir / f"trajectory_{trajectory.id}.json"
+    def finish(self, status: str = "completed") -> Optional[Trajectory]:
+        """Finish current trajectory."""
+        if not self._current:
+            return None
 
+        self._current.end_time = time.time()
+        self._current.status = status
+        result = self._current
+        self._current = None
+        self._save(result)
+        return result
+
+    def _save(self, trajectory: Trajectory) -> None:
+        """Save trajectory to disk."""
+        traj_file = self.data_dir / f"{trajectory.id}.json"
         data = {
             "id": trajectory.id,
-            "model": trajectory.model,
-            "created_at": trajectory.created_at,
+            "name": trajectory.name,
+            "start_time": trajectory.start_time,
+            "end_time": trajectory.end_time,
+            "status": trajectory.status,
             "steps": [
                 {
-                    "role": step.role,
-                    "content": step.content,
-                    "tool_call": step.tool_call,
-                    "tool_result": step.tool_result,
-                    "timestamp": step.timestamp,
+                    "step_id": s.step_id,
+                    "action": s.action,
+                    "input": s.input[:500],
+                    "output": s.output[:500],
+                    "timestamp": s.timestamp,
+                    "duration": s.duration,
                 }
-                for step in trajectory.steps
+                for s in trajectory.steps
             ],
-            "metadata": trajectory.metadata,
         }
-
-        with open(output_file, "w") as f:
+        with open(traj_file, "w") as f:
             json.dump(data, f, indent=2)
 
-        logger.info(f"Saved trajectory: {trajectory.id}")
+    def get_trajectory(self, traj_id: str) -> Optional[Trajectory]:
+        """Get a trajectory by ID."""
+        return self._trajectories.get(traj_id)
 
-    def export_sharegpt(self, trajectory_id: str) -> Optional[dict]:
-        """Export trajectory in ShareGPT format."""
-        trajectory = self.trajectories.get(trajectory_id)
-        if not trajectory:
-            return None
+    def list_trajectories(self) -> list[dict]:
+        """List all trajectories."""
+        return [
+            {
+                "id": t.id,
+                "name": t.name,
+                "status": t.status,
+                "steps": len(t.steps),
+                "duration": t.end_time - t.start_time if t.end_time else 0,
+            }
+            for t in self._trajectories.values()
+        ]
 
-        conversations = []
-        for step in trajectory.steps:
-            if step.role == "user":
-                conversations.append({"from": "human", "value": step.content})
-            elif step.role == "assistant":
-                conversations.append({"from": "gpt", "value": step.content})
+    def format_trajectory(self, traj_id: str) -> str:
+        """Format a trajectory as text."""
+        traj = self.get_trajectory(traj_id)
+        if not traj:
+            return "Trajectory not found"
 
-        return {
-            "conversations": conversations,
-            "metadata": {
-                "model": trajectory.model,
-                "trajectory_id": trajectory.id,
-            },
-        }
+        lines = [
+            f"Trajectory: {traj.name}",
+            f"Status: {traj.status}",
+            f"Duration: {traj.end_time - traj.start_time:.1f}s",
+            "",
+            "Steps:",
+        ]
 
-    def load_trajectory(self, trajectory_id: str) -> Optional[Trajectory]:
-        """Load a trajectory from file."""
-        output_file = self.output_dir / f"trajectory_{trajectory_id}.json"
-        if not output_file.exists():
-            return None
+        for step in traj.steps:
+            lines.append(f"  {step.step_id + 1}. {step.action}")
+            lines.append(f"     Input: {step.input[:100]}...")
+            lines.append(f"     Output: {step.output[:100]}...")
+            lines.append("")
 
-        try:
-            with open(output_file) as f:
-                data = json.load(f)
-
-            trajectory = Trajectory(
-                id=data["id"],
-                model=data.get("model", ""),
-                created_at=data.get("created_at", ""),
-                metadata=data.get("metadata", {}),
-            )
-
-            for step_data in data.get("steps", []):
-                step = TrajectoryStep(
-                    role=step_data["role"],
-                    content=step_data["content"],
-                    tool_call=step_data.get("tool_call"),
-                    tool_result=step_data.get("tool_result"),
-                    timestamp=step_data.get("timestamp", ""),
-                )
-                trajectory.steps.append(step)
-
-            return trajectory
-
-        except Exception as e:
-            logger.error(f"Failed to load trajectory: {e}")
-            return None
-
-    def list_trajectories(self) -> list[str]:
-        """List all trajectory IDs."""
-        return list(self.trajectories.keys())
-
-    def compress_trajectory(self, trajectory_id: str) -> Optional[str]:
-        """Compress a trajectory for storage."""
-        trajectory = self.trajectories.get(trajectory_id)
-        if not trajectory:
-            return None
-
-        # Create compressed version
-        compressed = {
-            "id": trajectory.id,
-            "model": trajectory.model,
-            "num_steps": len(trajectory.steps),
-            "summary": f"Trajectory with {len(trajectory.steps)} steps",
-        }
-
-        return json.dumps(compressed)
+        return "\n".join(lines)

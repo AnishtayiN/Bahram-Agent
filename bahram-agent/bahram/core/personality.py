@@ -1,109 +1,64 @@
-"""Personality and SOUL.md system for Bahram Agent."""
+"""Personality/SOUL.md system for Bahram Agent."""
 
 from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
-# Built-in personalities
-PERSONALITIES = {
-    "default": {
-        "name": "Bahram",
-        "description": "A helpful and capable AI assistant",
-        "system_prompt": "You are Bahram, an advanced AI agent. You are helpful, capable, and strive to complete tasks thoroughly.",
-    },
-    "pirate": {
-        "name": "Bahram the Pirate",
-        "description": "A pirate-themed assistant",
-        "system_prompt": "You are Bahram, a pirate AI! Arr! You speak like a pirate and love adventure. You're still helpful but with a pirate twist.",
-    },
-    "scholar": {
-        "name": "Bahram the Scholar",
-        "description": "A scholarly, academic assistant",
-        "system_prompt": "You are Bahram, a scholarly AI. You provide detailed, well-researched answers with citations. You value accuracy and intellectual rigor.",
-    },
-    "coder": {
-        "name": "Bahram the Coder",
-        "description": "A coding-focused assistant",
-        "system_prompt": "You are Bahram, an expert programmer. You write clean, efficient code and follow best practices. You explain technical concepts clearly.",
-    },
-    "creative": {
-        "name": "Bahram the Creative",
-        "description": "A creative and artistic assistant",
-        "system_prompt": "You are Bahram, a creative AI. You think outside the box, use vivid language, and bring imagination to every task.",
-    },
-}
 
+class Personality:
+    """Load and manage agent personality from SOUL.md."""
 
-class PersonalityManager:
-    """Manage agent personality and SOUL.md."""
+    def __init__(self, workspace_root: str = ".") -> None:
+        self.workspace_root = Path(workspace_root)
+        self._soul_content: str = ""
+        self._loaded = False
 
-    def __init__(self, project_dir: str = ".") -> None:
-        self.project_dir = Path(project_dir)
-        self._current_personality: str = "default"
-        self._soul_content: Optional[str] = None
-        self._custom_system_prompt: Optional[str] = None
+    def load(self) -> None:
+        """Load SOUL.md from workspace."""
+        if self._loaded:
+            return
 
-    def set_personality(self, name: str) -> bool:
-        """Set the current personality."""
-        if name in PERSONALITIES:
-            self._current_personality = name
-            self._custom_system_prompt = None  # Clear custom prompt
-            logger.info(f"Set personality: {name}")
-            return True
-        return False
+        soul_file = self.workspace_root / "SOUL.md"
+        if soul_file.exists():
+            try:
+                self._soul_content = soul_file.read_text()
+                logger.info("Loaded SOUL.md personality")
+            except Exception as e:
+                logger.warning(f"Failed to load SOUL.md: {e}")
 
-    def set_custom_prompt(self, prompt: str) -> None:
-        """Set a custom system prompt."""
-        self._custom_system_prompt = prompt
-        self._current_personality = "custom"
+        self._loaded = True
+
+    def get_personality(self) -> str:
+        """Get personality content."""
+        self.load()
+        return self._soul_content
 
     def get_system_prompt_addition(self) -> str:
-        """Get the system prompt addition for the current personality."""
-        # Custom prompt takes priority
-        if self._custom_system_prompt:
-            return f"\n\n{self._custom_system_prompt}"
+        """Get personality as system prompt addition."""
+        personality = self.get_personality()
+        if not personality:
+            return ""
 
-        # Check for SOUL.md
-        soul = self._load_soul_md()
-        if soul:
-            return f"\n\n{self._load_personality_prompt()}\n\n{self._load_soul_md()}"
+        return f"\n\n## Your Personality\n{personality}"
 
-        # Use built-in personality
-        return f"\n\n{self._load_personality_prompt()}"
+    def set_personality(self, content: str) -> None:
+        """Set personality content."""
+        self._soul_content = content
+        self._save()
 
-    def _load_personality_prompt(self) -> str:
-        """Get the prompt for current personality."""
-        if self._current_personality == "custom":
-            return self._custom_system_prompt or ""
+    def _save(self) -> None:
+        """Save personality to SOUL.md."""
+        soul_file = self.workspace_root / "SOUL.md"
+        try:
+            soul_file.write_text(self._soul_content)
+        except Exception as e:
+            logger.warning(f"Failed to save SOUL.md: {e}")
 
-        personality = PERSONALITIES.get(self._current_personality, PERSONALITIES["default"])
-        return f"## Personality: {personality['name']}\n\n{personality['system_prompt']}"
-
-    def _load_soul_md(self) -> Optional[str]:
-        """Load SOUL.md from project."""
-        soul_path = self.project_dir / "SOUL.md"
-        if soul_path.exists():
-            try:
-                return soul_path.read_text(encoding="utf-8")
-            except Exception as e:
-                logger.warning(f"Failed to read SOUL.md: {e}")
-        return None
-
-    def list_personalities(self) -> list[dict]:
-        """List available personalities."""
-        return [
-            {"name": name, "description": p["description"]}
-            for name, p in PERSONALITIES.items()
-        ]
-
-    def get_current(self) -> str:
-        """Get current personality name."""
-        return self._current_personality
-
-    def clear_cache(self) -> None:
-        """Clear cached SOUL.md content."""
-        self._soul_content = None
+    def has_personality(self) -> bool:
+        """Check if personality is loaded."""
+        self.load()
+        return bool(self._soul_content)

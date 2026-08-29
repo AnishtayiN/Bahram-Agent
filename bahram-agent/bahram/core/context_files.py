@@ -4,82 +4,67 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
 
 class ContextFiles:
-    """Context files that shape agent behavior in projects."""
+    """Load context from files in workspace."""
 
-    # Standard context file names (in priority order)
-    CONTEXT_FILE_NAMES = [
-        ".bahram.md",
-        "AGENTS.md",
-        "CLAUDE.md",
-        "SOUL.md",
-        ".cursorrules",
-        "CONTEXT.md",
-        "INSTRUCTIONS.md",
-    ]
-
-    def __init__(self, project_dir: str = ".") -> None:
-        self.project_dir = Path(project_dir)
-        self._context_content: Optional[str] = None
-
-    def discover_context_files(self) -> list[Path]:
-        """Discover context files in the project."""
-        found = []
-
-        for filename in self.CONTEXT_FILE_NAMES:
-            filepath = self.project_dir / filename
-            if filepath.exists():
-                found.append(filepath)
-                logger.debug(f"Found context file: {filepath}")
-
-        # Also check .bahram/ directory
-        bahram_dir = self.project_dir / ".bahram"
-        if bahram_dir.exists():
-            for md_file in bahram_dir.glob("*.md"):
-                found.append(md_file)
-                logger.debug(f"Found context file: {md_file}")
-
-        return found
+    def __init__(self, workspace_root: str = ".") -> None:
+        self.workspace_root = Path(workspace_root)
+        self._context_files: list[str] = [
+            "CLAUDE.md",
+            ".cursorrules",
+            "AGENTS.md",
+            "SOUL.md",
+            ".github/copilot-instructions.md",
+            "RULES.md",
+        ]
 
     def load_context(self) -> str:
-        """Load and combine all context files."""
-        if self._context_content is not None:
-            return self._context_content
+        """Load context from workspace files."""
+        context_parts = []
 
-        context_files = self.discover_context_files()
+        for filename in self._context_files:
+            file_path = self.workspace_root / filename
+            if file_path.exists():
+                try:
+                    content = file_path.read_text()
+                    context_parts.append(f"=== {filename} ===\n{content}")
+                except Exception as e:
+                    logger.warning(f"Failed to load {filename}: {e}")
 
-        if not context_files:
-            logger.debug("No context files found")
-            return ""
+        return "\n\n".join(context_parts)
 
-        parts = []
-        for filepath in context_files:
-            try:
-                content = filepath.read_text(encoding="utf-8")
-                parts.append(f"## From {filepath.name}\n\n{content}")
-            except Exception as e:
-                logger.warning(f"Failed to read {filepath}: {e}")
+    def get_loaded_files(self) -> list[str]:
+        """Get list of loaded context files."""
+        loaded = []
+        for filename in self._context_files:
+            file_path = self.workspace_root / filename
+            if file_path.exists():
+                loaded.append(filename)
+        return loaded
 
-        self._context_content = "\n\n---\n\n".join(parts)
-        return self._context_content
+    def add_context_file(self, filename: str) -> None:
+        """Add a context file to load."""
+        if filename not in self._context_files:
+            self._context_files.append(filename)
 
-    def get_system_prompt_addition(self) -> str:
-        """Get context to add to system prompt."""
-        context = self.load_context()
-        if not context:
-            return ""
+    def remove_context_file(self, filename: str) -> bool:
+        """Remove a context file."""
+        if filename in self._context_files:
+            self._context_files.remove(filename)
+            return True
+        return False
 
-        return f"\n\n## Project Context\n\n{context}"
-
-    def clear_cache(self) -> None:
-        """Clear the cached context."""
-        self._context_content = None
-
-    def list_found_files(self) -> list[str]:
-        """List found context file names."""
-        return [str(f.name) for f in self.discover_context_files()]
+    def save_context(self, filename: str, content: str) -> bool:
+        """Save context to a file."""
+        try:
+            file_path = self.workspace_root / filename
+            file_path.write_text(content)
+            return True
+        except Exception as e:
+            logger.warning(f"Failed to save {filename}: {e}")
+            return False

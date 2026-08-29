@@ -2,99 +2,150 @@
 
 from __future__ import annotations
 
+import base64
+import hashlib
 import json
 import logging
 import os
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
 
+@dataclass
+class SecretEntry:
+    """A secret entry."""
+
+    name: str
+    value: str
+    description: str = ""
+    category: str = "general"
+    created_at: float = 0.0
+
+
 class SecretsManager:
-    """Manage secrets and environment variables."""
+    """Manage secrets securely."""
 
-    def __init__(self, env_dir: str = "data/secrets") -> None:
-        self.env_dir = Path(env_dir)
-        self.env_dir.mkdir(parents=True, exist_ok=True)
-        self._secrets: dict[str, str] = {}
-        self._load_secrets()
+    def __init__(self, data_dir: str = "data/secrets") -> None:
+        self.data_dir = Path(data_dir)
+        self.data_dir.mkdir(parents=True, exist_ok=True)
+        self._secrets: dict[str, SecretEntry] = {}
+        self._key = self._get_or_create_key()
+        self._load()
 
-    def _load_secrets(self) -> None:
-        """Load secrets from .env file."""
-        env_file = self.env_dir / ".env"
-        if env_file.exists():
+    def _get_or_create_key(self) -> bytes:
+        """Get or create encryption key."""
+        key_file = self.data_dir / ".key"
+        if key_file.exists():
+            return base64.b64decode(key_file.read_text())
+        else:
+            key = os.urandom(32)
+            key_file.write_text(base64.b64encode(key).decode())
+            key_file.chmod(0o600)
+            return key
+
+    def _load(self) -> None:
+        """Load secrets from disk."""
+        secrets_file = self.data_dir / "secrets.enc"
+        if secrets_file.exists():
             try:
-                with open(env_file) as f:
-                    for line in f:
-                        line = line.strip()
-                        if line and not line.startswith("#") and "=" in line:
-                            key, value = line.split("=", 1)
-                            self._secrets[key.strip()] = value.strip()
+                # Simple obfuscation (not real encryption)
+                data = secrets_file.read_text()
+                decoded = base64.b64decode(data)
+                # XOR with key
+                decrypted = bytes(b ^ self._key[i % len(self._key)] for i, b in enumerate(decoded))
+                self._secrets = {
+                    k: SecretEntry(**v)
+                    for k, v in json.loads(decrypted).items()
+                }
             except Exception as e:
                 logger.warning(f"Failed to load secrets: {e}")
 
-    def _save_secrets(self) -> None:
-        """Save secrets to .env file."""
-        env_file = self.env_dir / ".env"
-        with open(env_file, "w") as f:
-            for key, value in self._secrets.items():
-                f.write(f"{key}={value}\n")
-        # Restrict permissions
-        try:
-            os.chmod(env_file, 0o600)
-        except Exception:
-            pass
+    def _save(self) -> None:
+        """Save secrets to disk."""
+        secrets_file = self.data_dir / "secrets.enc"
+        data = json.dumps({
+            k: {
+                "name": s.name,
+                "value": s.value,
+                "description": s.description,
+                "category": s.category,
+                "created_at": s.created_at,
+            }
+            for k, s in self._secrets.items()
+        })
+        # XOR with key
+        import time
+        encrypted = bytes(b ^ self._key[i % len(self._key)] for i, b in enumerate(data.encode()))
+        secrets_file.write_text(base64.b64encode(encrypted).decode())
+        secrets_file.chmod(0o600)
 
-    def get(self, key: str, default: str = "") -> str:
+    def set_secret(
+        self,
+        name: str,
+        value: str,
+        description: str = "",
+        category: str = "general",
+    ) -> None:
+        """Set a secret."""
+        import time
+        self._secrets[name] = SecretEntry(
+            name=name,
+            value=value,
+            description=description,
+            category=category,
+            created_at=time.time(),
+        )
+        self._save()
+
+    def get_secret(self, name: str) -> Optional[str]:
         """Get a secret value."""
-        # Check env first
-        env_value = os.environ.get(key)
-        if env_value:
-            return env_value
-        return self._secrets.get(key, default)
+        entry = self._secrets.get(name)
+        return entry.value if entry else None
 
-    def set(self, key: str, value: str) -> None:
-        """Set a secret value."""
-        self._secrets[key] = value
-        self._save_secrets()
+    def get_secret_info(self, name: str) -> Optional[dict]:
+        """Get secret info (without value)."""
+        entry = self._secrets.get(name)
+        if entry:
+            return {
+                "name": entry.name,
+                "description": entry.description,
+                "category": entry.category,
+                "created_at": entry.created_at,
+            }
+        return None
 
-    def delete(self, key: str) -> bool:
+    def delete_secret(self, name: str) -> bool:
         """Delete a secret."""
-        if key in self._secrets:
-            del self._secrets[key]
-            self._save_secrets()
+        if name in self._secrets:
+            del self._secrets[name]
+            self._save()
             return True
         return False
 
-    def list_keys(self) -> list[str]:
-        """List all secret keys."""
-        return list(self._secrets.keys())
+    def list_secrets(self, category: str = None) -> list[dict]:
+        """List secrets (without values)."""
+        secrets = list(self._secrets.values())
+        if category:
+            secrets = [s for s in secrets if s.category == category]
+        return [
+            {
+                "name": s.name,
+                "description": s.description,
+                "category": s.category,
+            }
+            for s in secrets
+        ]
 
-    def get_redacted(self) -> dict[str, str]:
-        """Get secrets with values redacted."""
-        return {k: "***" for k in self._secrets}
-
-    def get_provider_key(self, provider: str) -> str:
-        """Get API key for a provider."""
-        key_map = {
-            "anthropic": "ANTHROPIC_API_KEY",
-            "openai": "OPENAI_API_KEY",
-            "openrouter": "OPENROUTER_API_KEY",
-            "groq": "GROQ_API_KEY",
-            "deepseek": "DEEPSEEK_API_KEY",
-            "mistral": "MISTRAL_API_KEY",
-            "google": "GOOGLE_API_KEY",
-            "huggingface": "HF_API_KEY",
-            "nous": "NOUS_API_KEY",
-            "nvidia": "NVIDIA_API_KEY",
-            "xiaomi": "XIAOMI_API_KEY",
-            "minimax": "MINIMAX_API_KEY",
-            "kimi": "KIMI_API_KEY",
-            "zhipu": "ZHIPU_API_KEY",
-            "telegram": "TELEGRAM_BOT_TOKEN",
-            "discord": "DISCORD_BOT_TOKEN",
-            "slack": "SLACK_BOT_TOKEN",
-        }
-        env_key = key_map.get(provider.lower(), f"{provider.upper()}_API_KEY")
-        return self.get(env_key)
+    def import_from_env(self, prefix: str = "") -> int:
+        """Import secrets from environment variables."""
+        count = 0
+        for key, value in os.environ.items():
+            if prefix and not key.startswith(prefix):
+                continue
+            if key.startswith(("SECRET", "TOKEN", "KEY", "PASSWORD", "API_")):
+                self.set_secret(key, value, description="Imported from environment")
+                count += 1
+        return count

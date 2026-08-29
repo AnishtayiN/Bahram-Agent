@@ -77,7 +77,7 @@ class HomeAssistantAdvanced:
         return await self._call_service(
             "light", "turn_on", entity_id,
             {"rgb_color": [r, g, b]}
-        }
+        )
 
     async def _get_states(self, domain: str) -> dict[str, Any]:
         """Get states for a domain."""

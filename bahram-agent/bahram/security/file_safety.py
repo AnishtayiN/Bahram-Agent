@@ -5,82 +5,69 @@ from __future__ import annotations
 import logging
 import os
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
 
-# Protected paths that are always blocked
-PROTECTED_PATHS = [
-    "~/.ssh/",
-    "~/.aws/",
-    "~/.kube/",
-    "/etc/sudoers",
-    "~/.netrc",
-    "auth.json",
-    ".env",
-    ".env.local",
-    ".env.production",
-    ".envrc",
-    ".anthropic_oauth.json",
-    "mcp-tokens/",
-    "pairing/",
-]
-
-
 class FileWriteSafety:
-    """Enforce file write safety rules."""
+    """Enforce file write safety policies."""
 
-    def __init__(self, safe_root: str = "") -> None:
-        self.safe_root = safe_root
-        self._deny_patterns: list[str] = []
-
-    def check_write(self, path: str) -> tuple[bool, str]:
-        """Check if a file write is allowed.
-
-        Returns:
-            Tuple of (is_allowed, reason)
-        """
-        expanded = os.path.expanduser(path)
-        normalized = os.path.normpath(expanded)
-
-        # Check protected paths
-        for protected in PROTECTED_PATHS:
-            protected_expanded = os.path.expanduser(protected)
-            if normalized.startswith(protected_expanded):
-                return False, f"Protected path: {protected}"
-
-        # Check safe root
-        if self.safe_root:
-            safe_root_expanded = os.path.expanduser(self.safe_root)
-            if not normalized.startswith(safe_root_expanded):
-                return False, f"Outside safe root: {self.safe_root}"
-
-        # Check deny patterns
-        for pattern in self._deny_patterns:
-            if pattern in normalized:
-                return False, f"Denied by pattern: {pattern}"
-
-        return True, ""
+    def __init__(self) -> None:
+        self._protected_paths: list[str] = [
+            "/etc/passwd",
+            "/etc/shadow",
+            "/etc/sudoers",
+            "/boot",
+            "/sys",
+            "/proc",
+        ]
+        self._safe_root: str = ""
+        self._max_file_size: int = 100 * 1024 * 1024  # 100MB
 
     def set_safe_root(self, root: str) -> None:
-        """Set the safe root directory."""
-        self.safe_root = root
+        """Set safe root directory."""
+        self._safe_root = root
 
-    def add_deny_pattern(self, pattern: str) -> None:
-        """Add a deny pattern."""
-        if pattern not in self._deny_patterns:
-            self._deny_patterns.append(pattern)
+    def is_path_safe(self, path: str) -> tuple[bool, str]:
+        """Check if a path is safe to write."""
+        abs_path = os.path.abspath(path)
 
-    def remove_deny_pattern(self, pattern: str) -> bool:
-        """Remove a deny pattern."""
-        if pattern in self._deny_patterns:
-            self._deny_patterns.remove(pattern)
+        # Check protected paths
+        for protected in self._protected_paths:
+            if abs_path.startswith(protected):
+                return False, f"Path is protected: {protected}"
+
+        # Check safe root
+        if self._safe_root:
+            safe_root = os.path.abspath(self._safe_root)
+            if not abs_path.startswith(safe_root):
+                return False, f"Path is outside safe root: {safe_root}"
+
+        # Check file size
+        if os.path.exists(path):
+            size = os.path.getsize(path)
+            if size > self._max_file_size:
+                return False, f"File too large: {size} > {self._max_file_size}"
+
+        return True, "OK"
+
+    def check_write(self, path: str) -> tuple[bool, str]:
+        """Check if a write operation is allowed."""
+        return self.is_path_safe(path)
+
+    def add_protected_path(self, path: str) -> None:
+        """Add a protected path."""
+        if path not in self._protected_paths:
+            self._protected_paths.append(path)
+
+    def remove_protected_path(self, path: str) -> bool:
+        """Remove a protected path."""
+        if path in self._protected_paths:
+            self._protected_paths.remove(path)
             return True
         return False
 
-    @classmethod
-    def from_env(cls) -> "FileWriteSafety":
-        """Create from environment variable."""
-        safe_root = os.environ.get("HERMES_WRITE_SAFE_ROOT", "")
-        return cls(safe_root=safe_root)
+    def set_max_file_size(self, max_size: int) -> None:
+        """Set max file size."""
+        self._max_file_size = max_size

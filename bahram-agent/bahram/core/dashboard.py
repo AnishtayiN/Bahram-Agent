@@ -1,57 +1,136 @@
-"""Web dashboard for Bahram Agent."""
+"""Dashboard for Bahram Agent gateway."""
 
 from __future__ import annotations
 
 import json
 import logging
+import time
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
 
-class WebDashboard:
-    """Simple web dashboard for monitoring."""
+@dataclass
+class DashboardStats:
+    """Dashboard statistics."""
 
-    def __init__(self, host: str = "0.0.0.0", port: int = 8080) -> None:
-        self.host = host
-        self.port = port
-        self._stats: dict[str, Any] = {}
-        self._sessions: list[dict] = []
-        self._logs: list[str] = []
+    total_messages: int = 0
+    total_tokens: int = 0
+    total_cost: float = 0.0
+    active_platforms: list[str] = field(default_factory=list)
+    uptime: float = 0.0
+    last_activity: float = 0.0
+    errors: int = 0
+    success_rate: float = 100.0
 
-    def update_stats(self, stats: dict) -> None:
-        """Update dashboard statistics."""
-        self._stats.update(stats)
 
-    def add_session(self, session: dict) -> None:
-        """Add a session entry."""
-        self._sessions.append(session)
-        if len(self._sessions) > 100:
-            self._sessions = self._sessions[-100:]
+class Dashboard:
+    """Gateway dashboard for monitoring."""
 
-    def add_log(self, message: str) -> None:
-        """Add a log entry."""
-        self._logs.append(message)
-        if len(self._logs) > 1000:
-            self._logs = self._logs[-1000:]
+    def __init__(self, data_dir: str = "data/gateway") -> None:
+        self.data_dir = Path(data_dir)
+        self.data_dir.mkdir(parents=True, exist_ok=True)
+        self._stats = DashboardStats()
+        self._start_time = time.time()
+        self._load()
 
-    def get_dashboard_html(self) -> str:
-        """Generate dashboard HTML."""
-        return f"""<!DOCTYPE html>
-<html>
-<head><title>Bahram Agent Dashboard</title></head>
-<body>
-<h1>Bahram Agent</h1>
-<h2>Stats</h2>
-<pre>{json.dumps(self._stats, indent=2)}</pre>
-<h2>Recent Sessions ({len(self._sessions)})</h2>
-<ul>{''.join(f'<li>{s.get("name", "unnamed")} - {s.get("status", "unknown")}</li>' for s in self._sessions[-10:])}</ul>
-<h2>Logs</h2>
-<pre>{'\\n'.join(self._logs[-20:])}</pre>
-</body>
-</html>"""
+    def _load(self) -> None:
+        """Load stats from disk."""
+        stats_file = self.data_dir / "dashboard_stats.json"
+        if stats_file.exists():
+            try:
+                with open(stats_file) as f:
+                    data = json.load(f)
+                self._stats = DashboardStats(**data)
+            except Exception as e:
+                logger.warning(f"Failed to load dashboard stats: {e}")
 
-    def get_stats_json(self) -> str:
-        """Get stats as JSON."""
-        return json.dumps(self._stats, indent=2)
+    def _save(self) -> None:
+        """Save stats to disk."""
+        stats_file = self.data_dir / "dashboard_stats.json"
+        self._stats.uptime = time.time() - self._start_time
+        data = {
+            "total_messages": self._stats.total_messages,
+            "total_tokens": self._stats.total_tokens,
+            "total_cost": self._stats.total_cost,
+            "active_platforms": self._stats.active_platforms,
+            "uptime": self._stats.uptime,
+            "last_activity": self._stats.last_activity,
+            "errors": self._stats.errors,
+            "success_rate": self._stats.success_rate,
+        }
+        with open(stats_file, "w") as f:
+            json.dump(data, f, indent=2)
+
+    def record_message(self, platform: str, tokens: int = 0, cost: float = 0.0) -> None:
+        """Record a message."""
+        self._stats.total_messages += 1
+        self._stats.total_tokens += tokens
+        self._stats.total_cost += cost
+        self._stats.last_activity = time.time()
+
+        if platform not in self._stats.active_platforms:
+            self._stats.active_platforms.append(platform)
+
+        self._save()
+
+    def record_error(self) -> None:
+        """Record an error."""
+        self._stats.errors += 1
+        if self._stats.total_messages > 0:
+            self._stats.success_rate = (
+                (self._stats.total_messages - self._stats.errors)
+                / self._stats.total_messages
+                * 100
+            )
+        self._save()
+
+    def get_stats(self) -> dict[str, Any]:
+        """Get current statistics."""
+        self._stats.uptime = time.time() - self._start_time
+        return {
+            "total_messages": self._stats.total_messages,
+            "total_tokens": self._stats.total_tokens,
+            "total_cost": self._stats.total_cost,
+            "active_platforms": self._stats.active_platforms,
+            "uptime_hours": self._stats.uptime / 3600,
+            "last_activity": self._stats.last_activity,
+            "errors": self._stats.errors,
+            "success_rate": self._stats.success_rate,
+        }
+
+    def get_health(self) -> str:
+        """Get health status."""
+        if self._stats.success_rate > 99:
+            return "healthy"
+        elif self._stats.success_rate > 95:
+            return "degraded"
+        else:
+            return "unhealthy"
+
+    def format_dashboard(self) -> str:
+        """Format dashboard as text."""
+        stats = self.get_stats()
+        health = self.get_health()
+        health_emoji = {"healthy": "🟢", "degraded": "🟡", "unhealthy": "🔴"}
+
+        lines = [
+            f"{health_emoji.get(health, '⚪')} **Bahram Agent Dashboard**",
+            f"Health: {health.upper()}",
+            f"Uptime: {stats['uptime_hours']:.1f}h",
+            f"Messages: {stats['total_messages']}",
+            f"Tokens: {stats['total_tokens']:,}",
+            f"Cost: ${stats['total_cost']:.2f}",
+            f"Errors: {stats['errors']}",
+            f"Success Rate: {stats['success_rate']:.1f}%",
+            f"Active Platforms: {', '.join(stats['active_platforms']) or 'none'}",
+        ]
+        return "\n".join(lines)
+
+    def reset(self) -> None:
+        """Reset statistics."""
+        self._stats = DashboardStats()
+        self._start_time = time.time()
+        self._save()

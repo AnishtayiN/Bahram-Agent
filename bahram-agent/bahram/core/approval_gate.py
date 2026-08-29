@@ -2,159 +2,140 @@
 
 from __future__ import annotations
 
-import json
 import logging
-import uuid
 from dataclasses import dataclass, field
-from datetime import datetime
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Optional, Callable
 
 logger = logging.getLogger(__name__)
 
 
 @dataclass
-class PendingWrite:
-    """A pending write waiting for approval."""
+class ApprovalGate:
+    """An approval gate for file writes."""
 
-    id: str = field(default_factory=lambda: str(uuid.uuid4())[:8])
-    type: str = ""  # memory, skill
-    action: str = ""  # create, edit, patch, delete
-    target: str = ""
-    content: str = ""
-    old_content: str = ""
-    status: str = "pending"  # pending, approved, rejected
-    created_at: str = field(default_factory=lambda: datetime.now().isoformat())
+    name: str
+    pattern: str
+    description: str
+    require_approval: bool = True
+    auto_approve: bool = False
+    approver: str = ""
 
 
-class WriteApprovalGate:
-    """Gate memory/skill writes for approval."""
+class ApprovalGateManager:
+    """Manage write approval gates."""
 
-    def __init__(self, data_dir: str = "data/pending") -> None:
+    def __init__(self, data_dir: str = "data/security") -> None:
         self.data_dir = Path(data_dir)
         self.data_dir.mkdir(parents=True, exist_ok=True)
-        self._pending: dict[str, PendingWrite] = {}
-        self._memory_enabled = True
-        self._skill_enabled = True
-        self._load_pending()
+        self._gates: list[ApprovalGate] = []
+        self._pending: dict[str, dict] = {}
+        self._load()
 
-    def _load_pending(self) -> None:
-        """Load pending writes."""
-        pending_file = self.data_dir / "pending.json"
-        if pending_file.exists():
-            try:
-                with open(pending_file) as f:
-                    data = json.load(f)
-                for item in data:
-                    pw = PendingWrite(**item)
-                    self._pending[pw.id] = pw
-            except Exception as e:
-                logger.warning(f"Failed to load pending: {e}")
-
-    def _save_pending(self) -> None:
-        """Save pending writes."""
-        pending_file = self.data_dir / "pending.json"
-        data = [
-            {
-                "id": pw.id,
-                "type": pw.type,
-                "action": pw.action,
-                "target": pw.target,
-                "content": pw.content,
-                "old_content": pw.old_content,
-                "status": pw.status,
-                "created_at": pw.created_at,
-            }
-            for pw in self._pending.values()
+    def _load(self) -> None:
+        """Load gates from config."""
+        # Default gates
+        self._gates = [
+            ApprovalGate(
+                name="critical_files",
+                pattern="**/*.py",
+                description="Python source files",
+                require_approval=False,
+            ),
+            ApprovalGate(
+                name="config_files",
+                pattern="**/*.yaml,*.json,*.toml",
+                description="Configuration files",
+                require_approval=True,
+            ),
+            ApprovalGate(
+                name="secret_files",
+                pattern="**/*.env,*.key,*.pem",
+                description="Secret files",
+                require_approval=True,
+            ),
+            ApprovalGate(
+                name="system_files",
+                pattern="/etc/*,/usr/*",
+                description="System files",
+                require_approval=True,
+            ),
         ]
-        with open(pending_file, "w") as f:
-            json.dump(data, f, indent=2)
 
-    def stage_write(
-        self,
-        write_type: str,
-        action: str,
-        target: str,
-        content: str = "",
-        old_content: str = "",
-    ) -> PendingWrite:
-        """Stage a write for approval."""
-        pw = PendingWrite(
-            type=write_type,
-            action=action,
-            target=target,
-            content=content,
-            old_content=old_content,
-        )
-        self._pending[pw.id] = pw
-        self._save_pending()
-        return pw
+    def check_write(self, file_path: str) -> tuple[bool, str]:
+        """Check if a write requires approval.
 
-    def approve_write(self, write_id: str) -> Optional[PendingWrite]:
-        """Approve a pending write."""
-        pw = self._pending.get(write_id)
-        if pw:
-            pw.status = "approved"
-            self._save_pending()
-            return pw
-        return None
+        Returns:
+            Tuple of (requires_approval, reason)
+        """
+        path = Path(file_path)
 
-    def reject_write(self, write_id: str) -> Optional[PendingWrite]:
-        """Reject a pending write."""
-        pw = self._pending.get(write_id)
-        if pw:
-            pw.status = "rejected"
-            self._save_pending()
-            return pw
-        return None
+        for gate in self._gates:
+            if not gate.require_approval:
+                continue
 
-    def approve_all(self) -> int:
-        """Approve all pending writes."""
-        count = 0
-        for pw in self._pending.values():
-            if pw.status == "pending":
-                pw.status = "approved"
-                count += 1
-        self._save_pending()
-        return count
+            # Simple pattern matching
+            if self._matches_pattern(path, gate.pattern):
+                if gate.auto_approve:
+                    return False, "Auto-approved"
 
-    def reject_all(self) -> int:
-        """Reject all pending writes."""
-        count = 0
-        for pw in self._pending.values():
-            if pw.status == "pending":
-                pw.status = "rejected"
-                count += 1
-        self._save_pending()
-        return count
+                return True, f"Requires approval: {gate.description}"
 
-    def get_pending(self) -> list[PendingWrite]:
-        """Get all pending writes."""
-        return [pw for pw in self._pending.values() if pw.status == "pending"]
+        return False, "No approval required"
 
-    def set_memory_approval(self, enabled: bool) -> None:
-        """Enable/disable memory write approval."""
-        self._memory_enabled = enabled
+    def _matches_pattern(self, path: Path, pattern: str) -> bool:
+        """Check if path matches pattern."""
+        path_str = str(path)
+        patterns = [p.strip() for p in pattern.split(",")]
 
-    def set_skill_approval(self, enabled: bool) -> None:
-        """Enable/disable skill write approval."""
-        self._skill_enabled = enabled
+        for p in patterns:
+            if p.startswith("**/"):
+                # Glob pattern
+                suffix = p[3:]
+                if path_str.endswith(suffix) or path.match(p):
+                    return True
+            elif p.startswith("/"):
+                # Absolute path
+                if path_str.startswith(p):
+                    return True
+            else:
+                # Simple suffix
+                if path_str.endswith(p):
+                    return True
 
-    def needs_approval(self, write_type: str) -> bool:
-        """Check if writes of this type need approval."""
-        if write_type == "memory":
-            return self._memory_enabled
-        if write_type == "skill":
-            return self._skill_enabled
         return False
 
-    def render_pending(self) -> str:
-        """Render pending writes."""
-        pending = self.get_pending()
-        if not pending:
-            return "No pending writes."
+    def request_approval(self, write_id: str, file_path: str, reason: str) -> dict:
+        """Request approval for a write."""
+        self._pending[write_id] = {
+            "file_path": file_path,
+            "reason": reason,
+            "status": "pending",
+        }
+        return self._pending[write_id]
 
-        parts = []
-        for pw in pending:
-            parts.append(f"[{pw.id}] {pw.type}/{pw.action}: {pw.target}")
-        return "\n".join(parts)
+    def approve(self, write_id: str) -> bool:
+        """Approve a pending write."""
+        if write_id in self._pending:
+            self._pending[write_id]["status"] = "approved"
+            return True
+        return False
+
+    def deny(self, write_id: str) -> bool:
+        """Deny a pending write."""
+        if write_id in self._pending:
+            self._pending[write_id]["status"] = "denied"
+            return True
+        return False
+
+    def get_pending(self) -> list[dict]:
+        """Get pending approvals."""
+        return [
+            {"id": k, **v}
+            for k, v in self._pending.items()
+            if v["status"] == "pending"
+        ]
+
+    def add_gate(self, gate: ApprovalGate) -> None:
+        """Add a custom gate."""
+        self._gates.append(gate)

@@ -1,83 +1,85 @@
-"""Website access policy for Bahram Agent."""
+"""Website policy for Bahram Agent."""
 
 from __future__ import annotations
 
-import fnmatch
 import logging
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
 
 @dataclass
+class WebsiteRule:
+    """A website access rule."""
+
+    pattern: str
+    action: str  # "allow", "deny", "log"
+    reason: str = ""
+
+
 class WebsitePolicy:
-    """Website access policy configuration."""
+    """Manage website access policies."""
 
-    enabled: bool = False
-    blocklist: list[str] = field(default_factory=list)
-    allowlist: list[str] = field(default_factory=list)
-    shared_files: list[str] = field(default_factory=list)
+    def __init__(self) -> None:
+        self._rules: list[WebsiteRule] = []
+        self._default_action = "allow"
+        self._load_defaults()
 
+    def _load_defaults(self) -> None:
+        """Load default rules."""
+        self._rules = [
+            # Deny dangerous sites
+            WebsiteRule(pattern="*.malware.com", action="deny", reason="Malware site"),
+            WebsiteRule(pattern="*.phishing.com", action="deny", reason="Phishing site"),
+            # Allow common dev sites
+            WebsiteRule(pattern="github.com", action="allow"),
+            WebsiteRule(pattern="stackoverflow.com", action="allow"),
+            WebsiteRule(pattern="docs.python.org", action="allow"),
+            # Log analytics
+            WebsiteRule(pattern="*", action="log", reason="Default logging"),
+        ]
 
-class WebsiteAccessPolicy:
-    """Enforce website access policies."""
-
-    def __init__(self, policy: WebsitePolicy = None) -> None:
-        self.policy = policy or WebsitePolicy()
-
-    def is_allowed(self, url: str) -> tuple[bool, str]:
-        """Check if URL is allowed.
+    def check_url(self, url: str) -> tuple[str, str]:
+        """Check if a URL is allowed.
 
         Returns:
-            Tuple of (is_allowed, reason)
+            Tuple of (action, reason)
         """
-        if not self.policy.enabled:
-            return True, ""
+        url_lower = url.lower()
 
-        # Extract domain from URL
-        domain = self._extract_domain(url)
+        for rule in self._rules:
+            pattern = rule.pattern.lower()
 
-        # Check allowlist first (if configured)
-        if self.policy.allowlist:
-            for pattern in self.policy.allowlist:
-                if fnmatch.fnmatch(domain, pattern):
-                    return True, "allowed by allowlist"
-            return False, "not in allowlist"
+            # Simple wildcard matching
+            if pattern.startswith("*."):
+                domain = pattern[2:]
+                if url_lower.endswith(domain) or domain in url_lower:
+                    return rule.action, rule.reason
+            elif pattern in url_lower:
+                return rule.action, rule.reason
 
-        # Check blocklist
-        for pattern in self.policy.blocklist:
-            if fnmatch.fnmatch(domain, pattern):
-                return False, f"blocked by policy: {pattern}"
+        return self._default_action, "Default policy"
 
-        return True, ""
+    def add_rule(self, rule: WebsiteRule) -> None:
+        """Add a rule."""
+        self._rules.insert(0, rule)  # Insert at beginning for priority
 
-    def _extract_domain(self, url: str) -> str:
-        """Extract domain from URL."""
-        domain = url.split("://")[-1].split("/")[0].split("?")[0]
-        return domain.lower()
-
-    def add_to_blocklist(self, pattern: str) -> None:
-        """Add a pattern to the blocklist."""
-        if pattern not in self.policy.blocklist:
-            self.policy.blocklist.append(pattern)
-
-    def remove_from_blocklist(self, pattern: str) -> bool:
-        """Remove a pattern from the blocklist."""
-        if pattern in self.policy.blocklist:
-            self.policy.blocklist.remove(pattern)
-            return True
+    def remove_rule(self, pattern: str) -> bool:
+        """Remove a rule by pattern."""
+        for i, rule in enumerate(self._rules):
+            if rule.pattern == pattern:
+                del self._rules[i]
+                return True
         return False
 
-    def load_shared_blocklist(self, filepath: str) -> None:
-        """Load blocklist from a shared file."""
-        try:
-            from pathlib import Path
-            content = Path(filepath).read_text(encoding="utf-8")
-            for line in content.strip().split("\n"):
-                line = line.strip()
-                if line and not line.startswith("#"):
-                    if line not in self.policy.blocklist:
-                        self.policy.blocklist.append(line)
-        except Exception as e:
-            logger.warning(f"Failed to load shared blocklist: {e}")
+    def set_default_action(self, action: str) -> None:
+        """Set default action."""
+        self._default_action = action
+
+    def list_rules(self) -> list[dict]:
+        """List all rules."""
+        return [
+            {"pattern": r.pattern, "action": r.action, "reason": r.reason}
+            for r in self._rules
+        ]

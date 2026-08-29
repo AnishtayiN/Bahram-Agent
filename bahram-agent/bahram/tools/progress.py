@@ -1,106 +1,118 @@
-"""Tool progress notifications for Bahram Agent."""
+"""Tool execution progress tracking for Bahram Agent."""
 
 from __future__ import annotations
 
+import asyncio
 import logging
-from enum import Enum
-from typing import Any, Optional, Callable
+import time
+from dataclasses import dataclass, field
+from typing import Any, Callable, Optional
 
 logger = logging.getLogger(__name__)
 
 
-class ProgressMode(str, Enum):
-    """Progress notification modes."""
+@dataclass
+class ToolProgress:
+    """Progress tracking for tool execution."""
 
-    OFF = "off"
-    NEW = "new"
-    ALL = "all"
-    VERBOSE = "verbose"
-    LOG = "log"
+    tool_name: str
+    status: str = "pending"  # pending, running, completed, failed
+    progress: float = 0.0  # 0-100
+    message: str = ""
+    start_time: float = 0.0
+    end_time: float = 0.0
+    result: Any = None
+    error: str = ""
 
 
-class ToolProgressNotifier:
-    """Notify users about tool execution progress."""
+class ProgressTracker:
+    """Track tool execution progress."""
 
-    def __init__(self, mode: ProgressMode = ProgressMode.ALL) -> None:
-        self.mode = mode
-        self._notify_fn: Optional[Callable] = None
-        self._log_file: Optional[str] = None
+    def __init__(self) -> None:
+        self._active: dict[str, ToolProgress] = {}
+        self._history: list[ToolProgress] = []
+        self._callbacks: list[Callable] = []
 
-    def set_notify_function(self, fn: Callable) -> None:
-        """Set the notification function."""
-        self._notify_fn = fn
+    def start(self, tool_name: str) -> str:
+        """Start tracking a tool execution."""
+        import uuid
+        tracker_id = f"{tool_name}_{uuid.uuid4().hex[:8]}"
 
-    async def notify_start(self, tool: str, args: dict = None) -> None:
-        """Notify tool execution started."""
-        if self.mode == ProgressMode.OFF:
-            return
+        progress = ToolProgress(
+            tool_name=tool_name,
+            status="running",
+            start_time=time.time(),
+        )
+        self._active[tracker_id] = progress
+        self._notify_callbacks(progress)
+        return tracker_id
 
-        icon = self._get_tool_icon(tool)
-        message = f"{icon} `{tool}`..."
+    def update(self, tracker_id: str, progress: float = None, message: str = None) -> None:
+        """Update progress."""
+        if tracker_id in self._active:
+            p = self._active[tracker_id]
+            if progress is not None:
+                p.progress = progress
+            if message is not None:
+                p.message = message
+            self._notify_callbacks(p)
 
-        if self.mode == ProgressMode.VERBOSE and args:
-            args_str = str(args)[:100]
-            message += f" {args_str}"
+    def complete(self, tracker_id: str, result: Any = None) -> None:
+        """Mark as completed."""
+        if tracker_id in self._active:
+            p = self._active[tracker_id]
+            p.status = "completed"
+            p.progress = 100
+            p.end_time = time.time()
+            p.result = result
+            self._history.append(p)
+            del self._active[tracker_id]
+            self._notify_callbacks(p)
 
-        await self._send(message)
+    def fail(self, tracker_id: str, error: str) -> None:
+        """Mark as failed."""
+        if tracker_id in self._active:
+            p = self._active[tracker_id]
+            p.status = "failed"
+            p.end_time = time.time()
+            p.error = error
+            self._history.append(p)
+            del self._active[tracker_id]
+            self._notify_callbacks(p)
 
-    async def notify_progress(self, tool: str, progress: str) -> None:
-        """Notify tool progress."""
-        if self.mode not in [ProgressMode.ALL, ProgressMode.VERBOSE]:
-            return
+    def get_active(self) -> list[dict]:
+        """Get active executions."""
+        return [
+            {
+                "id": k,
+                "tool": v.tool_name,
+                "status": v.status,
+                "progress": v.progress,
+                "message": v.message,
+            }
+            for k, v in self._active.items()
+        ]
 
-        await self._send(f"⏳ {progress}")
+    def get_history(self, limit: int = 10) -> list[dict]:
+        """Get execution history."""
+        return [
+            {
+                "tool": p.tool_name,
+                "status": p.status,
+                "duration": p.end_time - p.start_time,
+                "error": p.error,
+            }
+            for p in self._history[-limit:]
+        ]
 
-    async def notify_complete(self, tool: str, result: Any = None) -> None:
-        """Notify tool execution completed."""
-        if self.mode == ProgressMode.OFF:
-            return
+    def add_callback(self, callback: Callable) -> None:
+        """Add progress callback."""
+        self._callbacks.append(callback)
 
-        if self.mode in [ProgressMode.ALL, ProgressMode.VERBOSE]:
-            await self._send(f"✅ `{tool}` completed")
-
-    async def notify_error(self, tool: str, error: str) -> None:
-        """Notify tool execution error."""
-        if self.mode == ProgressMode.OFF:
-            return
-
-        await self._send(f"❌ `{tool}` failed: {error[:100]}")
-
-    async def _send(self, message: str) -> None:
-        """Send notification."""
-        if self._notify_fn:
+    def _notify_callbacks(self, progress: ToolProgress) -> None:
+        """Notify callbacks of progress."""
+        for callback in self._callbacks:
             try:
-                await self._notify_fn(message)
+                callback(progress)
             except Exception as e:
-                logger.error(f"Failed to send notification: {e}")
-
-        if self._log_file:
-            self._log_to_file(message)
-
-    def _log_to_file(self, message: str) -> None:
-        """Log to file."""
-        if self._log_file:
-            try:
-                with open(self._log_file, "a") as f:
-                    f.write(f"{message}\n")
-            except Exception:
-                pass
-
-    def _get_tool_icon(self, tool: str) -> str:
-        """Get icon for tool."""
-        icons = {
-            "terminal": "💻",
-            "bash": "💻",
-            "read_file": "📄",
-            "write_file": "📝",
-            "edit": "✏️",
-            "patch": "✏️",
-            "web_search": "🔍",
-            "web_extract": "🌐",
-            "browser": "🌐",
-            "execute_code": "🐍",
-            "memory": "💾",
-            "skill": "🛠️",
-        }
-        return icons.get(tool, "⚙️")
+                logger.warning(f"Progress callback error: {e}")

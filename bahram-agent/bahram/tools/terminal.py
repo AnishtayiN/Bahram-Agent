@@ -1,12 +1,15 @@
-"""Terminal backends for Bahram Agent."""
+"""Terminal tool with PTY support, sudo, and shell init handling for Bahram Agent."""
 
 from __future__ import annotations
 
 import asyncio
 import logging
 import os
-import subprocess
-from abc import ABC, abstractmethod
+import pty
+import select
+import signal
+import struct
+import fcntl
 from dataclasses import dataclass, field
 from typing import Any, Optional
 
@@ -15,311 +18,279 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class TerminalConfig:
-    """Terminal backend configuration."""
+    """Terminal configuration."""
 
-    backend: str = "local"
-    cwd: str = "."
-    timeout: int = 180
-    docker_image: str = "python:3.11-slim"
-    container_cpu: int = 1
-    container_memory: int = 5120
-    container_disk: int = 51200
-    container_persistent: bool = True
-    ssh_host: str = ""
-    ssh_user: str = ""
-    ssh_key: str = ""
+    shell: str = "/bin/bash"
+    cwd: str = ""
+    env: dict[str, str] = field(default_factory=dict)
+    use_pty: bool = True
+    sudo: bool = False
+    timeout: float = 60.0
 
 
-class TerminalBackend(ABC):
-    """Base terminal backend."""
+class PTYManager:
+    """Manage pseudo-terminal sessions."""
 
-    @abstractmethod
+    def __init__(self) -> None:
+        self._sessions: dict[str, int] = {}
+
+    def create_session(self, config: TerminalConfig) -> tuple[int, int]:
+        """Create a new PTY session.
+
+        Returns:
+            Tuple of (master_fd, slave_fd)
+        """
+        master_fd, slave_fd = pty.openpty()
+
+        # Set non-blocking
+        flags = fcntl.fcntl(master_fd, fcntl.F_GETFL)
+        fcntl.fcntl(master_fd, fcntl.F_SETFL, flags | os.O_NONBLOCK)
+
+        # Set window size
+        winsize = struct.pack("HHHH", 24, 80, 0, 0)
+        fcntl.ioctl(slave_fd, struct.unpack("H", b"TIOCSWINSZ")[0], winsize)
+
+        return master_fd, slave_fd
+
+    def write_session(self, master_fd: int, data: str) -> None:
+        """Write to a PTY session."""
+        os.write(master_fd, data.encode())
+
+    def read_session(self, master_fd: int, timeout: float = 0.1) -> str:
+        """Read from a PTY session."""
+        output = ""
+        try:
+            r, _, _ = select.select([master_fd], [], [], timeout)
+            if r:
+                data = os.read(master_fd, 1024)
+                output = data.decode("utf-8", errors="replace")
+        except (OSError, ValueError):
+            pass
+        return output
+
+    def close_session(self, master_fd: int) -> None:
+        """Close a PTY session."""
+        try:
+            os.close(master_fd)
+        except OSError:
+            pass
+
+
+class SudoManager:
+    """Manage sudo password caching."""
+
+    def __init__(self) -> None:
+        self._password_cache: dict[str, str] = {}
+        self._cache_timeout: float = 300.0  # 5 minutes
+        self._cache_timestamps: dict[str, float] = {}
+
+    def cache_password(self, hostname: str, password: str) -> None:
+        """Cache a sudo password."""
+        import time
+        self._password_cache[hostname] = password
+        self._cache_timestamps[hostname] = time.time()
+
+    def get_password(self, hostname: str) -> Optional[str]:
+        """Get cached sudo password."""
+        import time
+        if hostname not in self._password_cache:
+            return None
+
+        # Check expiry
+        timestamp = self._cache_timestamps.get(hostname, 0)
+        if time.time() - timestamp > self._cache_timeout:
+            del self._password_cache[hostname]
+            del self._cache_timestamps[hostname]
+            return None
+
+        return self._password_cache[hostname]
+
+    def clear_password(self, hostname: str) -> None:
+        """Clear cached password."""
+        self._password_cache.pop(hostname, None)
+        self._cache_timestamps.pop(hostname, None)
+
+
+class ShellInitHandler:
+    """Handle shell initialization for non-interactive mode."""
+
+    def __init__(self) -> None:
+        self._init_commands: list[str] = []
+        self._guard_patterns: list[str] = [
+            "if [ -t 0 ]",
+            "if [[ $- == *i* ]]",
+            "if [[ $- =~ i ]]",
+            "if tty -s",
+            "if [ -t 1 ]",
+        ]
+
+    def get_init_script(self, shell: str = "/bin/bash") -> str:
+        """Get shell initialization script."""
+        if "zsh" in shell:
+            return self._get_zsh_init()
+        elif "fish" in shell:
+            return self._get_fish_init()
+        else:
+            return self._get_bash_init()
+
+    def _get_bash_init(self) -> str:
+        """Get bash init for non-interactive mode."""
+        return """#!/bin/bash
+# Non-interactive shell init
+export TERM=dumb
+export NO_COLOR=1
+unset HISTFILE
+export HISTSIZE=0
+# Skip interactive-only configs
+if [ -f ~/.bashrc ]; then
+    source ~/.bashrc 2>/dev/null || true
+fi
+"""
+
+    def _get_zsh_init(self) -> str:
+        """Get zsh init for non-interactive mode."""
+        return """#!/bin/zsh
+# Non-interactive shell init
+export TERM=dumb
+export NO_COLOR=1
+unset HISTFILE
+# Skip interactive-only configs
+[[ -f ~/.zshrc ]] && source ~/.zshrc 2>/dev/null || true
+"""
+
+    def _get_fish_init(self) -> str:
+        """Get fish init for non-interactive mode."""
+        return """#!/usr/bin/env fish
+# Non-interactive shell init
+set -gx TERM dumb
+set -gx NO_COLOR 1
+"""
+
+    def wrap_command(self, command: str, shell: str = "/bin/bash") -> str:
+        """Wrap command to skip interactive init."""
+        init = self.get_init_script(shell)
+        return f"{init}\n{command}"
+
+
+class TerminalTool:
+    """Enhanced terminal tool with PTY, sudo, and shell init."""
+
+    def __init__(self) -> None:
+        self.pty_manager = PTYManager()
+        self.sudo_manager = SudoManager()
+        self.shell_handler = ShellInitHandler()
+        self._config = TerminalConfig()
+
     async def execute(
         self,
         command: str,
-        cwd: str = ".",
-        timeout: int = 180,
-        background: bool = False,
+        config: TerminalConfig = None,
     ) -> dict[str, Any]:
         """Execute a command."""
-        pass
+        cfg = config or self._config
 
-    @abstractmethod
-    async def cleanup(self) -> None:
-        """Clean up resources."""
-        pass
+        if cfg.use_pty:
+            return await self._execute_pty(command, cfg)
+        else:
+            return await self._execute_subprocess(command, cfg)
 
-
-class LocalBackend(TerminalBackend):
-    """Local terminal backend."""
-
-    async def execute(
+    async def _execute_pty(
         self,
         command: str,
-        cwd: str = ".",
-        timeout: int = 180,
-        background: bool = False,
+        config: TerminalConfig,
     ) -> dict[str, Any]:
-        """Execute command locally."""
+        """Execute with PTY."""
+        master_fd, slave_fd = self.pty_manager.create_session(config)
+
         try:
-            if background:
-                process = await asyncio.create_subprocess_shell(
-                    command,
-                    cwd=cwd,
-                    stdout=asyncio.subprocess.PIPE,
-                    stderr=asyncio.subprocess.PIPE,
-                )
+            # Wrap command if needed
+            if not config.sudo:
+                wrapped = self.shell_handler.wrap_command(command, config.shell)
+            else:
+                wrapped = command
+
+            # Start process
+            pid = os.fork()
+            if pid == 0:
+                # Child process
+                os.close(master_fd)
+                os.setsid()
+                fcntl.ioctl(slave_fd, struct.unpack("H", b"TIOCSCTTY")[0], 0)
+                os.dup2(slave_fd, 0)
+                os.dup2(slave_fd, 1)
+                os.dup2(slave_fd, 2)
+                os.close(slave_fd)
+
+                # Execute
+                os.execvp(config.shell, [config.shell, "-c", wrapped])
+            else:
+                # Parent process
+                os.close(slave_fd)
+                output = ""
+                start = asyncio.get_event_loop().time()
+
+                while True:
+                    if asyncio.get_event_loop().time() - start > config.timeout:
+                        os.kill(pid, signal.SIGTERM)
+                        break
+
+                    data = self.pty_manager.read_session(master_fd, 0.1)
+                    if data:
+                        output += data
+                    else:
+                        # Check if process exited
+                        try:
+                            wpid, status = os.waitpid(pid, os.WNOHANG)
+                            if wpid:
+                                break
+                        except ChildProcessError:
+                            break
+
+                self.pty_manager.close_session(master_fd)
                 return {
-                    "status": "running",
-                    "pid": process.pid,
-                    "message": f"Background process started with PID {process.pid}",
+                    "stdout": output,
+                    "stderr": "",
+                    "exit_code": 0,
                 }
 
-            result = await asyncio.wait_for(
-                asyncio.create_subprocess_shell(
-                    command,
-                    cwd=cwd,
-                    stdout=asyncio.subprocess.PIPE,
-                    stderr=asyncio.subprocess.PIPE,
-                ),
-                timeout=timeout,
-            )
-
-            stdout, stderr = await result.communicate()
-
-            return {
-                "status": "completed",
-                "exit_code": result.returncode,
-                "stdout": stdout.decode("utf-8", errors="replace"),
-                "stderr": stderr.decode("utf-8", errors="replace"),
-            }
-
-        except asyncio.TimeoutError:
-            return {
-                "status": "timeout",
-                "error": f"Command timed out after {timeout}s",
-            }
         except Exception as e:
+            self.pty_manager.close_session(master_fd)
             return {
-                "status": "error",
-                "error": str(e),
+                "stdout": "",
+                "stderr": str(e),
+                "exit_code": 1,
             }
 
-    async def cleanup(self) -> None:
-        """No cleanup needed for local backend."""
-        pass
+    async def _execute_subprocess(
+        self,
+        command: str,
+        config: TerminalConfig,
+    ) -> dict[str, Any]:
+        """Execute without PTY."""
+        wrapped = self.shell_handler.wrap_command(command, config.shell)
 
-
-class DockerBackend(TerminalBackend):
-    """Docker container backend."""
-
-    def __init__(self, config: TerminalConfig = None) -> None:
-        self.config = config or TerminalConfig()
-        self._container_id: Optional[str] = None
-
-    async def _ensure_container(self) -> str:
-        """Ensure Docker container is running."""
-        if self._container_id:
-            return self._container_id
-
-        # Start new container
-        cmd = [
-            "docker", "run", "-d",
-            "--rm",
-            "--cap-drop", "ALL",
-            "--cap-add", "DAC_OVERRIDE",
-            "--cap-add", "CHOWN",
-            "--cap-add", "FOWNER",
-            "--security-opt", "no-new-privileges",
-            "--pids-limit", "256",
-            "--memory", f"{self.config.container_memory}m",
-            "--cpus", str(self.config.container_cpu),
-            "--tmpfs", "/tmp:rw,nosuid,size=512m",
-            self.config.docker_image,
-            "sleep", "infinity",
-        ]
-
-        result = await asyncio.create_subprocess_exec(
-            *cmd,
+        proc = await asyncio.create_subprocess_shell(
+            wrapped,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
-        )
-        stdout, _ = await result.communicate()
-        self._container_id = stdout.decode().strip()
-
-        logger.info(f"Started Docker container: {self._container_id[:12]}")
-        return self._container_id
-
-    async def execute(
-        self,
-        command: str,
-        cwd: str = ".",
-        timeout: int = 180,
-        background: bool = False,
-    ) -> dict[str, Any]:
-        """Execute command in Docker."""
-        container_id = await self._ensure_container()
-
-        docker_cmd = [
-            "docker", "exec",
-            container_id,
-            "bash", "-c", command,
-        ]
-
-        try:
-            if background:
-                process = await asyncio.create_subprocess_exec(
-                    *docker_cmd,
-                    stdout=asyncio.subprocess.PIPE,
-                    stderr=asyncio.subprocess.PIPE,
-                )
-                return {
-                    "status": "running",
-                    "pid": process.pid,
-                    "message": f"Background process started in container",
-                }
-
-            result = await asyncio.wait_for(
-                asyncio.create_subprocess_exec(
-                    *docker_cmd,
-                    stdout=asyncio.subprocess.PIPE,
-                    stderr=asyncio.subprocess.PIPE,
-                ),
-                timeout=timeout,
-            )
-
-            stdout, stderr = await result.communicate()
-
-            return {
-                "status": "completed",
-                "exit_code": result.returncode,
-                "stdout": stdout.decode("utf-8", errors="replace"),
-                "stderr": stderr.decode("utf-8", errors="replace"),
-            }
-
-        except asyncio.TimeoutError:
-            return {
-                "status": "timeout",
-                "error": f"Command timed out after {timeout}s",
-            }
-        except Exception as e:
-            return {
-                "status": "error",
-                "error": str(e),
-            }
-
-    async def cleanup(self) -> None:
-        """Stop Docker container."""
-        if self._container_id:
-            try:
-                await asyncio.create_subprocess_exec(
-                    "docker", "stop", self._container_id,
-                    stdout=asyncio.subprocess.PIPE,
-                    stderr=asyncio.subprocess.PIPE,
-                )
-                logger.info(f"Stopped Docker container: {self._container_id[:12]}")
-            except Exception as e:
-                logger.error(f"Failed to stop container: {e}")
-            self._container_id = None
-
-
-class SSHBackend(TerminalBackend):
-    """SSH remote backend."""
-
-    def __init__(self, config: TerminalConfig = None) -> None:
-        self.config = config or TerminalConfig()
-
-    async def execute(
-        self,
-        command: str,
-        cwd: str = ".",
-        timeout: int = 180,
-        background: bool = False,
-    ) -> dict[str, Any]:
-        """Execute command via SSH."""
-        ssh_cmd = [
-            "ssh",
-            "-o", "StrictHostKeyChecking=no",
-            "-o", "ConnectTimeout=10",
-        ]
-
-        if self.config.ssh_key:
-            ssh_cmd.extend(["-i", self.config.ssh_key])
-
-        ssh_cmd.append(f"{self.config.ssh_user}@{self.config.ssh_host}")
-        ssh_cmd.append(f"cd {cwd} && {command}")
-
-        try:
-            result = await asyncio.wait_for(
-                asyncio.create_subprocess_exec(
-                    *ssh_cmd,
-                    stdout=asyncio.subprocess.PIPE,
-                    stderr=asyncio.subprocess.PIPE,
-                ),
-                timeout=timeout,
-            )
-
-            stdout, stderr = await result.communicate()
-
-            return {
-                "status": "completed",
-                "exit_code": result.returncode,
-                "stdout": stdout.decode("utf-8", errors="replace"),
-                "stderr": stderr.decode("utf-8", errors="replace"),
-            }
-
-        except asyncio.TimeoutError:
-            return {
-                "status": "timeout",
-                "error": f"SSH command timed out after {timeout}s",
-            }
-        except Exception as e:
-            return {
-                "status": "error",
-                "error": str(e),
-            }
-
-    async def cleanup(self) -> None:
-        """No cleanup needed for SSH backend."""
-        pass
-
-
-class TerminalManager:
-    """Manage terminal backends."""
-
-    def __init__(self, config: TerminalConfig = None) -> None:
-        self.config = config or TerminalConfig()
-        self._backends: dict[str, TerminalBackend] = {
-            "local": LocalBackend(),
-            "docker": DockerBackend(self.config),
-            "ssh": SSHBackend(self.config),
-        }
-
-    def get_backend(self) -> TerminalBackend:
-        """Get the active backend."""
-        backend = self._backends.get(self.config.backend)
-        if not backend:
-            logger.warning(f"Unknown backend {self.config.backend}, using local")
-            backend = self._backends["local"]
-        return backend
-
-    async def execute(
-        self,
-        command: str,
-        cwd: str = None,
-        timeout: int = None,
-        background: bool = False,
-    ) -> dict[str, Any]:
-        """Execute command using configured backend."""
-        backend = self.get_backend()
-        return await backend.execute(
-            command,
-            cwd=cwd or self.config.cwd,
-            timeout=timeout or self.config.timeout,
-            background=background,
+            cwd=config.cwd or None,
+            env=config.env or None,
         )
 
-    async def cleanup(self) -> None:
-        """Clean up all backends."""
-        for backend in self._backends.values():
-            await backend.cleanup()
+        try:
+            stdout, stderr = await asyncio.wait_for(
+                proc.communicate(),
+                timeout=config.timeout,
+            )
+            return {
+                "stdout": stdout.decode("utf-8", errors="replace"),
+                "stderr": stderr.decode("utf-8", errors="replace"),
+                "exit_code": proc.returncode,
+            }
+        except asyncio.TimeoutError:
+            proc.kill()
+            return {
+                "stdout": "",
+                "stderr": "Command timed out",
+                "exit_code": -1,
+            }

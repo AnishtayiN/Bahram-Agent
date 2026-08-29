@@ -1,73 +1,126 @@
-"""Background process notifications for Bahram Agent."""
+"""Background task notifications for Bahram Agent."""
 
 from __future__ import annotations
 
+import asyncio
 import logging
-from enum import Enum
-from typing import Any, Optional, Callable
+import time
+from dataclasses import dataclass, field
+from typing import Any, Callable, Optional
 
 logger = logging.getLogger(__name__)
 
 
-class BackgroundNotificationMode(str, Enum):
-    """Background notification modes."""
+@dataclass
+class BackgroundTask:
+    """A background task."""
 
-    CONCISE = "concise"
-    ALL = "all"
-    RESULT = "result"
-    ERROR = "error"
-    OFF = "off"
+    task_id: str
+    name: str
+    status: str = "pending"  # pending, running, completed, failed
+    result: Any = None
+    error: str = ""
+    start_time: float = 0.0
+    end_time: float = 0.0
+    notify_chat_id: str = ""
+    notify_platform: str = ""
 
 
-class BackgroundProcessNotifier:
-    """Notify about background process status."""
+class BackgroundNotifier:
+    """Manage background task notifications."""
 
-    def __init__(self, mode: BackgroundNotificationMode = BackgroundNotificationMode.CONCISE) -> None:
-        self.mode = mode
+    def __init__(self) -> None:
+        self._tasks: dict[str, BackgroundTask] = {}
         self._notify_fn: Optional[Callable] = None
 
     def set_notify_function(self, fn: Callable) -> None:
-        """Set the notification function."""
+        """Set notification function."""
         self._notify_fn = fn
 
-    async def notify_started(self, session_id: str, command: str) -> None:
-        """Notify background process started."""
-        if self.mode == BackgroundNotificationMode.OFF:
-            return
+    def start_task(
+        self,
+        task_id: str,
+        name: str,
+        notify_chat_id: str = "",
+        notify_platform: str = "",
+    ) -> None:
+        """Start tracking a background task."""
+        self._tasks[task_id] = BackgroundTask(
+            task_id=task_id,
+            name=name,
+            status="running",
+            start_time=time.time(),
+            notify_chat_id=notify_chat_id,
+            notify_platform=notify_platform,
+        )
 
-        await self._send(f"🔄 Background process started: `{command[:50]}` (ID: {session_id})")
+    def complete_task(self, task_id: str, result: Any = None) -> None:
+        """Mark task as completed."""
+        if task_id in self._tasks:
+            task = self._tasks[task_id]
+            task.status = "completed"
+            task.result = result
+            task.end_time = time.time()
+            self._send_notification(task, f"Task '{task.name}' completed")
 
-    async def notify_output(self, session_id: str, output: str) -> None:
-        """Notify background process output."""
-        if self.mode != BackgroundNotificationMode.ALL:
-            return
+    def fail_task(self, task_id: str, error: str) -> None:
+        """Mark task as failed."""
+        if task_id in self._tasks:
+            task = self._tasks[task_id]
+            task.status = "failed"
+            task.error = error
+            task.end_time = time.time()
+            self._send_notification(task, f"Task '{task.name}' failed: {error}")
 
-        await self._send(f"📤 [{session_id}] {output[:200]}")
-
-    async def notify_completed(self, session_id: str, exit_code: int, output: str = "") -> None:
-        """Notify background process completed."""
-        if self.mode == BackgroundNotificationMode.OFF:
-            return
-
-        if exit_code == 0:
-            if self.mode in [BackgroundNotificationMode.CONCISE, BackgroundNotificationMode.RESULT, BackgroundNotificationMode.ALL]:
-                await self._send(f"✅ Background process {session_id} completed")
-        else:
-            if self.mode in [BackgroundNotificationMode.CONCISE, BackgroundNotificationMode.ERROR, BackgroundNotificationMode.ALL]:
-                tail = output[-200:] if output else ""
-                await self._send(f"❌ Background process {session_id} failed (exit {exit_code})\n```\n{tail}\n```")
-
-    async def notify_error(self, session_id: str, error: str) -> None:
-        """Notify background process error."""
-        if self.mode == BackgroundNotificationMode.OFF:
-            return
-
-        await self._send(f"❌ Background process {session_id} error: {error[:200]}")
-
-    async def _send(self, message: str) -> None:
+    def _send_notification(self, task: BackgroundTask, message: str) -> None:
         """Send notification."""
-        if self._notify_fn:
-            try:
-                await self._notify_fn(message)
-            except Exception as e:
-                logger.error(f"Failed to send notification: {e}")
+        if not self._notify_fn or not task.notify_chat_id:
+            return
+
+        try:
+            if asyncio.iscoroutinefunction(self._notify_fn):
+                asyncio.create_task(
+                    self._notify_fn(task.notify_platform, task.notify_chat_id, message)
+                )
+            else:
+                self._notify_fn(task.notify_platform, task.notify_chat_id, message)
+        except Exception as e:
+            logger.warning(f"Failed to send notification: {e}")
+
+    def get_active_tasks(self) -> list[dict]:
+        """Get active tasks."""
+        return [
+            {
+                "id": t.task_id,
+                "name": t.name,
+                "status": t.status,
+                "start_time": t.start_time,
+            }
+            for t in self._tasks.values()
+            if t.status in ("pending", "running")
+        ]
+
+    def get_task(self, task_id: str) -> Optional[dict]:
+        """Get task info."""
+        task = self._tasks.get(task_id)
+        if task:
+            return {
+                "id": task.task_id,
+                "name": task.name,
+                "status": task.status,
+                "result": task.result,
+                "error": task.error,
+            }
+        return None
+
+    def cleanup_old(self, max_age_seconds: int = 3600) -> int:
+        """Cleanup old completed tasks."""
+        now = time.time()
+        to_remove = [
+            tid for tid, task in self._tasks.items()
+            if task.status in ("completed", "failed")
+            and (now - task.end_time) > max_age_seconds
+        ]
+        for tid in to_remove:
+            del self._tasks[tid]
+        return len(to_remove)
