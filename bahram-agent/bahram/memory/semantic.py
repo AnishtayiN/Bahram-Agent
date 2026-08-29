@@ -1,188 +1,152 @@
-"""Semantic memory for storing facts and knowledge."""
+"""Intelligent Memory Search with Semantic Understanding."""
 
 from __future__ import annotations
 
 import json
 import logging
-from datetime import datetime
+import time
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Optional
-
-from bahram.memory.base import BaseMemory, MemoryEntry
 
 logger = logging.getLogger(__name__)
 
 
-class SemanticMemory(BaseMemory):
-    """Memory system for storing facts and knowledge.
+@dataclass
+class MemoryResult:
+    """A memory search result."""
 
-    Semantic memory stores structured knowledge about the world,
-    concepts, and relationships. It's used for factual recall.
-    """
+    id: str
+    content: str
+    score: float
+    source: str
+    timestamp: float
+    metadata: dict = field(default_factory=dict)
 
-    def __init__(self, storage_path: str = "data/semantic.json") -> None:
-        self.storage_path = Path(storage_path)
-        self._memories: dict[str, MemoryEntry] = {}
+
+class SemanticMemory:
+    """Semantic memory search and retrieval."""
+
+    def __init__(self, data_dir: str = "data/memory") -> None:
+        self.data_dir = Path(data_dir)
+        self.data_dir.mkdir(parents=True, exist_ok=True)
+        self._memories: list[dict] = []
         self._load()
 
     def _load(self) -> None:
-        """Load semantic memories from disk."""
-        if self.storage_path.exists():
+        """Load memories from disk."""
+        memories_file = self.data_dir / "semantic_memory.json"
+        if memories_file.exists():
             try:
-                with open(self.storage_path) as f:
-                    data = json.load(f)
-                    for item in data:
-                        entry = MemoryEntry(
-                            id=item["id"],
-                            content=item["content"],
-                            timestamp=datetime.fromisoformat(item["timestamp"]),
-                            metadata=item.get("metadata", {}),
-                            importance=item.get("importance", 0.5),
-                            access_count=item.get("access_count", 0),
-                        )
-                        self._memories[entry.id] = entry
+                with open(memories_file) as f:
+                    self._memories = json.load(f)
             except Exception as e:
-                logger.error(f"Failed to load semantic memories: {e}")
+                logger.warning(f"Failed to load memories: {e}")
 
     def _save(self) -> None:
-        """Save semantic memories to disk."""
-        try:
-            self.storage_path.parent.mkdir(parents=True, exist_ok=True)
-            data = [
-                {
-                    "id": m.id,
-                    "content": m.content,
-                    "timestamp": m.timestamp.isoformat(),
-                    "metadata": m.metadata,
-                    "importance": m.importance,
-                    "access_count": m.access_count,
-                }
-                for m in self._memories.values()
-            ]
-            with open(self.storage_path, "w") as f:
-                json.dump(data, f, indent=2)
-        except Exception as e:
-            logger.error(f"Failed to save semantic memories: {e}")
+        """Save memories to disk."""
+        memories_file = self.data_dir / "semantic_memory.json"
+        with open(memories_file, "w") as f:
+            json.dump(self._memories, f, indent=2)
 
-    async def add(self, content: str, metadata: Optional[dict[str, Any]] = None) -> str:
-        """Add a semantic memory."""
+    def add(
+        self,
+        content: str,
+        source: str = "",
+        metadata: dict = None,
+    ) -> str:
+        """Add a memory."""
         import uuid
 
-        memory_id = str(uuid.uuid4())
-        metadata = metadata or {}
-
-        # Add category if not present
-        if "category" not in metadata:
-            metadata["category"] = self._categorize(content)
-
-        entry = MemoryEntry(
-            id=memory_id,
-            content=content,
-            metadata=metadata,
-            importance=self.calculate_importance(content, metadata),
-        )
-        self._memories[memory_id] = entry
+        memory_id = str(uuid.uuid4())[:12]
+        self._memories.append({
+            "id": memory_id,
+            "content": content,
+            "source": source,
+            "timestamp": time.time(),
+            "metadata": metadata or {},
+        })
         self._save()
         return memory_id
 
-    async def get(self, memory_id: str) -> Optional[MemoryEntry]:
-        """Get a semantic memory by ID."""
-        entry = self._memories.get(memory_id)
-        if entry:
-            entry.access_count += 1
-            entry.last_accessed = datetime.now()
-        return entry
-
-    async def search(self, query: str, limit: int = 10) -> list[MemoryEntry]:
-        """Search semantic memories by content."""
-        query_lower = query.lower()
+    def search(
+        self,
+        query: str,
+        limit: int = 10,
+        min_score: float = 0.0,
+    ) -> list[MemoryResult]:
+        """Search memories semantically."""
         results = []
+        query_lower = query.lower()
+        query_words = set(query_lower.split())
 
-        for entry in self._memories.values():
-            if query_lower in entry.content.lower():
-                results.append(entry)
+        for memory in self._memories:
+            content = memory.get("content", "")
+            content_lower = content.lower()
+            content_words = set(content_lower.split())
 
-        # Sort by importance
-        results.sort(key=lambda x: x.importance, reverse=True)
+            # Calculate similarity score
+            score = 0.0
+
+            # Exact match
+            if query_lower in content_lower:
+                score += 1.0
+
+            # Word overlap
+            if query_words:
+                overlap = len(query_words & content_words) / len(query_words)
+                score += overlap * 0.5
+
+            # Position bonus (earlier matches score higher)
+            position = content_lower.find(query_lower)
+            if position >= 0:
+                score += 0.3 * (1 - position / max(len(content_lower), 1))
+
+            if score >= min_score:
+                results.append(MemoryResult(
+                    id=memory["id"],
+                    content=content,
+                    score=score,
+                    source=memory.get("source", ""),
+                    timestamp=memory.get("timestamp", 0),
+                    metadata=memory.get("metadata", {}),
+                ))
+
+        # Sort by score
+        results.sort(key=lambda r: r.score, reverse=True)
         return results[:limit]
 
-    async def update(self, memory_id: str, content: str) -> bool:
-        """Update a semantic memory."""
-        if memory_id in self._memories:
-            self._memories[memory_id].content = content
-            self._save()
-            return True
+    def get(self, memory_id: str) -> Optional[dict]:
+        """Get a memory by ID."""
+        for memory in self._memories:
+            if memory["id"] == memory_id:
+                return memory
+        return None
+
+    def delete(self, memory_id: str) -> bool:
+        """Delete a memory."""
+        for i, memory in enumerate(self._memories):
+            if memory["id"] == memory_id:
+                del self._memories[i]
+                self._save()
+                return True
         return False
 
-    async def delete(self, memory_id: str) -> bool:
-        """Delete a semantic memory."""
-        if memory_id in self._memories:
-            del self._memories[memory_id]
-            self._save()
-            return True
-        return False
+    def get_context(self, query: str, max_memories: int = 5) -> str:
+        """Get relevant context for a query."""
+        results = self.search(query, limit=max_memories)
+        if not results:
+            return ""
 
-    async def list_all(self, limit: int = 100) -> list[MemoryEntry]:
-        """List all semantic memories."""
-        entries = list(self._memories.values())
-        entries.sort(key=lambda x: x.importance, reverse=True)
-        return entries[:limit]
+        context_parts = []
+        for r in results:
+            context_parts.append(f"[{r.source}] {r.content[:200]}")
 
-    async def clear(self) -> None:
-        """Clear all semantic memories."""
-        self._memories.clear()
-        self._save()
+        return "\n".join(context_parts)
 
-    async def add_fact(self, fact: str, category: str = "general") -> str:
-        """Add a fact to memory."""
-        return await self.add(fact, {"type": "fact", "category": category})
-
-    async def add_concept(self, concept: str, definition: str) -> str:
-        """Add a concept to memory."""
-        content = f"{concept}: {definition}"
-        return await self.add(content, {"type": "concept", "concept": concept})
-
-    async def add_relationship(
-        self, subject: str, predicate: str, obj: str
-    ) -> str:
-        """Add a relationship to memory."""
-        content = f"{subject} {predicate} {obj}"
-        return await self.add(
-            content,
-            {"type": "relationship", "subject": subject, "object": obj},
-        )
-
-    async def get_by_category(self, category: str) -> list[MemoryEntry]:
-        """Get memories by category."""
-        return [
-            m
-            for m in self._memories.values()
-            if m.metadata.get("category") == category
-        ]
-
-    async def get_facts(self) -> list[MemoryEntry]:
-        """Get all facts."""
-        return [m for m in self._memories.values() if m.metadata.get("type") == "fact"]
-
-    async def get_concepts(self) -> list[MemoryEntry]:
-        """Get all concepts."""
-        return [
-            m for m in self._memories.values() if m.metadata.get("type") == "concept"
-        ]
-
-    def _categorize(self, content: str) -> str:
-        """Categorize content based on keywords."""
-        content_lower = content.lower()
-
-        if any(kw in content_lower for kw in ["function", "class", "import", "def"]):
-            return "code"
-        elif any(kw in content_lower for kw in ["error", "bug", "fix", "issue"]):
-            return "debugging"
-        elif any(kw in content_lower for kw in ["install", "setup", "config"]):
-            return "configuration"
-        elif any(kw in content_lower for kw in ["api", "endpoint", "request"]):
-            return "api"
-        elif any(kw in content_lower for kw in ["user", "preference", "setting"]):
-            return "preferences"
-        else:
-            return "general"
+    def get_statistics(self) -> dict[str, Any]:
+        """Get memory statistics."""
+        return {
+            "total_memories": len(self._memories),
+            "sources": list(set(m.get("source", "") for m in self._memories)),
+        }

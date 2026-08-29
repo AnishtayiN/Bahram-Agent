@@ -1,0 +1,131 @@
+"""Smart Context Manager - Automatically manage context windows."""
+
+from __future__ import annotations
+
+import json
+import logging
+from dataclasses import dataclass, field
+from typing import Any, Optional
+
+logger = logging.getLogger(__name__)
+
+
+@dataclass
+class ContextWindow:
+    """A context window."""
+
+    content: str
+    tokens: int
+    priority: int = 0
+    metadata: dict = field(default_factory=dict)
+
+
+class SmartContextManager:
+    """Intelligent context window management."""
+
+    def __init__(self, max_tokens: int = 8192) -> None:
+        self.max_tokens = max_tokens
+        self._windows: list[ContextWindow] = []
+        self._system_prompt: str = ""
+        self._history: list[dict] = []
+
+    def set_system_prompt(self, prompt: str) -> None:
+        """Set system prompt."""
+        self._system_prompt = prompt
+
+    def add_context(
+        self,
+        content: str,
+        priority: int = 0,
+        metadata: dict = None,
+    ) -> None:
+        """Add context window."""
+        tokens = self._estimate_tokens(content)
+        self._windows.append(ContextWindow(
+            content=content,
+            tokens=tokens,
+            priority=priority,
+            metadata=metadata or {},
+        ))
+
+    def add_history(self, role: str, content: str) -> None:
+        """Add conversation history."""
+        self._history.append({"role": role, "content": content})
+
+    def build_context(self) -> list[dict]:
+        """Build optimized context for LLM."""
+        messages = []
+
+        # System prompt
+        if self._system_prompt:
+            messages.append({"role": "system", "content": self._system_prompt})
+            used_tokens = self._estimate_tokens(self._system_prompt)
+        else:
+            used_tokens = 0
+
+        # Add high-priority context first
+        sorted_windows = sorted(self._windows, key=lambda w: w.priority, reverse=True)
+        for window in sorted_windows:
+            if used_tokens + window.tokens <= self.max_tokens * 0.7:
+                messages.append({"role": "system", "content": window.content})
+                used_tokens += window.tokens
+
+        # Add conversation history
+        for msg in reversed(self._history):
+            msg_tokens = self._estimate_tokens(msg["content"])
+            if used_tokens + msg_tokens <= self.max_tokens * 0.9:
+                messages.insert(-1, msg)  # Insert before last message
+                used_tokens += msg_tokens
+
+        return messages
+
+    def _estimate_tokens(self, text: str) -> int:
+        """Estimate token count."""
+        # Simple estimation: ~4 chars per token
+        return len(text) // 4
+
+    def get_usage(self) -> dict[str, int]:
+        """Get context usage."""
+        total_tokens = sum(w.tokens for w in self._windows)
+        history_tokens = sum(self._estimate_tokens(m["content"]) for m in self._history)
+        return {
+            "max_tokens": self.max_tokens,
+            "context_tokens": total_tokens,
+            "history_tokens": history_tokens,
+            "total_used": total_tokens + history_tokens,
+            "remaining": self.max_tokens - total_tokens - history_tokens,
+        }
+
+    def optimize(self) -> int:
+        """Optimize context by removing low-priority items."""
+        usage = self.get_usage()
+        if usage["remaining"] > 0:
+            return 0
+
+        # Remove low-priority windows
+        removed = 0
+        self._windows.sort(key=lambda w: w.priority)
+        while self._windows and usage["remaining"] < 0:
+            removed_window = self._windows.pop(0)
+            usage["remaining"] += removed_window.tokens
+            removed += 1
+
+        return removed
+
+    def clear(self) -> None:
+        """Clear all context."""
+        self._windows.clear()
+        self._history.clear()
+
+    def format_context(self) -> str:
+        """Format context for display."""
+        usage = self.get_usage()
+        lines = [
+            "## Context Window",
+            f"Max: {usage['max_tokens']} tokens",
+            f"Used: {usage['total_used']} tokens",
+            f"Remaining: {usage['remaining']} tokens",
+            f"Context windows: {len(self._windows)}",
+            f"History messages: {len(self._history)}",
+        ]
+        return "\n".join(lines)
