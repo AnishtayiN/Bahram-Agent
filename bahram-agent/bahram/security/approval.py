@@ -1,0 +1,192 @@
+"""Dangerous command approval system for Bahram Agent."""
+
+from __future__ import annotations
+
+import fnmatch
+import logging
+import re
+from dataclasses import dataclass, field
+from enum import Enum
+from typing import Optional
+
+logger = logging.getLogger(__name__)
+
+
+class ApprovalMode(str, Enum):
+    """Approval modes."""
+
+    SMART = "smart"
+    MANUAL = "manual"
+    OFF = "off"
+
+
+@dataclass
+class ApprovalConfig:
+    """Approval system configuration."""
+
+    mode: ApprovalMode = ApprovalMode.SMART
+    timeout: int = 300
+    cron_mode: str = "deny"
+    single_query_mode: str = "deny"
+    deny: list[str] = field(default_factory=list)
+    allowlist: list[str] = field(default_factory=list)
+
+
+# Hardline blocklist - always blocked, no override
+HARDLINE_BLOCKLIST = [
+    "rm -rf /",
+    "rm -rf --no-preserve-root /",
+    ":(){ :|:& };:",  # fork bomb
+    "mkfs.* /dev/*",
+    "dd if=/dev/zero of=/dev/*",
+    "dd if=/dev/zero of=/dev/sd*",
+]
+
+# Patterns that trigger approval
+DANGEROUS_PATTERNS = [
+    # Recursive delete
+    (r"rm\s+(-[a-zA-Z]*r[a-zA-Z]*|-[a-zA-Z]*\s+-[a-zA-Z]*r|-[a-zA-Z]*\s+--recursive)\s+", "Recursive delete"),
+    (r"rm\s+.*\s+/", "Delete in root path"),
+
+    # Permission changes
+    (r"chmod\s+(777|666|o\+w|a\+w)", "Unsafe permissions"),
+    (r"chmod\s+--recursive\s+", "Recursive chmod"),
+    (r"chown\s+(-R|--recursive)\s+root", "Recursive chown to root"),
+
+    # Filesystem operations
+    (r"mkfs", "Format filesystem"),
+    (r"dd\s+if=", "Disk copy"),
+    (r">\s*/dev/sd", "Write to block device"),
+
+    # SQL
+    (r"DROP\s+(TABLE|DATABASE)", "SQL DROP"),
+    (r"DELETE\s+FROM\s+.*\s+(?!WHERE)", "SQL DELETE without WHERE"),
+    (r"TRUNCATE\s+TABLE", "SQL TRUNCATE"),
+
+    # System config
+    (r">\s*/etc/", "Overwrite system config"),
+    (r"systemctl\s+(stop|restart|disable|mask)", "System service control"),
+    (r"kill\s+-9\s+-1", "Kill all processes"),
+    (r"pkill\s+-9", "Force kill processes"),
+
+    # Fork bombs
+    (r":\(\)\s*\{", "Fork bomb pattern"),
+
+    # Shell execution
+    (r"bash\s+-[cC]", "Shell command execution"),
+    (r"sh\s+-[cC]", "Shell command execution"),
+    (r"zsh\s+-c", "Shell command execution"),
+    (r"python\s+-e", "Script execution"),
+    (r"perl\s+-e", "Script execution"),
+    (r"ruby\s+-e", "Script execution"),
+
+    # Pipe to shell
+    (r"curl\s+.*\|\s*sh", "Pipe remote content to shell"),
+    (r"wget\s+.*\|\s*sh", "Pipe remote content to shell"),
+    (r"bash\s*<\(curl", "Execute remote script"),
+    (r"sh\s*<\(wget", "Execute remote script"),
+
+    # Sensitive file writes
+    (r"tee\s+.*(/etc/|~/.ssh/|~/.hermes/\.env)", "Overwrite sensitive file"),
+    (r">\s*~/.ssh/", "Overwrite SSH file"),
+    (r">\s*~/.hermes/\.env", "Overwrite env file"),
+
+    # Find with destructive actions
+    (r"find\s+.*-exec\s+rm", "Find with rm"),
+    (r"find\s+.*-delete", "Find delete"),
+
+    # Docker hijacking
+    (r"docker\s+(stop|kill|restart)", "Container lifecycle"),
+    (r"docker\s+compose\s+(down|stop|kill|restart)", "Container lifecycle"),
+    (r"(DOCKER_HOST|DOCKER_CONTEXT)=", "Docker daemon redirect"),
+]
+
+
+class ApprovalSystem:
+    """Dangerous command approval system."""
+
+    def __init__(self, config: ApprovalConfig = None) -> None:
+        self.config = config or ApprovalConfig()
+        self._session_allowlist: list[str] = []
+
+    def check_command(self, command: str) -> tuple[bool, str]:
+        """Check if a command is dangerous.
+
+        Returns:
+            Tuple of (is_dangerous, reason)
+        """
+        # Check hardline blocklist first
+        for pattern in HARDLINE_BLOCKLIST:
+            if re.search(pattern, command, re.IGNORECASE):
+                return True, f"HARDLINE BLOCKED: {pattern}"
+
+        # Check user-defined deny rules
+        for deny_pattern in self.config.deny:
+            if fnmatch.fnmatch(command.lower(), deny_pattern.lower()):
+                return True, f"DENIED by policy: {deny_pattern}"
+
+        # Check if already in allowlist
+        if self._is_in_allowlist(command):
+            return False, ""
+
+        # Check dangerous patterns
+        for pattern, description in DANGEROUS_PATTERNS:
+            if re.search(pattern, command, re.IGNORECASE):
+                return True, description
+
+        return False, ""
+
+    def _is_in_allowlist(self, command: str) -> bool:
+        """Check if command is in the allowlist."""
+        for pattern in self.config.allowlist + self._session_allowlist:
+            if fnmatch.fnmatch(command.lower(), pattern.lower()):
+                return True
+        return False
+
+    def approve_once(self, command: str) -> None:
+        """Approve command for this session only."""
+        self._session_allowlist.append(command)
+
+    def approve_always(self, command: str) -> None:
+        """Add command to permanent allowlist."""
+        self.config.allowlist.append(command)
+
+    def get_approval_mode(self) -> ApprovalMode:
+        """Get current approval mode."""
+        return self.config.mode
+
+    def should_prompt(self, command: str) -> bool:
+        """Check if we should prompt for approval."""
+        if self.config.mode == ApprovalMode.OFF:
+            return False
+
+        is_dangerous, _ = self.check_command(command)
+        if not is_dangerous:
+            return False
+
+        # Check allowlist
+        if self._is_in_allowlist(command):
+            return False
+
+        return True
+
+    def assess_risk(self, command: str) -> str:
+        """Assess risk level for smart mode.
+
+        Returns: 'low', 'medium', 'high', 'critical'
+        """
+        is_dangerous, reason = self.check_command(command)
+
+        if not is_dangerous:
+            return "low"
+
+        if "HARDLINE" in reason:
+            return "critical"
+
+        if any(x in reason.lower() for x in ["delete", "drop", "truncate", "kill"]):
+            return "high"
+
+        if any(x in reason.lower() for x in ["chmod", "chown", "systemctl"]):
+            return "medium"
+
+        return "medium"

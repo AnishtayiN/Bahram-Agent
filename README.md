@@ -39,30 +39,60 @@ Bahram Agent is an advanced self-improving AI agent inspired by [Hermes Agent](h
 - **17+ LLM Providers** - Anthropic, OpenAI, OpenRouter, Nous, NVIDIA, Groq, and more
 - **Context Compression** - Intelligent context window management
 - **Fallback Providers** - Automatic failover to backup models
+- **Personality System** - SOUL.md and built-in personalities
+- **Silence Tokens** - [SILENT] for automated flows
 
 ### 🛠️ Tools & Capabilities
-- **8+ Built-in Tools** - Bash, file operations, web search, code analysis
+- **15+ Built-in Tools** - Bash, files, web search, code analysis, browser, image gen
+- **Terminal Backends** - Local, Docker, SSH, Singularity, Modal, Daytona, Vercel
+- **Background Process Management** - Start, poll, wait, kill background processes
+- **Execute Code** - Run Python/bash in sandboxed environment
+- **Delegation** - Spawn isolated subagents for parallel work
+- **Clarify Tool** - Multi-select questions with options
+- **Todo/Task Planning** - Create and manage task lists
+- **Document Extraction** - PDF, DOCX, XLSX, PPTX support
+- **Browser Automation** - Navigate, click, type, screenshot
+- **Image Generation** - DALL-E, Stability, FAL integration
 - **MCP Integration** - Connect to external tool servers
 - **Plugin System** - Extend with custom tools and hooks
 - **Batch Processing** - Process multiple prompts efficiently
+
+### 🔒 Security
+- **Dangerous Command Approval** - Smart/manual/off modes
+- **YOLO Mode** - Toggle all approval prompts
+- **Hardline Blocklist** - Always-on safety floor
+- **SSRF Protection** - Block private network access
+- **Context File Scanning** - Prompt injection detection
+- **File Write Safety** - Protected paths and sandbox
 
 ### 💾 Memory & Learning
 - **3 Memory Systems** - Conversation, episodic, and semantic memory
 - **Honcho User Modeling** - Dialectic user profiling across sessions
 - **Memory Nudge** - Periodic reminders for knowledge persistence
+- **Session Search** - Full-text search across past conversations
 - **Trajectory Generation** - Export training data for model improvement
 
 ### 🎯 Skills & Automation
 - **Skills System** - Auto-triggering, reusable capabilities
 - **Skill Hub** - Browse, install, and manage skills from registries
 - **Cron Scheduler** - Automated task execution with natural language
-- **Context Files** - Project-specific instructions
+- **Context Files** - Project-specific instructions (.bahram.md, AGENTS.md, SOUL.md)
 
 ### 🌐 Platform Support
 - **Telegram Bot** - Full-featured with inline keyboards
 - **Discord Integration** - Server and DM support
 - **Slack Integration** - Workspace connectivity
+- **WhatsApp** - Baileys/Cloud API bridge
+- **Signal** - Via signal-cli
+- **Email** - IMAP/SMTP support
+- **Home Assistant** - Smart home control
 - **Rich CLI** - Beautiful terminal interface with markdown
+
+### 🎙️ Voice & Media
+- **Voice Transcription** - Whisper API integration
+- **Text-to-Speech** - Multiple voice options
+- **Image Generation** - DALL-E 3, Stability AI, FAL
+- **Document Extraction** - PDF, DOCX, XLSX, PPTX
 
 ---
 
@@ -250,16 +280,47 @@ bahram-agent/
 │   │   ├── compressor.py   # Context compression
 │   │   ├── batch.py        # Batch processing
 │   │   ├── context_files.py # Project context
-│   │   └── trajectory.py   # Trajectory generation
-│   ├── tools/              # 8+ built-in tools
+│   │   ├── trajectory.py   # Trajectory generation
+│   │   ├── personality.py  # Personality/SOUL.md
+│   │   └── silence.py      # Silence tokens
+│   ├── security/           # Security system
+│   │   ├── approval.py     # Command approval
+│   │   └── protection.py   # SSRF, injection detection
+│   ├── tools/              # 15+ built-in tools
+│   │   ├── bash.py         # Shell execution
+│   │   ├── read.py         # File reading
+│   │   ├── write.py        # File writing
+│   │   ├── edit.py         # File editing
+│   │   ├── glob.py         # File pattern matching
+│   │   ├── grep.py         # Content search
+│   │   ├── webfetch.py     # Web fetching
+│   │   ├── websearch.py    # Web search
+│   │   ├── task.py         # Subagent spawning
+│   │   ├── terminal.py     # Terminal backends
+│   │   ├── process.py      # Background processes
+│   │   ├── execute_code.py # Code execution
+│   │   ├── delegation.py   # Task delegation
+│   │   ├── clarify.py      # Clarification questions
+│   │   ├── todo.py         # Task planning
+│   │   ├── documents.py    # Document extraction
+│   │   ├── browser.py      # Browser automation
+│   │   └── image_gen.py    # Image generation
 │   ├── memory/             # Memory systems
 │   │   ├── conversation.py # Chat history
 │   │   ├── episodic.py     # Experiences
 │   │   ├── semantic.py     # Facts/knowledge
 │   │   ├── nudge.py        # Memory nudges
-│   │   └── honcho.py       # User modeling
+│   │   ├── honcho.py       # User modeling
+│   │   └── search.py       # Session search
 │   ├── skills/             # Skill management
-│   ├── platforms/          # Telegram, Discord, Slack
+│   ├── platforms/          # Platform adapters
+│   │   ├── telegram.py     # Telegram
+│   │   ├── discord.py      # Discord
+│   │   ├── slack.py        # Slack
+│   │   ├── whatsapp.py     # WhatsApp
+│   │   ├── signal.py       # Signal
+│   │   ├── email.py        # Email
+│   │   └── homeassistant.py # Home Assistant
 │   ├── providers/          # 17+ LLM providers
 │   │   ├── anthropic.py
 │   │   ├── openai.py
@@ -282,7 +343,9 @@ bahram-agent/
 │   │   ├── base.py         # Base plugin
 │   │   └── manager.py      # Plugin manager
 │   ├── hub/                # Skills hub
-│   ├── voice/              # Voice transcription
+│   ├── voice/              # Voice systems
+│   │   ├── __init__.py     # Voice transcription
+│   │   └── modes.py        # TTS and voice modes
 │   └── scheduler/          # Task scheduler
 │       └── cron.py         # Cron scheduler
 ├── bot.py                  # Telegram bot
@@ -368,6 +431,16 @@ Edit `config/config.yaml`:
 agent:
   model: "anthropic/claude-sonnet-4-6"
 
+# Security settings
+approvals:
+  mode: smart  # smart, manual, off
+  timeout: 300
+
+# Terminal backend
+terminal:
+  backend: local  # local, docker, ssh
+  timeout: 180
+
 # Add custom provider
 providers:
   custom:
@@ -413,24 +486,43 @@ mypy .
 |---------|--------|--------|
 | Core Engine | ✅ | ✅ |
 | 17+ LLM Providers | ✅ | ✅ |
-| 8+ Tools | ✅ | ✅ |
+| 15+ Tools | ✅ | ✅ |
+| Terminal Backends | ✅ | ✅ |
+| Background Processes | ✅ | ✅ |
+| Security/Approval | ✅ | ✅ |
 | Memory Systems | ✅ | ✅ |
 | Skills System | ✅ | ✅ |
 | MCP Integration | ✅ | ✅ |
 | Plugin System | ✅ | ✅ |
 | Skill Hub | ✅ | ✅ |
 | Voice Transcription | ✅ | ✅ |
+| Text-to-Speech | ✅ | ✅ |
+| Image Generation | ✅ | ✅ |
+| Browser Automation | ✅ | ✅ |
+| Document Extraction | ✅ | ✅ |
 | Telegram Bot | ✅ | ✅ |
 | Discord/Slack | ✅ | ✅ |
+| WhatsApp/Signal | ✅ | ✅ |
+| Email | ✅ | ✅ |
+| Home Assistant | ✅ | ✅ |
 | CLI Interface | ✅ | ✅ |
 | Cron Scheduler | ✅ | ✅ |
 | Honcho Modeling | ✅ | ✅ |
+| Session Search | ✅ | ✅ |
 | Memory Nudge | ✅ | ✅ |
 | Context Compression | ✅ | ✅ |
 | Batch Processing | ✅ | ✅ |
 | Fallback Providers | ✅ | ✅ |
 | Context Files | ✅ | ✅ |
 | Trajectory Generation | ✅ | ✅ |
+| Personality/SOUL.md | ✅ | ✅ |
+| Silence Tokens | ✅ | ✅ |
+| Execute Code | ✅ | ✅ |
+| Delegation | ✅ | ✅ |
+| Clarify Tool | ✅ | ✅ |
+| Todo/Task Planning | ✅ | ✅ |
+| SSRF Protection | ✅ | ✅ |
+| Injection Detection | ✅ | ✅ |
 
 ---
 
