@@ -1,77 +1,93 @@
 from __future__ import annotations
 
+import json
 import logging
-from typing import Any, Optional
+from typing import Any, AsyncIterator
+
+from bahram.providers.base import BaseProvider
+from bahram.core.engine import AgentResponse, ToolCall
 
 logger = logging.getLogger(__name__)
 
-class OllamaProvider:
-    ""
+class OllamaProvider(BaseProvider):
+    def __init__(self, api_key: str = "", model: str = "", base_url: str = "", **kwargs: Any) -> None:
+        super().__init__(api_key=api_key, model=model or "llama3", **kwargs)
+        self.base_url = (base_url or "http://localhost:11434").rstrip("/")
+        self.temperature = kwargs.get("temperature", 0.7)
+        self.max_tokens = kwargs.get("max_tokens", 4096)
 
-    def __init__(self, base_url: str = "http://localhost:11434", model: str = "") -> None:
-        self.base_url = base_url.rstrip("/")
-        self.model = model or "llama3"
-
-    async def complete(
-        self,
-        messages: list[dict],
-        model: str = None,
-        temperature: float = 0.7,
-        max_tokens: int = 4096,
-        stream: bool = False,
-    ) -> str:
-        ""
+    async def _call_api(
+        self, messages: list[dict], system_msg: str, tools: list[dict],
+        model: str | None, temperature: float, max_tokens: int,
+    ) -> AgentResponse:
+        import httpx
+        api_messages = []
+        if system_msg:
+            api_messages.append({"role": "system", "content": system_msg})
+        api_messages.extend(messages)
+        payload: dict[str, Any] = {
+            "model": self._get_model(model),
+            "messages": api_messages,
+            "stream": False,
+            "options": {"temperature": temperature, "num_predict": max_tokens},
+        }
+        if tools:
+            payload["tools"] = tools
         try:
-            import httpx
-
             async with httpx.AsyncClient() as client:
                 response = await client.post(
                     f"{self.base_url}/api/chat",
-                    json={
-                        "model": model or self.model,
-                        "messages": messages,
-                        "stream": False,
-                        "options": {
-                            "temperature": temperature,
-                            "num_predict": max_tokens,
-                        },
-                    },
-                    timeout=120.0,
+                    json=payload, timeout=120.0,
                 )
-
                 if response.status_code == 200:
                     data = response.json()
-                    return data.get("message", {}).get("content", "")
-                else:
-                    error = response.text
-                    raise RuntimeError(f"Ollama API error: {error}")
-
+                    msg = data.get("message", {})
+                    content = msg.get("content", "")
+                    tool_calls_raw = msg.get("tool_calls") or []
+                    tool_calls = []
+                    for tc in tool_calls_raw:
+                        func = tc.get("function", {})
+                        tool_calls.append(ToolCall(
+                            id=f"call_{len(tool_calls)}",
+                            name=func.get("name", ""),
+                            arguments=func.get("arguments", {}),
+                        ))
+                    return AgentResponse(content=content, tool_calls=tool_calls)
+                raise RuntimeError(f"Ollama API error ({response.status_code}): {response.text}")
         except ImportError:
             raise ImportError("httpx not installed. Run: pip install httpx")
-        except Exception as e:
-            logger.error(f"Ollama completion failed: {e}")
-            raise
 
-    async def list_models(self) -> list[str]:
-        ""
+    async def _stream_api(
+        self, messages: list[dict], system_msg: str, tools: list[dict],
+        model: str | None, temperature: float, max_tokens: int,
+    ) -> AsyncIterator[str]:
+        import httpx
+        api_messages = []
+        if system_msg:
+            api_messages.append({"role": "system", "content": system_msg})
+        api_messages.extend(messages)
+        payload: dict[str, Any] = {
+            "model": self._get_model(model), "messages": api_messages,
+            "stream": True, "options": {"temperature": temperature, "num_predict": max_tokens},
+        }
         try:
-            import httpx
-
             async with httpx.AsyncClient() as client:
-                response = await client.get(f"{self.base_url}/api/tags", timeout=10.0)
+                async with client.stream("POST", f"{self.base_url}/api/chat",
+                    json=payload, timeout=120.0) as response:
+                    async for line in response.aiter_lines():
+                        if line.strip():
+                            try:
+                                chunk = json.loads(line)
+                                content = chunk.get("message", {}).get("content", "")
+                                if content:
+                                    yield content
+                            except json.JSONDecodeError:
+                                pass
+        except ImportError:
+            raise ImportError("httpx not installed. Run: pip install httpx")
 
-                if response.status_code == 200:
-                    data = response.json()
-                    return [m["name"] for m in data.get("models", [])]
-                return []
-
-        except Exception:
-            return []
+    def get_models(self) -> list[str]:
+        return ["llama3", "llama3.1", "codellama", "mistral"]
 
     def get_provider_info(self) -> dict[str, Any]:
-        ""
-        return {
-            "name": "ollama",
-            "base_url": self.base_url,
-            "model": self.model,
-        }
+        return {"name": "ollama", "configured": True, "model": self.model, "base_url": self.base_url}

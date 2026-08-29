@@ -1,84 +1,100 @@
 from __future__ import annotations
 
+import json
 import logging
-from typing import Any, Optional
+import time
+from typing import Any, AsyncIterator
+
+from bahram.providers.base import BaseProvider
+from bahram.core.engine import AgentResponse, ToolCall
 
 logger = logging.getLogger(__name__)
 
-class OpenAIProvider:
-    ""
+class OpenAIProvider(BaseProvider):
+    BASE_URL = "https://api.openai.com/v1"
 
-    def __init__(self, api_key: str = "", model: str = "") -> None:
-        self.api_key = api_key
-        self.model = model or "gpt-4o"
+    def __init__(self, api_key: str = "", model: str = "", **kwargs: Any) -> None:
+        super().__init__(api_key=api_key, model=model or "gpt-4o", **kwargs)
+        self.temperature = kwargs.get("temperature", 0.7)
+        self.max_tokens = kwargs.get("max_tokens", 4096)
 
-    async def complete(
+    async def _call_api(
         self,
         messages: list[dict],
-        model: str = None,
-        temperature: float = 0.7,
-        max_tokens: int = 4096,
-        stream: bool = False,
-    ) -> str:
-        ""
-        try:
-            import httpx
+        system_msg: str,
+        tools: list[dict[str, Any]],
+        model: str | None,
+        temperature: float,
+        max_tokens: int,
+    ) -> AgentResponse:
+        import httpx
 
+        api_messages = []
+        if system_msg:
+            api_messages.append({"role": "system", "content": system_msg})
+        api_messages.extend(messages)
+
+        payload: dict[str, Any] = {
+            "model": self._get_model(model),
+            "messages": api_messages,
+            "temperature": temperature,
+            "max_tokens": max_tokens,
+        }
+        if tools:
+            payload["tools"] = tools
+
+        try:
             async with httpx.AsyncClient() as client:
                 response = await client.post(
-                    "https://api.openai.com/v1/chat/completions",
+                    f"{self.BASE_URL}/chat/completions",
                     headers={
                         "Authorization": f"Bearer {self.api_key}",
                         "Content-Type": "application/json",
                     },
-                    json={
-                        "model": model or self.model,
-                        "messages": messages,
-                        "temperature": temperature,
-                        "max_tokens": max_tokens,
-                    },
+                    json=payload,
                     timeout=120.0,
                 )
-
                 if response.status_code == 200:
-                    data = response.json()
-                    return data["choices"][0]["message"]["content"]
-                else:
-                    error = response.json().get("error", {}).get("message", "Unknown error")
-                    raise RuntimeError(f"OpenAI API error: {error}")
-
+                    return self._parse_openai_response(response.json())
+                error = response.json().get("error", {}).get("message", "Unknown error")
+                raise RuntimeError(f"OpenAI API error ({response.status_code}): {error}")
         except ImportError:
             raise ImportError("httpx not installed. Run: pip install httpx")
-        except Exception as e:
-            logger.error(f"OpenAI completion failed: {e}")
-            raise
 
-    async def stream(
+    async def _stream_api(
         self,
         messages: list[dict],
-        model: str = None,
-        temperature: float = 0.7,
-        max_tokens: int = 4096,
-    ):
-        ""
-        try:
-            import httpx
+        system_msg: str,
+        tools: list[dict[str, Any]],
+        model: str | None,
+        temperature: float,
+        max_tokens: int,
+    ) -> AsyncIterator[str]:
+        import httpx
 
+        api_messages = []
+        if system_msg:
+            api_messages.append({"role": "system", "content": system_msg})
+        api_messages.extend(messages)
+
+        payload: dict[str, Any] = {
+            "model": self._get_model(model),
+            "messages": api_messages,
+            "temperature": temperature,
+            "max_tokens": max_tokens,
+            "stream": True,
+        }
+
+        try:
             async with httpx.AsyncClient() as client:
                 async with client.stream(
                     "POST",
-                    "https://api.openai.com/v1/chat/completions",
+                    f"{self.BASE_URL}/chat/completions",
                     headers={
                         "Authorization": f"Bearer {self.api_key}",
                         "Content-Type": "application/json",
                     },
-                    json={
-                        "model": model or self.model,
-                        "messages": messages,
-                        "temperature": temperature,
-                        "max_tokens": max_tokens,
-                        "stream": True,
-                    },
+                    json=payload,
                     timeout=120.0,
                 ) as response:
                     async for line in response.aiter_lines():
@@ -87,30 +103,17 @@ class OpenAIProvider:
                             if data == "[DONE]":
                                 break
                             try:
-                                import json
                                 chunk = json.loads(data)
                                 delta = chunk["choices"][0].get("delta", {})
-                                if "content" in delta:
+                                if "content" in delta and delta["content"]:
                                     yield delta["content"]
-                            except Exception:
+                            except (json.JSONDecodeError, KeyError, IndexError):
                                 pass
-
         except ImportError:
             raise ImportError("httpx not installed. Run: pip install httpx")
 
     def get_models(self) -> list[str]:
-        ""
-        return [
-            "gpt-4o",
-            "gpt-4o-mini",
-            "gpt-4-turbo",
-            "gpt-3.5-turbo",
-        ]
+        return ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "gpt-3.5-turbo"]
 
     def get_provider_info(self) -> dict[str, Any]:
-        ""
-        return {
-            "name": "openai",
-            "configured": bool(self.api_key),
-            "model": self.model,
-        }
+        return {"name": "openai", "configured": bool(self.api_key), "model": self.model}

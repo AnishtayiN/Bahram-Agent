@@ -1,12 +1,17 @@
+from __future__ import annotations
+
+import logging
+from typing import Any
+
 from bahram.providers.base import BaseProvider
-from bahram.providers.anthropic import AnthropicProvider
 from bahram.providers.openai import OpenAIProvider
-from bahram.providers.openrouter import OpenRouterProvider
-from bahram.providers.nous import NousProvider
-from bahram.providers.nvidia import NvidiaProvider
+from bahram.providers.anthropic import AnthropicProvider
 from bahram.providers.groq import GroqProvider
 from bahram.providers.deepseek import DeepSeekProvider
 from bahram.providers.mistral import MistralProvider
+from bahram.providers.openrouter import OpenRouterProvider
+from bahram.providers.nous import NousProvider
+from bahram.providers.nvidia import NvidiaProvider
 from bahram.providers.google import GoogleProvider
 from bahram.providers.huggingface import HuggingFaceProvider
 from bahram.providers.xiaomi import XiaomiProvider
@@ -19,14 +24,14 @@ from bahram.providers.custom import CustomProvider
 
 __all__ = [
     "BaseProvider",
-    "AnthropicProvider",
     "OpenAIProvider",
-    "OpenRouterProvider",
-    "NousProvider",
-    "NvidiaProvider",
+    "AnthropicProvider",
     "GroqProvider",
     "DeepSeekProvider",
     "MistralProvider",
+    "OpenRouterProvider",
+    "NousProvider",
+    "NvidiaProvider",
     "GoogleProvider",
     "HuggingFaceProvider",
     "XiaomiProvider",
@@ -38,40 +43,47 @@ __all__ = [
     "CustomProvider",
 ]
 
-import logging
-
 logger = logging.getLogger(__name__)
 
-async def init_providers(engine: "AgentEngine", config: "Config") -> None:
-    ""
-    provider_map = {
-        "anthropic": AnthropicProvider,
-        "openai": OpenAIProvider,
-        "openrouter": OpenRouterProvider,
-        "nous": NousProvider,
-        "nvidia": NvidiaProvider,
-        "groq": GroqProvider,
-        "deepseek": DeepSeekProvider,
-        "mistral": MistralProvider,
-        "google": GoogleProvider,
-        "huggingface": HuggingFaceProvider,
-        "xiaomi": XiaomiProvider,
-        "minimax": MiniMaxProvider,
-        "kimi": KimiProvider,
-        "zhipu": ZhipuProvider,
-        "ollama": OllamaProvider,
-        "lmstudio": LMStudioProvider,
-        "custom": CustomProvider,
-    }
+PROVIDER_MAP: dict[str, type[BaseProvider]] = {
+    "anthropic": AnthropicProvider,
+    "openai": OpenAIProvider,
+    "openrouter": OpenRouterProvider,
+    "nous": NousProvider,
+    "nvidia": NvidiaProvider,
+    "groq": GroqProvider,
+    "deepseek": DeepSeekProvider,
+    "mistral": MistralProvider,
+    "google": GoogleProvider,
+    "huggingface": HuggingFaceProvider,
+    "xiaomi": XiaomiProvider,
+    "minimax": MiniMaxProvider,
+    "kimi": KimiProvider,
+    "zhipu": ZhipuProvider,
+    "ollama": OllamaProvider,
+    "lmstudio": LMStudioProvider,
+    "custom": CustomProvider,
+}
 
+async def init_providers(engine: Any, config: Any) -> None:
     for provider_name, provider_config in config.providers.items():
         try:
-            provider_class = provider_map.get(provider_name)
-            if provider_class:
-                provider = provider_class(provider_config)
-                engine.register_provider(provider_name, provider)
-                logger.info(f"Registered provider: {provider_name}")
-            else:
+            provider_class = PROVIDER_MAP.get(provider_name)
+            if provider_class is None:
                 logger.warning(f"Unknown provider: {provider_name}")
+                continue
+            kwargs: dict[str, Any] = {
+                "api_key": provider_config.api_key,
+                "model": provider_config.models[0] if provider_config.models else "",
+            }
+            if provider_config.base_url:
+                kwargs["base_url"] = provider_config.base_url
+            if provider_config.temperature:
+                kwargs["temperature"] = provider_config.temperature
+            if provider_config.max_tokens:
+                kwargs["max_tokens"] = provider_config.max_tokens
+            provider = provider_class(**kwargs)
+            engine.register_provider(provider_name, provider)
+            logger.info(f"Registered provider: {provider_name}")
         except Exception as e:
             logger.error(f"Failed to initialize provider {provider_name}: {e}")

@@ -1,49 +1,53 @@
-"""Tests for tools."""
+from __future__ import annotations
+
 import pytest
-from bahram.tools.autocomplete import AutoComplete
-from bahram.tools.code_review import CodeReviewTool
-from bahram.tools.todo import TodoTool
+import asyncio
 
-class TestAutoComplete:
-    def test_autocomplete_creation(self):
-        ac = AutoComplete()
-        assert ac is not None
+from bahram.tools.base import BaseTool, ToolSchema
 
-    def test_complete_python(self):
-        ac = AutoComplete()
-        results = ac.complete("def", language="python")
-        assert len(results) > 0
 
-    def test_add_to_history(self):
-        ac = AutoComplete()
-        ac.add_to_history("test_command")
-        assert "test_command" in ac._history
+class TestToolSchema:
+    def test_create_schema(self):
+        schema = ToolSchema(name="test", description="A test tool", parameters={"type": "object", "properties": {}})
+        assert schema.name == "test"
+        assert schema.to_dict()["name"] == "test"
 
-class TestCodeReviewTool:
-    def test_review_tool_creation(self):
-        tool = CodeReviewTool()
-        assert tool is not None
+
+class ConcreteTool(BaseTool):
+    @property
+    def name(self) -> str:
+        return "concrete_tool"
+
+    @property
+    def description(self) -> str:
+        return "A concrete test tool"
+
+    @property
+    def parameters(self) -> dict:
+        return {"type": "object", "properties": {"text": {"type": "string"}}, "required": ["text"]}
+
+    async def execute(self, **kwargs) -> str:
+        return f"Executed with: {kwargs.get('text', '')}"
+
+
+class TestBaseTool:
+    def test_schema(self):
+        tool = ConcreteTool()
+        schema = tool.schema()
+        assert schema["type"] == "function"
+        assert schema["function"]["name"] == "concrete_tool"
+
+    def test_validate_args(self):
+        tool = ConcreteTool()
+        assert tool.validate_args(text="hello") is True
+
+    def test_validate_missing_required(self):
+        tool = ConcreteTool()
+        with pytest.raises(ValueError, match="Missing required parameter"):
+            tool.validate_args()
 
     @pytest.mark.asyncio
-    async def test_review_code(self):
-        tool = CodeReviewTool()
-        code = "x = 1\nprint(x)"
-        issues = await tool.review_code(code)
-        assert isinstance(issues, list)
-
-class TestTodoTool:
-    def test_todo_tool_creation(self, tmp_path):
-        tool = TodoTool(data_dir=str(tmp_path))
-        assert tool is not None
-
-    def test_add_todo(self, tmp_path):
-        tool = TodoTool(data_dir=str(tmp_path))
-        todo = tool.add("Test task")
-        assert todo.content == "Test task"
-
-    def test_list_todos(self, tmp_path):
-        tool = TodoTool(data_dir=str(tmp_path))
-        tool.add("Task 1")
-        tool.add("Task 2")
-        todos = tool.list_todos()
-        assert len(todos) == 2
+    async def test_execute(self):
+        tool = ConcreteTool()
+        result = await tool.execute(text="hello")
+        assert "hello" in result

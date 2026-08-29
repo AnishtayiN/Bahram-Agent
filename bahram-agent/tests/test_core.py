@@ -1,40 +1,143 @@
-"""Tests for core modules."""
+from __future__ import annotations
+
 import pytest
-from bahram.core.config import Config
-from bahram.core.context import ContextManager
-from bahram.core.profiles import ProfileManager
-from bahram.core.themes import ThemeManager
+import asyncio
+import time
+from unittest.mock import AsyncMock, MagicMock, patch
+
+from bahram.core.engine import (
+    AgentEngine, AgentResponse, Message, MessageRole, ToolCall, ToolResult,
+    SecurityPolicy, ToolMeta,
+)
+from bahram.core.config import Config, ProviderConfig
+
+
+class TestMessage:
+    def test_create_message(self):
+        msg = Message(role=MessageRole.USER, content="hello")
+        assert msg.role == MessageRole.USER
+        assert msg.content == "hello"
+        assert msg.timestamp > 0
+
+    def test_message_roles(self):
+        for role in MessageRole:
+            msg = Message(role=role, content="test")
+            assert msg.role == role
+
+
+class TestToolCall:
+    def test_create_tool_call(self):
+        tc = ToolCall(id="1", name="bash", arguments={"command": "ls"})
+        assert tc.id == "1"
+        assert tc.name == "bash"
+        assert tc.arguments["command"] == "ls"
+
+
+class TestToolResult:
+    def test_success_result(self):
+        r = ToolResult(tool_call_id="1", content="output", success=True)
+        assert r.success is True
+        assert r.content == "output"
+
+    def test_error_result(self):
+        r = ToolResult(tool_call_id="1", content="", success=False, error="fail")
+        assert r.success is False
+        assert r.error == "fail"
+
+
+class TestSecurityPolicy:
+    def test_safe_tool(self):
+        policy = SecurityPolicy()
+        safe, reason = policy.check_tool("read", {"path": "file.txt"})
+        assert safe is True
+        assert reason == "ok"
+
+    def test_approval_required(self):
+        policy = SecurityPolicy()
+        safe, reason = policy.check_tool("bash", {"command": "ls"})
+        assert safe is True
+        assert reason == "approval_required"
+
+    def test_blocked_command(self):
+        policy = SecurityPolicy()
+        safe, reason = policy.check_tool("bash", {"command": "rm -rf /"})
+        assert safe is False
+        assert "blocked" in reason.lower() or "dangerous" in reason.lower()
+
+    def test_requires_approval(self):
+        policy = SecurityPolicy()
+        assert policy.requires_approval("bash") is True
+        assert policy.requires_approval("read") is False
+
+
+class TestAgentEngine:
+    def test_register_tool(self):
+        engine = AgentEngine()
+        tool = MagicMock()
+        tool.schema.return_value = {"type": "function", "function": {"name": "test", "description": "test tool", "parameters": {}}}
+        engine.register_tool("test", tool)
+        assert "test" in engine.tools
+
+    def test_get_tools_schema(self):
+        engine = AgentEngine()
+        tool = MagicMock()
+        tool.schema.return_value = {"type": "function", "function": {"name": "test", "description": "test", "parameters": {}}}
+        engine.register_tool("test", tool)
+        schemas = engine.get_tools_schema()
+        assert len(schemas) == 1
+
+    @pytest.mark.asyncio
+    async def test_security_blocks_dangerous(self):
+        engine = AgentEngine()
+        tool = MagicMock()
+        engine.register_tool("bash", tool)
+        tc = ToolCall(id="1", name="bash", arguments={"command": "rm -rf /"})
+        result = await engine.execute_tool(tc)
+        assert result.success is False
+
+    @pytest.mark.asyncio
+    async def test_unknown_tool(self):
+        engine = AgentEngine()
+        tc = ToolCall(id="1", name="nonexistent", arguments={})
+        result = await engine.execute_tool(tc)
+        assert result.success is False
+        assert "Unknown tool" in result.error
+
+    @pytest.mark.asyncio
+    async def test_execute_tool_success(self):
+        engine = AgentEngine()
+        tool = AsyncMock()
+        tool.execute = AsyncMock(return_value="success output")
+        engine.register_tool("echo", tool)
+        tc = ToolCall(id="1", name="echo", arguments={"text": "hello"})
+        result = await engine.execute_tool(tc)
+        assert result.success is True
+        assert "success output" in result.content
+
+    @pytest.mark.asyncio
+    async def test_execute_tool_error(self):
+        engine = AgentEngine()
+        tool = AsyncMock()
+        tool.execute = AsyncMock(side_effect=ValueError("bad args"))
+        engine.register_tool("fail", tool)
+        tc = ToolCall(id="1", name="fail", arguments={})
+        result = await engine.execute_tool(tc)
+        assert result.success is False
+        assert "bad args" in result.error
+
 
 class TestConfig:
-    def test_config_creation(self):
+    def test_default_config(self):
         config = Config()
-        assert config is not None
+        assert config.agent.name == "Bahram"
+        assert config.memory.enabled is True
+        assert config.tools.enabled == ["bash", "read", "write", "edit", "glob", "grep"]
 
-    def test_config_defaults(self):
-        config = Config()
-        assert hasattr(config, 'model') or hasattr(config, '__dict__')
-
-class TestContextManager:
-    def test_context_creation(self):
-        ctx = ContextManager()
-        assert ctx is not None
-
-class TestProfileManager:
-    def test_profile_manager(self, tmp_path):
-        pm = ProfileManager(data_dir=str(tmp_path))
-        assert pm is not None
-
-    def test_create_profile(self, tmp_path):
-        pm = ProfileManager(data_dir=str(tmp_path))
-        profile = pm.create_profile("test", "Test Profile")
-        assert profile.name == "test"
-
-class TestThemeManager:
-    def test_theme_manager(self, tmp_path):
-        tm = ThemeManager(config_dir=str(tmp_path))
-        assert tm is not None
-
-    def test_get_default_theme(self, tmp_path):
-        tm = ThemeManager(config_dir=str(tmp_path))
-        theme = tm.get_theme("default")
-        assert theme is not None
+    def test_config_from_dict(self):
+        data = {
+            "agent": {"name": "Test", "model": "test-model"},
+            "providers": {"openai": {"api_key": "sk-test", "models": ["gpt-4o"]}},
+        }
+        config = Config._from_dict(data)
+        assert config.agent.name == "Test"
+        assert config.providers["openai"].api_key == "sk-test"

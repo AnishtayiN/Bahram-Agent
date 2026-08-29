@@ -2,19 +2,17 @@ from __future__ import annotations
 
 import json
 import logging
-import time
 from typing import Any, AsyncIterator
 
 from bahram.providers.base import BaseProvider
-from bahram.core.engine import AgentResponse, ToolCall
+from bahram.core.engine import AgentResponse
 
 logger = logging.getLogger(__name__)
 
-class GroqProvider(BaseProvider):
-    BASE_URL = "https://api.groq.com/openai/v1"
-
-    def __init__(self, api_key: str = "", model: str = "", **kwargs: Any) -> None:
-        super().__init__(api_key=api_key, model=model or "llama3-8b-8192", **kwargs)
+class OpenAICompatibleProvider(BaseProvider):
+    def __init__(self, api_key: str = "", model: str = "", base_url: str = "", **kwargs: Any) -> None:
+        super().__init__(api_key=api_key, model=model, **kwargs)
+        self.base_url = base_url.rstrip("/")
         self.temperature = kwargs.get("temperature", 0.7)
         self.max_tokens = kwargs.get("max_tokens", 4096)
 
@@ -35,17 +33,19 @@ class GroqProvider(BaseProvider):
         }
         if tools:
             payload["tools"] = tools
+        headers = {"Content-Type": "application/json"}
+        if self.api_key:
+            headers["Authorization"] = f"Bearer {self.api_key}"
         try:
             async with httpx.AsyncClient() as client:
                 response = await client.post(
-                    f"{self.BASE_URL}/chat/completions",
-                    headers={"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"},
-                    json=payload, timeout=60.0,
+                    f"{self.base_url}/chat/completions",
+                    headers=headers, json=payload, timeout=120.0,
                 )
                 if response.status_code == 200:
                     return self._parse_openai_response(response.json())
                 error = response.json().get("error", {}).get("message", "Unknown error")
-                raise RuntimeError(f"Groq API error ({response.status_code}): {error}")
+                raise RuntimeError(f"API error ({response.status_code}): {error}")
         except ImportError:
             raise ImportError("httpx not installed. Run: pip install httpx")
 
@@ -62,11 +62,13 @@ class GroqProvider(BaseProvider):
             "model": self._get_model(model), "messages": api_messages,
             "temperature": temperature, "max_tokens": max_tokens, "stream": True,
         }
+        headers = {"Content-Type": "application/json"}
+        if self.api_key:
+            headers["Authorization"] = f"Bearer {self.api_key}"
         try:
             async with httpx.AsyncClient() as client:
-                async with client.stream("POST", f"{self.BASE_URL}/chat/completions",
-                    headers={"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"},
-                    json=payload, timeout=60.0) as response:
+                async with client.stream("POST", f"{self.base_url}/chat/completions",
+                    headers=headers, json=payload, timeout=120.0) as response:
                     async for line in response.aiter_lines():
                         if line.startswith("data: "):
                             data = line[6:]
@@ -81,9 +83,3 @@ class GroqProvider(BaseProvider):
                                 pass
         except ImportError:
             raise ImportError("httpx not installed. Run: pip install httpx")
-
-    def get_models(self) -> list[str]:
-        return ["llama3-8b-8192", "llama3-70b-8192", "mixtral-8x7b-32768", "gemma-7b-it"]
-
-    def get_provider_info(self) -> dict[str, Any]:
-        return {"name": "groq", "configured": bool(self.api_key), "model": self.model}
