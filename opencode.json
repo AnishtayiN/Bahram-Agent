@@ -1,0 +1,111 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "username": "bahram-operator",
+  "model": "anthropic/claude-sonnet-4-6",
+  "small_model": "anthropic/claude-haiku-3.5",
+  "default_agent": "bahram",
+  "shell": "/bin/bash",
+  "logLevel": "INFO",
+  "share": "auto",
+  "autoupdate": true,
+  "snapshot": true,
+  "instructions": ["AGENTS.md"],
+
+  "skills": {
+    "paths": [".opencode/skills"]
+  },
+
+  "agent": {
+    "bahram": {
+      "description": "Bahram - Advanced AI agent with self-improving capabilities, multi-platform support, and autonomous task execution. Inspired by Hermes architecture.",
+      "mode": "primary",
+      "model": "anthropic/claude-sonnet-4-6",
+      "color": "#FF6B35",
+      "permission": {
+        "edit": "allow",
+        "bash": { "*": "ask" },
+        "webfetch": "allow",
+        "websearch": "allow"
+      }
+    },
+    "bahram-researcher": {
+      "description": "Research subagent for deep analysis and information gathering",
+      "mode": "subagent",
+      "model": "anthropic/claude-sonnet-4-6",
+      "permission": {
+        "edit": "deny",
+        "bash": "deny",
+        "webfetch": "allow",
+        "websearch": "allow"
+      }
+    },
+    "bahram-coder": {
+      "description": "Coding subagent for implementation tasks",
+      "mode": "subagent",
+      "model": "anthropic/claude-sonnet-4-6",
+      "permission": {
+        "edit": "allow",
+        "bash": { "*": "allow" }
+      }
+    },
+    "bahram-reviewer": {
+      "description": "Code review subagent with strict quality standards",
+      "mode": "subagent",
+      "model": "anthropic/claude-sonnet-4-6",
+      "permission": {
+        "edit": "deny",
+        "bash": "deny"
+      }
+    }
+  },
+
+  "command": {
+    "analyze": {
+      "description": "Deep analysis of codebase or system",
+      "agent": "bahram"
+    },
+    "review": {
+      "description": "Comprehensive code review",
+      "agent": "bahram-reviewer"
+    },
+    "deploy": {
+      "description": "Deployment automation",
+      "agent": "bahram"
+    },
+    "research": {
+      "description": "Research and gather information",
+      "agent": "bahram-researcher"
+    }
+  },
+
+  "mcp": {
+    "filesystem": {
+      "type": "local",
+      "command": ["npx", "-y", "@modelcontextprotocol/server-filesystem", "/agent"],
+      "enabled": true
+    },
+    "github": {
+      "type": "remote",
+      "url": "https://api.github.com",
+      "enabled": false
+    }
+  },
+
+  "permission": {
+    "edit": "ask",
+    "bash": { "git *": "allow", "npm *": "allow", "*": "ask" },
+    "external_directory": { "~/projects/**": "allow", "*": "ask" }
+  },
+
+  "formatter": true,
+  "lsp": true,
+
+  "experimental": {
+    "primary_tools": ["edit", "bash"],
+    "mcp_timeout": 30000
+  },
+
+  "tool_output": { "max_lines": 300, "max_bytes": 16384 },
+
+  "compaction": { "auto": true, "tail_turns": 20 }
+}

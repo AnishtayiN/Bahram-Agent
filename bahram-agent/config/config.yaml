@@ -1,0 +1,127 @@
+# Bahram Agent Configuration
+
+agent:
+  name: "Bahram"
+  version: "1.0.0"
+  description: "Advanced self-improving AI agent"
+  
+  # Default model
+  model: "anthropic/claude-sonnet-4-6"
+  small_model: "anthropic/claude-haiku-3.5"
+  
+  # Agent personality
+  system_prompt: |
+    You are Bahram, an advanced AI agent with self-improving capabilities.
+    You are autonomous, reliable, and constantly learning.
+    Execute tasks with confidence, verify with care, and always strive to be better.
+
+# LLM Providers
+providers:
+  anthropic:
+    api_key: "${ANTHROPIC_API_KEY}"
+    models:
+      - "claude-sonnet-4-6"
+      - "claude-haiku-3.5"
+      - "claude-opus-4-6"
+    
+  openai:
+    api_key: "${OPENAI_API_KEY}"
+    models:
+      - "gpt-4o"
+      - "gpt-4o-mini"
+      - "o1"
+  
+  openrouter:
+    api_key: "${OPENROUTER_API_KEY}"
+    base_url: "https://openrouter.ai/api/v1"
+    models:
+      - "anthropic/claude-sonnet-4-6"
+      - "openai/gpt-4o"
+      - "meta-llama/llama-3.1-405b"
+
+# Memory configuration
+memory:
+  enabled: true
+  database: "data/memory.db"
+  embedding_model: "all-MiniLM-L6-v2"
+  max_context_turns: 20
+  auto_summarize: true
+  summary_threshold: 50
+
+# Skills configuration
+skills:
+  enabled: true
+  directory: "skills"
+  auto_create: true
+  auto_improve: true
+  hub_url: "https://skills.bahram-agent.dev"
+
+# Tools configuration
+tools:
+  enabled:
+    - "bash"
+    - "read"
+    - "write"
+    - "edit"
+    - "glob"
+    - "grep"
+    - "webfetch"
+    - "websearch"
+    - "task"
+  disabled: []
+  bash:
+    timeout: 120
+    sandbox: false
+  webfetch:
+    timeout: 30
+    max_size: 1048576
+
+# Platform integrations
+platforms:
+  telegram:
+    enabled: false
+    token: "${TELEGRAM_BOT_TOKEN}"
+    allowed_users: []
+  
+  discord:
+    enabled: false
+    token: "${DISCORD_BOT_TOKEN}"
+    guild_id: ""
+  
+  slack:
+    enabled: false
+    token: "${SLACK_BOT_TOKEN}"
+    app_token: "${SLACK_APP_TOKEN}"
+
+# Scheduler
+scheduler:
+  enabled: true
+  max_concurrent: 5
+  check_interval: 60
+
+# Security
+security:
+  sandbox_mode: false
+  allowed_commands: []
+  blocked_commands:
+    - "rm -rf /"
+    - "mkfs"
+    - "dd"
+  require_approval:
+    - "bash"
+    - "write"
+    - "edit"
+
+# Logging
+logging:
+  level: "INFO"
+  file: "logs/bahram.log"
+  max_size: "10MB"
+  backup_count: 5
+
+# Server (for API access)
+server:
+  enabled: false
+  host: "0.0.0.0"
+  port: 8000
+  auth_token: ""
