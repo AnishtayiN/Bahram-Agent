@@ -1,0 +1,128 @@
+"""Intelligent code review tool for Bahram Agent."""
+
+from __future__ import annotations
+
+import logging
+import re
+from dataclasses import dataclass, field
+from typing import Any, Optional
+
+logger = logging.getLogger(__name__)
+
+
+@dataclass
+class CodeIssue:
+    """A code issue."""
+
+    file: str
+    line: int
+    severity: str  # error, warning, info
+    category: str
+    message: str
+    suggestion: str = ""
+
+
+class CodeReviewTool:
+    """Intelligent code review and analysis."""
+
+    def __init__(self) -> None:
+        self._rules: list[tuple[str, str, str, str]] = [
+            # (pattern, severity, category, message)
+            (r"print\(", "info", "style", "Consider using logging instead of print"),
+            (r"except:", "warning", "error", "Bare except clause - specify exception type"),
+            (r"TODO", "info", "todo", "TODO comment found"),
+            (r"FIXME", "warning", "todo", "FIXME comment found"),
+            (r"HACK", "warning", "style", "HACK comment found - consider refactoring"),
+            (r"import \*", "warning", "style", "Wildcard import - prefer explicit imports"),
+            (r"eval\(", "error", "security", "eval() usage - potential security risk"),
+            (r"exec\(", "error", "security", "exec() usage - potential security risk"),
+            (r"__import__", "warning", "security", "Dynamic import - consider static import"),
+            (r"len\(.+\) == 0", "info", "style", "Use 'not x' instead of 'len(x) == 0'"),
+            (r"== True", "info", "style", "Use 'if x:' instead of 'if x == True:'"),
+            (r"== False", "info", "style", "Use 'if not x:' instead of 'if x == False:'"),
+            (r"if .+ is not None", "info", "style", "Consider using 'if x:' pattern"),
+            (r"raise NotImplementedError", "info", "design", "Abstract method - ensure implementation"),
+            (r"global ", "warning", "style", "Global variable usage - consider alternatives"),
+            (r"lambda .+=", "warning", "style", "Lambda assignment - use def instead"),
+        ]
+
+    async def review_file(self, file_path: str) -> list[CodeIssue]:
+        """Review a file for issues."""
+        try:
+            with open(file_path, "r", encoding="utf-8", errors="replace") as f:
+                content = f.read()
+                lines = content.split("\n")
+
+            issues = []
+            for i, line in enumerate(lines, 1):
+                for pattern, severity, category, message in self._rules:
+                    if re.search(pattern, line):
+                        issues.append(CodeIssue(
+                            file=file_path,
+                            line=i,
+                            severity=severity,
+                            category=category,
+                            message=message,
+                            suggestion=self._get_suggestion(category, line),
+                        ))
+
+            return issues
+
+        except Exception as e:
+            logger.warning(f"Failed to review {file_path}: {e}")
+            return []
+
+    async def review_code(self, code: str, language: str = "python") -> list[CodeIssue]:
+        """Review code string."""
+        issues = []
+        lines = code.split("\n")
+
+        for i, line in enumerate(lines, 1):
+            for pattern, severity, category, message in self._rules:
+                if re.search(pattern, line):
+                    issues.append(CodeIssue(
+                        file="<code>",
+                        line=i,
+                        severity=severity,
+                        category=category,
+                        message=message,
+                        suggestion=self._get_suggestion(category, line),
+                    ))
+
+        return issues
+
+    def _get_suggestion(self, category: str, line: str) -> str:
+        """Get suggestion for an issue."""
+        suggestions = {
+            "style": "Consider refactoring for better readability",
+            "error": "Handle exceptions explicitly",
+            "security": "Review for security implications",
+            "todo": "Address before merging",
+            "design": "Ensure proper implementation",
+        }
+        return suggestions.get(category, "")
+
+    def get_summary(self, issues: list[CodeIssue]) -> dict[str, int]:
+        """Get summary of issues."""
+        summary = {"error": 0, "warning": 0, "info": 0}
+        for issue in issues:
+            summary[issue.severity] = summary.get(issue.severity, 0) + 1
+        return summary
+
+    def format_report(self, issues: list[CodeIssue]) -> str:
+        """Format issues as report."""
+        if not issues:
+            return "No issues found!"
+
+        lines = ["## Code Review Report", ""]
+        summary = self.get_summary(issues)
+        lines.append(f"Errors: {summary['error']} | Warnings: {summary['warning']} | Info: {summary['info']}")
+        lines.append("")
+
+        for issue in sorted(issues, key=lambda x: (x.severity, x.file, x.line)):
+            severity_emoji = {"error": "🔴", "warning": "🟡", "info": "🔵"}
+            lines.append(f"{severity_emoji.get(issue.severity, '⚪')} {issue.file}:{issue.line} - {issue.message}")
+            if issue.suggestion:
+                lines.append(f"   💡 {issue.suggestion}")
+
+        return "\n".join(lines)
