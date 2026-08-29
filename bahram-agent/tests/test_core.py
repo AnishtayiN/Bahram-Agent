@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 from bahram.core.engine import (
     AgentEngine, AgentResponse, Message, MessageRole, ToolCall, ToolResult,
-    SecurityPolicy, ToolMeta,
+    Trajectory, TrajectoryStep,
 )
 from bahram.core.config import Config, ProviderConfig
 
@@ -46,28 +46,36 @@ class TestToolResult:
 
 
 class TestSecurityPolicy:
-    def test_safe_tool(self):
-        policy = SecurityPolicy()
-        safe, reason = policy.check_tool("read", {"path": "file.txt"})
-        assert safe is True
-        assert reason == "ok"
+    def test_approval_system_safe(self):
+        from bahram.security.approval import ApprovalSystem
+        system = ApprovalSystem()
+        is_dangerous, reason = system.check_command("ls -la")
+        assert is_dangerous is False
 
-    def test_approval_required(self):
-        policy = SecurityPolicy()
-        safe, reason = policy.check_tool("bash", {"command": "ls"})
-        assert safe is True
-        assert reason == "approval_required"
+    def test_approval_system_dangerous(self):
+        from bahram.security.approval import ApprovalSystem
+        system = ApprovalSystem()
+        is_dangerous, reason = system.check_command("rm -rf /")
+        assert is_dangerous is True
 
-    def test_blocked_command(self):
-        policy = SecurityPolicy()
-        safe, reason = policy.check_tool("bash", {"command": "rm -rf /"})
-        assert safe is False
-        assert "blocked" in reason.lower() or "dangerous" in reason.lower()
+    @pytest.mark.asyncio
+    async def test_engine_blocks_dangerous(self):
+        engine = AgentEngine()
+        tool = MagicMock()
+        engine.register_tool("bash", tool)
+        tc = ToolCall(id="1", name="bash", arguments={"command": "rm -rf /"})
+        result = await engine.execute_tool(tc)
+        assert result.success is False
 
-    def test_requires_approval(self):
-        policy = SecurityPolicy()
-        assert policy.requires_approval("bash") is True
-        assert policy.requires_approval("read") is False
+    @pytest.mark.asyncio
+    async def test_engine_allows_safe(self):
+        engine = AgentEngine()
+        tool = AsyncMock()
+        tool.execute = AsyncMock(return_value="output")
+        engine.register_tool("bash", tool)
+        tc = ToolCall(id="1", name="bash", arguments={"command": "ls"})
+        result = await engine.execute_tool(tc)
+        assert result.success is True
 
 
 class TestAgentEngine:

@@ -8,8 +8,6 @@ from bahram.tools.base import BaseTool
 logger = logging.getLogger(__name__)
 
 class WebFetchTool(BaseTool):
-    ""
-
     def __init__(self, config: Any = None) -> None:
         self.config = config
         self.timeout = getattr(config, "webfetch_timeout", 30) if config else 30
@@ -21,7 +19,7 @@ class WebFetchTool(BaseTool):
 
     @property
     def description(self) -> str:
-        return ""
+        return "Fetch a URL and return its content as text, markdown, or HTML."
 
     @property
     def parameters(self) -> dict[str, Any]:
@@ -99,8 +97,6 @@ class WebFetchTool(BaseTool):
             return f"Error fetching URL: {e}"
 
 class WebSearchTool(BaseTool):
-    ""
-
     def __init__(self, config: Any = None) -> None:
         self.config = config
 
@@ -110,7 +106,7 @@ class WebSearchTool(BaseTool):
 
     @property
     def description(self) -> str:
-        return ""
+        return "Search the web using DuckDuckGo and return results."
 
     @property
     def parameters(self) -> dict[str, Any]:

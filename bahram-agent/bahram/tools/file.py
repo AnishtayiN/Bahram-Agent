@@ -10,15 +10,13 @@ from bahram.tools.base import BaseTool
 logger = logging.getLogger(__name__)
 
 class ReadTool(BaseTool):
-    ""
-
     @property
     def name(self) -> str:
         return "read"
 
     @property
     def description(self) -> str:
-        return ""
+        return "Read a file and return its contents with line numbers."
 
     @property
     def parameters(self) -> dict[str, Any]:
@@ -74,15 +72,13 @@ class ReadTool(BaseTool):
             return f"Error reading file: {e}"
 
 class WriteTool(BaseTool):
-    ""
-
     @property
     def name(self) -> str:
         return "write"
 
     @property
     def description(self) -> str:
-        return ""
+        return "Write content to a file, creating parent directories if needed."
 
     @property
     def parameters(self) -> dict[str, Any]:
@@ -131,15 +127,13 @@ class WriteTool(BaseTool):
             return f"Error writing file: {e}"
 
 class EditTool(BaseTool):
-    ""
-
     @property
     def name(self) -> str:
         return "edit"
 
     @property
     def description(self) -> str:
-        return ""
+        return "Edit a file by replacing a specific string with a new string."
 
     @property
     def parameters(self) -> dict[str, Any]:

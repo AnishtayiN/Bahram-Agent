@@ -130,7 +130,7 @@ class Agent:
         self._store.add_message(session_id, user_msg)
 
         messages = ctx.get_messages()
-        response = await self.engine.run(messages, model=model)
+        response = await self.engine.run(messages, model=model, session_id=session_id)
 
         assistant_msg = Message(
             role=MessageRole.ASSISTANT, content=response.content,

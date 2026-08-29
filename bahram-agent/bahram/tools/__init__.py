@@ -1,24 +1,46 @@
-from bahram.tools.base import BaseTool
-from bahram.tools.bash import BashTool
-from bahram.tools.file import ReadTool, WriteTool, EditTool
+from __future__ import annotations
 
-__all__ = [
-    "BaseTool",
-    "BashTool",
-    "ReadTool",
-    "WriteTool",
-    "EditTool",
-]
+import logging
+from typing import Any
 
-async def init_tools(engine: "AgentEngine", config: "Config") -> None:
-    ""
+logger = logging.getLogger(__name__)
+
+async def init_tools(engine: Any, config: Any) -> None:
     tools_config = config.tools
+    disabled = set(tools_config.disabled) if hasattr(tools_config, 'disabled') else set()
 
-    if "bash" in tools_config.enabled:
-        engine.register_tool("bash", BashTool(config=tools_config))
-    if "read" in tools_config.enabled:
-        engine.register_tool("read", ReadTool())
-    if "write" in tools_config.enabled:
-        engine.register_tool("write", WriteTool())
-    if "edit" in tools_config.enabled:
-        engine.register_tool("edit", EditTool())
+    tool_list: list[tuple[str, Any]] = []
+
+    try:
+        from bahram.tools.bash import BashTool
+        tool_list.append(("bash", BashTool(config=tools_config)))
+    except Exception as e:
+        logger.warning(f"Failed to load bash tool: {e}")
+
+    try:
+        from bahram.tools.file import ReadTool, WriteTool, EditTool
+        tool_list.append(("read", ReadTool()))
+        tool_list.append(("write", WriteTool(config=tools_config)))
+        tool_list.append(("edit", EditTool()))
+    except Exception as e:
+        logger.warning(f"Failed to load file tools: {e}")
+
+    try:
+        from bahram.tools.web import WebFetchTool, WebSearchTool
+        tool_list.append(("webfetch", WebFetchTool(config=tools_config)))
+        tool_list.append(("websearch", WebSearchTool(config=tools_config)))
+    except Exception as e:
+        logger.warning(f"Failed to load web tools: {e}")
+
+    try:
+        from bahram.tools.execute_code import ExecuteCodeTool
+        tool_list.append(("execute_code", ExecuteCodeTool()))
+    except Exception as e:
+        logger.warning(f"Failed to load execute_code tool: {e}")
+
+    for name, tool in tool_list:
+        if name in disabled:
+            continue
+        engine.register_tool(name, tool)
+
+    logger.info(f"Registered {len(engine.tools)} tools: {list(engine.tools.keys())}")

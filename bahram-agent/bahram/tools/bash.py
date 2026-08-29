@@ -23,7 +23,7 @@ class BashTool(BaseTool):
 
     @property
     def description(self) -> str:
-        return ""
+        return "Execute a bash command and return its output."
 
     @property
     def parameters(self) -> dict[str, Any]:
