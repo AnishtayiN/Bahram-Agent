@@ -1,5 +1,3 @@
-"""NVIDIA NIM provider."""
-
 from __future__ import annotations
 
 import json
@@ -11,9 +9,8 @@ from bahram.providers.base import BaseProvider
 
 logger = logging.getLogger(__name__)
 
-
 class NvidiaProvider(BaseProvider):
-    """NVIDIA NIM provider for Nemotron models."""
+    ""
 
     async def complete(
         self,
@@ -21,7 +18,7 @@ class NvidiaProvider(BaseProvider):
         tools: list[dict[str, Any]],
         **kwargs: Any,
     ) -> AgentResponse:
-        """Generate a completion using NVIDIA NIM API."""
+        ""
         try:
             import httpx
 
@@ -31,14 +28,12 @@ class NvidiaProvider(BaseProvider):
             if not api_key:
                 raise ValueError("NVIDIA NIM API key not configured")
 
-            # Convert messages
             openai_messages = []
             for msg in messages:
                 openai_messages.append(
                     {"role": msg.role.value, "content": msg.content}
                 )
 
-            # Prepare request
             payload = {
                 "model": kwargs.get("model", "nvidia/nemotron-4-340b-instruct"),
                 "messages": openai_messages,
@@ -49,7 +44,6 @@ class NvidiaProvider(BaseProvider):
             if tools:
                 payload["tools"] = tools
 
-            # Make request
             async with httpx.AsyncClient() as client:
                 response = await client.post(
                     f"{base_url}/chat/completions",
@@ -100,7 +94,7 @@ class NvidiaProvider(BaseProvider):
         tools: list[dict[str, Any]],
         **kwargs: Any,
     ) -> AsyncIterator[str]:
-        """Stream a completion using NVIDIA NIM API."""
+        ""
         try:
             import httpx
 

@@ -1,5 +1,3 @@
-"""Core components of Bahram Agent."""
-
 from bahram.core.agent import Agent
 from bahram.core.config import Config
 from bahram.core.engine import AgentEngine

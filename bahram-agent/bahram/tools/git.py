@@ -1,5 +1,3 @@
-"""Git operations tool for Bahram Agent."""
-
 from __future__ import annotations
 
 import asyncio
@@ -9,25 +7,23 @@ from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
-
 @dataclass
 class GitCommit:
-    """A git commit."""
+    ""
 
     hash: str
     author: str
     date: str
     message: str
 
-
 class GitTool:
-    """Git operations tool."""
+    ""
 
     def __init__(self, repo_path: str = ".") -> None:
         self.repo_path = repo_path
 
     async def _run(self, command: str) -> dict[str, Any]:
-        """Run a git command."""
+        ""
         proc = await asyncio.create_subprocess_shell(
             f"git -C {self.repo_path} {command}",
             stdout=asyncio.subprocess.PIPE,
@@ -41,7 +37,7 @@ class GitTool:
         }
 
     async def status(self) -> dict[str, Any]:
-        """Get git status."""
+        ""
         result = await self._run("status --porcelain")
         files = []
         for line in result["stdout"].strip().split("\n"):
@@ -52,7 +48,7 @@ class GitTool:
         return {"files": files, "clean": len(files) == 0}
 
     async def log(self, limit: int = 10) -> list[GitCommit]:
-        """Get git log."""
+        ""
         result = await self._run(f"log --oneline -{limit} --format=%H|%an|%ai|%s")
         commits = []
         for line in result["stdout"].strip().split("\n"):
@@ -68,7 +64,7 @@ class GitTool:
         return commits
 
     async def diff(self, file_path: str = None) -> str:
-        """Get git diff."""
+        ""
         cmd = "diff"
         if file_path:
             cmd += f" {file_path}"
@@ -76,7 +72,7 @@ class GitTool:
         return result["stdout"]
 
     async def add(self, files: list[str] = None) -> bool:
-        """Add files to staging."""
+        ""
         cmd = "add"
         if files:
             cmd += " " + " ".join(files)
@@ -86,46 +82,46 @@ class GitTool:
         return result["returncode"] == 0
 
     async def commit(self, message: str) -> bool:
-        """Create a commit."""
+        ""
         result = await self._run(f'commit -m "{message}"')
         return result["returncode"] == 0
 
     async def push(self, remote: str = "origin", branch: str = "main") -> bool:
-        """Push to remote."""
+        ""
         result = await self._run(f"push {remote} {branch}")
         return result["returncode"] == 0
 
     async def pull(self, remote: str = "origin", branch: str = "main") -> bool:
-        """Pull from remote."""
+        ""
         result = await self._run(f"pull {remote} {branch}")
         return result["returncode"] == 0
 
     async def branch(self) -> list[str]:
-        """List branches."""
+        ""
         result = await self._run("branch --format=%(refname:short)")
         return [b.strip() for b in result["stdout"].strip().split("\n") if b.strip()]
 
     async def checkout(self, branch: str) -> bool:
-        """Checkout a branch."""
+        ""
         result = await self._run(f"checkout {branch}")
         return result["returncode"] == 0
 
     async def create_branch(self, branch: str) -> bool:
-        """Create a new branch."""
+        ""
         result = await self._run(f"checkout -b {branch}")
         return result["returncode"] == 0
 
     async def stash(self) -> bool:
-        """Stash changes."""
+        ""
         result = await self._run("stash")
         return result["returncode"] == 0
 
     async def stash_pop(self) -> bool:
-        """Pop stash."""
+        ""
         result = await self._run("stash pop")
         return result["returncode"] == 0
 
     async def blame(self, file_path: str) -> str:
-        """Get git blame."""
+        ""
         result = await self._run(f"blame {file_path}")
         return result["stdout"]

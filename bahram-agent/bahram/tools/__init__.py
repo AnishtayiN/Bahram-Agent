@@ -1,5 +1,3 @@
-"""Tools system for Bahram Agent."""
-
 from bahram.tools.base import BaseTool
 from bahram.tools.bash import BashTool
 from bahram.tools.file import ReadTool, WriteTool, EditTool
@@ -12,9 +10,8 @@ __all__ = [
     "EditTool",
 ]
 
-
 async def init_tools(engine: "AgentEngine", config: "Config") -> None:
-    """Initialize all tools."""
+    ""
     tools_config = config.tools
 
     if "bash" in tools_config.enabled:

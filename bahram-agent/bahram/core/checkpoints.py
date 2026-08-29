@@ -1,5 +1,3 @@
-"""Filesystem snapshots and checkpoints for Bahram Agent."""
-
 from __future__ import annotations
 
 import json
@@ -12,10 +10,9 @@ from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
-
 @dataclass
 class Checkpoint:
-    """A filesystem checkpoint."""
+    ""
 
     id: str
     name: str
@@ -24,9 +21,8 @@ class Checkpoint:
     files: list[str] = field(default_factory=list)
     metadata: dict = field(default_factory=dict)
 
-
 class CheckpointManager:
-    """Manage filesystem checkpoints for rollback."""
+    ""
 
     def __init__(self, data_dir: str = "data/checkpoints", max_checkpoints: int = 10) -> None:
         self.data_dir = Path(data_dir)
@@ -38,7 +34,7 @@ class CheckpointManager:
         self._load()
 
     def _load(self) -> None:
-        """Load checkpoints from disk."""
+        ""
         checkpoints_file = self.data_dir / "checkpoints.json"
         if checkpoints_file.exists():
             try:
@@ -49,7 +45,7 @@ class CheckpointManager:
                 logger.warning(f"Failed to load checkpoints: {e}")
 
     def _save(self) -> None:
-        """Save checkpoints to disk."""
+        ""
         checkpoints_file = self.data_dir / "checkpoints.json"
         data = [
             {
@@ -72,12 +68,11 @@ class CheckpointManager:
         description: str = "",
         metadata: dict = None,
     ) -> Checkpoint:
-        """Create a checkpoint."""
+        ""
         checkpoint_id = f"cp_{int(time.time() * 1000)}"
         snapshot_dir = self._snapshots_dir / checkpoint_id
         snapshot_dir.mkdir(exist_ok=True)
 
-        # Copy files to snapshot
         copied_files = []
         for file_path in files:
             src = Path(file_path)
@@ -101,7 +96,6 @@ class CheckpointManager:
 
         self._checkpoints.append(checkpoint)
 
-        # Trim old checkpoints
         if len(self._checkpoints) > self._max_checkpoints:
             removed = self._checkpoints[: len(self._checkpoints) - self._max_checkpoints]
             for old in removed:
@@ -114,7 +108,7 @@ class CheckpointManager:
         return checkpoint
 
     def rollback(self, checkpoint_id: str) -> bool:
-        """Rollback to a checkpoint."""
+        ""
         checkpoint = next(
             (c for c in self._checkpoints if c.id == checkpoint_id), None
         )
@@ -125,7 +119,6 @@ class CheckpointManager:
         if not snapshot_dir.exists():
             return False
 
-        # Restore files
         for file_path in checkpoint.files:
             src = Path(file_path)
             snapshot_file = snapshot_dir / src.name
@@ -138,7 +131,7 @@ class CheckpointManager:
         return True
 
     def list_checkpoints(self) -> list[dict]:
-        """List checkpoints."""
+        ""
         return [
             {
                 "id": c.id,
@@ -151,7 +144,7 @@ class CheckpointManager:
         ]
 
     def delete_checkpoint(self, checkpoint_id: str) -> bool:
-        """Delete a checkpoint."""
+        ""
         checkpoint = next(
             (c for c in self._checkpoints if c.id == checkpoint_id), None
         )

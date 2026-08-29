@@ -1,5 +1,3 @@
-"""Ollama LLM provider for Bahram Agent."""
-
 from __future__ import annotations
 
 import logging
@@ -7,9 +5,8 @@ from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
-
 class OllamaProvider:
-    """Ollama local LLM provider."""
+    ""
 
     def __init__(self, base_url: str = "http://localhost:11434", model: str = "") -> None:
         self.base_url = base_url.rstrip("/")
@@ -23,7 +20,7 @@ class OllamaProvider:
         max_tokens: int = 4096,
         stream: bool = False,
     ) -> str:
-        """Complete a conversation."""
+        ""
         try:
             import httpx
 
@@ -56,7 +53,7 @@ class OllamaProvider:
             raise
 
     async def list_models(self) -> list[str]:
-        """List available models."""
+        ""
         try:
             import httpx
 
@@ -72,7 +69,7 @@ class OllamaProvider:
             return []
 
     def get_provider_info(self) -> dict[str, Any]:
-        """Get provider information."""
+        ""
         return {
             "name": "ollama",
             "base_url": self.base_url,

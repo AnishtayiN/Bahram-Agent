@@ -1,5 +1,3 @@
-"""Delivery ledger for crash recovery in Bahram Agent."""
-
 from __future__ import annotations
 
 import json
@@ -11,24 +9,22 @@ from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
-
 @dataclass
 class DeliveryEntry:
-    """A delivery ledger entry."""
+    ""
 
     message_id: str
     platform: str
     chat_id: str
     content: str
-    status: str  # "pending", "sent", "failed"
+    status: str
     timestamp: float
     attempts: int = 0
     max_attempts: int = 3
     error: str = ""
 
-
 class DeliveryLedger:
-    """Track message delivery for crash recovery."""
+    ""
 
     def __init__(self, data_dir: str = "data/gateway") -> None:
         self.data_dir = Path(data_dir)
@@ -37,7 +33,7 @@ class DeliveryLedger:
         self._load()
 
     def _load(self) -> None:
-        """Load ledger from disk."""
+        ""
         ledger_file = self.data_dir / "delivery_ledger.json"
         if ledger_file.exists():
             try:
@@ -50,7 +46,7 @@ class DeliveryLedger:
                 logger.warning(f"Failed to load delivery ledger: {e}")
 
     def _save(self) -> None:
-        """Save ledger to disk."""
+        ""
         ledger_file = self.data_dir / "delivery_ledger.json"
         data = [
             {
@@ -76,7 +72,7 @@ class DeliveryLedger:
         chat_id: str,
         content: str,
     ) -> DeliveryEntry:
-        """Record a pending send."""
+        ""
         entry = DeliveryEntry(
             message_id=message_id,
             platform=platform,
@@ -90,7 +86,7 @@ class DeliveryLedger:
         return entry
 
     def mark_sent(self, message_id: str) -> bool:
-        """Mark a message as sent."""
+        ""
         if message_id in self._entries:
             self._entries[message_id].status = "sent"
             self._save()
@@ -98,7 +94,7 @@ class DeliveryLedger:
         return False
 
     def mark_failed(self, message_id: str, error: str) -> bool:
-        """Mark a message as failed."""
+        ""
         if message_id in self._entries:
             entry = self._entries[message_id]
             entry.attempts += 1
@@ -110,7 +106,7 @@ class DeliveryLedger:
         return False
 
     def get_pending(self) -> list[dict]:
-        """Get pending messages."""
+        ""
         return [
             {
                 "message_id": e.message_id,
@@ -124,7 +120,7 @@ class DeliveryLedger:
         ]
 
     def get_retryable(self) -> list[dict]:
-        """Get messages that can be retried."""
+        ""
         return [
             {
                 "message_id": e.message_id,
@@ -137,7 +133,7 @@ class DeliveryLedger:
         ]
 
     def cleanup(self, max_age_seconds: int = 86400) -> int:
-        """Cleanup old entries."""
+        ""
         now = time.time()
         to_remove = [
             msg_id

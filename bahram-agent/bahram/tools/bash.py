@@ -1,5 +1,3 @@
-"""Bash tool for executing shell commands."""
-
 from __future__ import annotations
 
 import asyncio
@@ -12,9 +10,8 @@ from bahram.tools.base import BaseTool
 
 logger = logging.getLogger(__name__)
 
-
 class BashTool(BaseTool):
-    """Tool for executing bash commands."""
+    ""
 
     def __init__(self, config: Any = None) -> None:
         self.config = config
@@ -26,9 +23,7 @@ class BashTool(BaseTool):
 
     @property
     def description(self) -> str:
-        return """Execute a bash command in the terminal.
-Use this tool for running shell commands, installing packages, git operations, etc.
-The command runs in the current working directory by default."""
+        return ""
 
     @property
     def parameters(self) -> dict[str, Any]:
@@ -52,7 +47,7 @@ The command runs in the current working directory by default."""
         }
 
     async def execute(self, **kwargs: Any) -> str:
-        """Execute a bash command."""
+        ""
         command = kwargs.get("command", "")
         workdir = kwargs.get("workdir", os.getcwd())
         timeout = kwargs.get("timeout", self.timeout)
@@ -63,7 +58,7 @@ The command runs in the current working directory by default."""
         logger.info(f"Executing bash command: {command}")
 
         try:
-            # Run command asynchronously
+
             process = await asyncio.create_subprocess_shell(
                 command,
                 stdout=asyncio.subprocess.PIPE,
@@ -80,11 +75,9 @@ The command runs in the current working directory by default."""
                 await process.communicate()
                 return f"Error: Command timed out after {timeout} seconds"
 
-            # Decode output
             stdout_str = stdout.decode("utf-8", errors="replace")
             stderr_str = stderr.decode("utf-8", errors="replace")
 
-            # Format output
             output = []
             if stdout_str:
                 output.append(f"STDOUT:\n{stdout_str}")

@@ -1,5 +1,3 @@
-"""Tool execution progress tracking for Bahram Agent."""
-
 from __future__ import annotations
 
 import asyncio
@@ -10,23 +8,21 @@ from typing import Any, Callable, Optional
 
 logger = logging.getLogger(__name__)
 
-
 @dataclass
 class ToolProgress:
-    """Progress tracking for tool execution."""
+    ""
 
     tool_name: str
-    status: str = "pending"  # pending, running, completed, failed
-    progress: float = 0.0  # 0-100
+    status: str = "pending"
+    progress: float = 0.0
     message: str = ""
     start_time: float = 0.0
     end_time: float = 0.0
     result: Any = None
     error: str = ""
 
-
 class ProgressTracker:
-    """Track tool execution progress."""
+    ""
 
     def __init__(self) -> None:
         self._active: dict[str, ToolProgress] = {}
@@ -34,7 +30,7 @@ class ProgressTracker:
         self._callbacks: list[Callable] = []
 
     def start(self, tool_name: str) -> str:
-        """Start tracking a tool execution."""
+        ""
         import uuid
         tracker_id = f"{tool_name}_{uuid.uuid4().hex[:8]}"
 
@@ -48,7 +44,7 @@ class ProgressTracker:
         return tracker_id
 
     def update(self, tracker_id: str, progress: float = None, message: str = None) -> None:
-        """Update progress."""
+        ""
         if tracker_id in self._active:
             p = self._active[tracker_id]
             if progress is not None:
@@ -58,7 +54,7 @@ class ProgressTracker:
             self._notify_callbacks(p)
 
     def complete(self, tracker_id: str, result: Any = None) -> None:
-        """Mark as completed."""
+        ""
         if tracker_id in self._active:
             p = self._active[tracker_id]
             p.status = "completed"
@@ -70,7 +66,7 @@ class ProgressTracker:
             self._notify_callbacks(p)
 
     def fail(self, tracker_id: str, error: str) -> None:
-        """Mark as failed."""
+        ""
         if tracker_id in self._active:
             p = self._active[tracker_id]
             p.status = "failed"
@@ -81,7 +77,7 @@ class ProgressTracker:
             self._notify_callbacks(p)
 
     def get_active(self) -> list[dict]:
-        """Get active executions."""
+        ""
         return [
             {
                 "id": k,
@@ -94,7 +90,7 @@ class ProgressTracker:
         ]
 
     def get_history(self, limit: int = 10) -> list[dict]:
-        """Get execution history."""
+        ""
         return [
             {
                 "tool": p.tool_name,
@@ -106,11 +102,11 @@ class ProgressTracker:
         ]
 
     def add_callback(self, callback: Callable) -> None:
-        """Add progress callback."""
+        ""
         self._callbacks.append(callback)
 
     def _notify_callbacks(self, progress: ToolProgress) -> None:
-        """Notify callbacks of progress."""
+        ""
         for callback in self._callbacks:
             try:
                 callback(progress)

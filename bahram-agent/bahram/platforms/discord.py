@@ -1,5 +1,3 @@
-"""Discord platform integration."""
-
 from __future__ import annotations
 
 import logging
@@ -9,16 +7,15 @@ from bahram.platforms.base import BasePlatform, PlatformMessage
 
 logger = logging.getLogger(__name__)
 
-
 class DiscordPlatform(BasePlatform):
-    """Discord bot integration."""
+    ""
 
     @property
     def name(self) -> str:
         return "discord"
 
     async def start(self) -> None:
-        """Start the Discord bot."""
+        ""
         try:
             import discord
             from discord.ext import commands
@@ -57,7 +54,6 @@ class DiscordPlatform(BasePlatform):
 
                 await self._handle_message(msg)
 
-            # Start the bot
             await self.bot.start(token)
 
         except ImportError:
@@ -66,20 +62,20 @@ class DiscordPlatform(BasePlatform):
             logger.error(f"Failed to start Discord bot: {e}")
 
     async def stop(self) -> None:
-        """Stop the Discord bot."""
+        ""
         if hasattr(self, "bot"):
             await self.bot.close()
             logger.info("Discord bot stopped")
 
     async def send_message(self, chat_id: str, content: str) -> None:
-        """Send a message to a Discord channel."""
+        ""
         if hasattr(self, "bot"):
             channel = self.bot.get_channel(int(chat_id))
             if channel:
                 await channel.send(content)
 
     async def reply(self, message: PlatformMessage, content: str) -> None:
-        """Reply to a Discord message."""
+        ""
         if hasattr(self, "bot"):
             channel = self.bot.get_channel(int(message.chat_id))
             if channel:

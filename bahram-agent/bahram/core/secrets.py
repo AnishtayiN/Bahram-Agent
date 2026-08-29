@@ -1,5 +1,3 @@
-"""Secrets management for Bahram Agent."""
-
 from __future__ import annotations
 
 import base64
@@ -13,10 +11,9 @@ from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
-
 @dataclass
 class SecretEntry:
-    """A secret entry."""
+    ""
 
     name: str
     value: str
@@ -24,9 +21,8 @@ class SecretEntry:
     category: str = "general"
     created_at: float = 0.0
 
-
 class SecretsManager:
-    """Manage secrets securely."""
+    ""
 
     def __init__(self, data_dir: str = "data/secrets") -> None:
         self.data_dir = Path(data_dir)
@@ -36,7 +32,7 @@ class SecretsManager:
         self._load()
 
     def _get_or_create_key(self) -> bytes:
-        """Get or create encryption key."""
+        ""
         key_file = self.data_dir / ".key"
         if key_file.exists():
             return base64.b64decode(key_file.read_text())
@@ -47,14 +43,14 @@ class SecretsManager:
             return key
 
     def _load(self) -> None:
-        """Load secrets from disk."""
+        ""
         secrets_file = self.data_dir / "secrets.enc"
         if secrets_file.exists():
             try:
-                # Simple obfuscation (not real encryption)
+
                 data = secrets_file.read_text()
                 decoded = base64.b64decode(data)
-                # XOR with key
+
                 decrypted = bytes(b ^ self._key[i % len(self._key)] for i, b in enumerate(decoded))
                 self._secrets = {
                     k: SecretEntry(**v)
@@ -64,7 +60,7 @@ class SecretsManager:
                 logger.warning(f"Failed to load secrets: {e}")
 
     def _save(self) -> None:
-        """Save secrets to disk."""
+        ""
         secrets_file = self.data_dir / "secrets.enc"
         data = json.dumps({
             k: {
@@ -76,7 +72,7 @@ class SecretsManager:
             }
             for k, s in self._secrets.items()
         })
-        # XOR with key
+
         import time
         encrypted = bytes(b ^ self._key[i % len(self._key)] for i, b in enumerate(data.encode()))
         secrets_file.write_text(base64.b64encode(encrypted).decode())
@@ -89,7 +85,7 @@ class SecretsManager:
         description: str = "",
         category: str = "general",
     ) -> None:
-        """Set a secret."""
+        ""
         import time
         self._secrets[name] = SecretEntry(
             name=name,
@@ -101,12 +97,12 @@ class SecretsManager:
         self._save()
 
     def get_secret(self, name: str) -> Optional[str]:
-        """Get a secret value."""
+        ""
         entry = self._secrets.get(name)
         return entry.value if entry else None
 
     def get_secret_info(self, name: str) -> Optional[dict]:
-        """Get secret info (without value)."""
+        ""
         entry = self._secrets.get(name)
         if entry:
             return {
@@ -118,7 +114,7 @@ class SecretsManager:
         return None
 
     def delete_secret(self, name: str) -> bool:
-        """Delete a secret."""
+        ""
         if name in self._secrets:
             del self._secrets[name]
             self._save()
@@ -126,7 +122,7 @@ class SecretsManager:
         return False
 
     def list_secrets(self, category: str = None) -> list[dict]:
-        """List secrets (without values)."""
+        ""
         secrets = list(self._secrets.values())
         if category:
             secrets = [s for s in secrets if s.category == category]
@@ -140,7 +136,7 @@ class SecretsManager:
         ]
 
     def import_from_env(self, prefix: str = "") -> int:
-        """Import secrets from environment variables."""
+        ""
         count = 0
         for key, value in os.environ.items():
             if prefix and not key.startswith(prefix):

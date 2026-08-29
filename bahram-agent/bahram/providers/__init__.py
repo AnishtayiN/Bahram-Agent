@@ -1,5 +1,3 @@
-"""LLM providers for Bahram Agent."""
-
 from bahram.providers.base import BaseProvider
 from bahram.providers.anthropic import AnthropicProvider
 from bahram.providers.openai import OpenAIProvider
@@ -44,9 +42,8 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-
 async def init_providers(engine: "AgentEngine", config: "Config") -> None:
-    """Initialize all configured providers."""
+    ""
     provider_map = {
         "anthropic": AnthropicProvider,
         "openai": OpenAIProvider,

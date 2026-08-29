@@ -1,5 +1,3 @@
-"""Task tool for Bahram Agent."""
-
 from __future__ import annotations
 
 import asyncio
@@ -9,22 +7,20 @@ from typing import Any, Callable, Optional
 
 logger = logging.getLogger(__name__)
 
-
 @dataclass
 class Task:
-    """A background task."""
+    ""
 
     task_id: str
     name: str
-    status: str = "pending"  # pending, running, completed, failed
+    status: str = "pending"
     result: Any = None
     error: str = ""
     start_time: float = 0.0
     end_time: float = 0.0
 
-
 class TaskTool:
-    """Launch and manage background tasks."""
+    ""
 
     def __init__(self) -> None:
         self._tasks: dict[str, Task] = {}
@@ -38,7 +34,7 @@ class TaskTool:
         *args,
         **kwargs,
     ) -> Task:
-        """Launch a background task."""
+        ""
         import time
 
         task = Task(
@@ -64,7 +60,6 @@ class TaskTool:
 
         task.end_time = time.time()
 
-        # Notify callback
         if task_id in self._callbacks:
             try:
                 await self._callbacks[task_id](task)
@@ -74,27 +69,27 @@ class TaskTool:
         return task
 
     def get_task(self, task_id: str) -> Optional[Task]:
-        """Get a task by ID."""
+        ""
         return self._tasks.get(task_id)
 
     def get_status(self, task_id: str) -> str:
-        """Get task status."""
+        ""
         task = self._tasks.get(task_id)
         return task.status if task else "not_found"
 
     def get_result(self, task_id: str) -> Any:
-        """Get task result."""
+        ""
         task = self._tasks.get(task_id)
         if task and task.status == "completed":
             return task.result
         return None
 
     def set_callback(self, task_id: str, callback: Callable) -> None:
-        """Set completion callback."""
+        ""
         self._callbacks[task_id] = callback
 
     def list_tasks(self) -> list[dict]:
-        """List all tasks."""
+        ""
         return [
             {
                 "id": t.task_id,
@@ -106,7 +101,7 @@ class TaskTool:
         ]
 
     def cancel(self, task_id: str) -> bool:
-        """Cancel a task."""
+        ""
         task = self._tasks.get(task_id)
         if task and task.status == "running":
             task.status = "cancelled"

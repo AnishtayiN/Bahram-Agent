@@ -1,5 +1,3 @@
-"""Web tools for fetching and searching."""
-
 from __future__ import annotations
 
 import logging
@@ -9,9 +7,8 @@ from bahram.tools.base import BaseTool
 
 logger = logging.getLogger(__name__)
 
-
 class WebFetchTool(BaseTool):
-    """Tool for fetching web content."""
+    ""
 
     def __init__(self, config: Any = None) -> None:
         self.config = config
@@ -24,9 +21,7 @@ class WebFetchTool(BaseTool):
 
     @property
     def description(self) -> str:
-        return """Fetch content from a URL.
-Returns the text content of the webpage.
-Useful for reading documentation, articles, or any web content."""
+        return ""
 
     @property
     def parameters(self) -> dict[str, Any]:
@@ -47,7 +42,7 @@ Useful for reading documentation, articles, or any web content."""
         }
 
     async def execute(self, **kwargs: Any) -> str:
-        """Fetch web content."""
+        ""
         import httpx
 
         url = kwargs.get("url", "")
@@ -65,38 +60,36 @@ Useful for reading documentation, articles, or any web content."""
                 response = await client.get(url)
                 response.raise_for_status()
 
-                # Check size
                 if len(response.content) > self.max_size:
                     return f"Error: Response too large ({len(response.content)} bytes)"
 
-                # Get content based on format
                 if format_type == "html":
                     return response.text
                 elif format_type == "markdown":
-                    # Simple HTML to text conversion
+
                     import re
 
                     text = response.text
-                    # Remove HTML tags
+
                     text = re.sub(r"<[^>]+>", " ", text)
-                    # Remove extra whitespace
+
                     text = re.sub(r"\s+", " ", text).strip()
                     return text
                 else:
-                    # Plain text - use rich text extraction if available
+
                     try:
                         from readability import Document
 
                         doc = Document(response.text)
                         return doc.summary()
                     except ImportError:
-                        # Fallback to simple extraction
+
                         import re
 
                         text = response.text
                         text = re.sub(r"<[^>]+>", " ", text)
                         text = re.sub(r"\s+", " ", text).strip()
-                        return text[:5000]  # Limit length
+                        return text[:5000]
 
         except httpx.TimeoutException:
             return f"Error: Request timed out after {self.timeout} seconds"
@@ -105,9 +98,8 @@ Useful for reading documentation, articles, or any web content."""
         except Exception as e:
             return f"Error fetching URL: {e}"
 
-
 class WebSearchTool(BaseTool):
-    """Tool for searching the web."""
+    ""
 
     def __init__(self, config: Any = None) -> None:
         self.config = config
@@ -118,9 +110,7 @@ class WebSearchTool(BaseTool):
 
     @property
     def description(self) -> str:
-        return """Search the web for information.
-Returns search results with titles, URLs, and snippets.
-Useful for finding current information, documentation, or answers to questions."""
+        return ""
 
     @property
     def parameters(self) -> dict[str, Any]:
@@ -140,7 +130,7 @@ Useful for finding current information, documentation, or answers to questions."
         }
 
     async def execute(self, **kwargs: Any) -> str:
-        """Search the web."""
+        ""
         import httpx
 
         query = kwargs.get("query", "")
@@ -150,9 +140,9 @@ Useful for finding current information, documentation, or answers to questions."
             return "Error: No query provided"
 
         try:
-            # Use DuckDuckGo as default search engine
+
             async with httpx.AsyncClient(timeout=30) as client:
-                # DuckDuckGo HTML search
+
                 response = await client.get(
                     "https://html.duckduckgo.com/html/",
                     params={"q": query},
@@ -162,12 +152,10 @@ Useful for finding current information, documentation, or answers to questions."
                 if response.status_code != 200:
                     return f"Error: Search failed with status {response.status_code}"
 
-                # Parse results (simplified)
                 import re
 
                 html = response.text
 
-                # Extract results
                 results = []
                 result_pattern = re.compile(
                     r'<a[^>]+class="result__a"[^>]*href="([^"]*)"[^>]*>(.*?)</a>.*?'
@@ -179,7 +167,7 @@ Useful for finding current information, documentation, or answers to questions."
                     if len(results) >= num_results:
                         break
                     url, title, snippet = match.groups()
-                    # Clean HTML
+
                     title = re.sub(r"<[^>]+>", "", title).strip()
                     snippet = re.sub(r"<[^>]+>", "", snippet).strip()
                     results.append(f"**{title}**\n{url}\n{snippet}\n")

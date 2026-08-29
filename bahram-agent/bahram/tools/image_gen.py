@@ -1,5 +1,3 @@
-"""Image generation tool for Bahram Agent."""
-
 from __future__ import annotations
 
 import logging
@@ -8,9 +6,8 @@ from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
-
 class ImageGenTool:
-    """Generate images using AI."""
+    ""
 
     def __init__(self) -> None:
         self._provider: str = "openai"
@@ -24,7 +21,7 @@ class ImageGenTool:
         style: str = "vivid",
         output_path: str = None,
     ) -> dict[str, Any]:
-        """Generate an image from a prompt."""
+        ""
         if self._provider == "openai":
             return await self._generate_openai(prompt, size, style, output_path)
         else:
@@ -37,7 +34,7 @@ class ImageGenTool:
         style: str,
         output_path: str = None,
     ) -> dict[str, Any]:
-        """Generate using OpenAI DALL-E."""
+        ""
         try:
             import httpx
 
@@ -62,7 +59,6 @@ class ImageGenTool:
                     data = response.json()
                     image_url = data["data"][0]["url"]
 
-                    # Download image
                     if output_path:
                         img_response = await client.get(image_url)
                         if img_response.status_code == 200:
@@ -84,9 +80,9 @@ class ImageGenTool:
             return {"error": str(e)}
 
     def set_provider(self, provider: str) -> None:
-        """Set image generation provider."""
+        ""
         self._provider = provider
 
     def set_api_key(self, api_key: str) -> None:
-        """Set API key."""
+        ""
         self._api_key = api_key

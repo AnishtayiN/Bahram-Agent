@@ -1,5 +1,3 @@
-"""Anthropic Claude LLM provider for Bahram Agent."""
-
 from __future__ import annotations
 
 import logging
@@ -7,9 +5,8 @@ from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
-
 class AnthropicProvider:
-    """Anthropic Claude LLM provider."""
+    ""
 
     def __init__(self, api_key: str = "", model: str = "") -> None:
         self.api_key = api_key
@@ -24,11 +21,10 @@ class AnthropicProvider:
         stream: bool = False,
         system: str = "",
     ) -> str:
-        """Complete a conversation."""
+        ""
         try:
             import httpx
 
-            # Separate system message
             if not system and messages and messages[0].get("role") == "system":
                 system = messages[0]["content"]
                 messages = messages[1:]
@@ -68,7 +64,7 @@ class AnthropicProvider:
             raise
 
     def get_models(self) -> list[str]:
-        """Get available models."""
+        ""
         return [
             "claude-3-5-sonnet-20241022",
             "claude-3-5-haiku-20241022",
@@ -77,7 +73,7 @@ class AnthropicProvider:
         ]
 
     def get_provider_info(self) -> dict[str, Any]:
-        """Get provider information."""
+        ""
         return {
             "name": "anthropic",
             "configured": bool(self.api_key),

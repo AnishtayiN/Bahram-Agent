@@ -1,5 +1,3 @@
-"""Groq LLM provider for Bahram Agent."""
-
 from __future__ import annotations
 
 import logging
@@ -7,9 +5,8 @@ from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
-
 class GroqProvider:
-    """Groq LLM provider (fast, free tier available)."""
+    ""
 
     def __init__(self, api_key: str = "", model: str = "") -> None:
         self.api_key = api_key
@@ -24,7 +21,7 @@ class GroqProvider:
         max_tokens: int = 4096,
         stream: bool = False,
     ) -> str:
-        """Complete a conversation."""
+        ""
         try:
             import httpx
 
@@ -64,7 +61,7 @@ class GroqProvider:
         temperature: float = 0.7,
         max_tokens: int = 4096,
     ):
-        """Stream a completion."""
+        ""
         try:
             import httpx
 
@@ -103,7 +100,7 @@ class GroqProvider:
             raise ImportError("httpx not installed. Run: pip install httpx")
 
     def get_models(self) -> list[str]:
-        """Get available models."""
+        ""
         return [
             "llama3-8b-8192",
             "llama3-70b-8192",
@@ -112,7 +109,7 @@ class GroqProvider:
         ]
 
     def get_provider_info(self) -> dict[str, Any]:
-        """Get provider information."""
+        ""
         return {
             "name": "groq",
             "configured": bool(self.api_key),

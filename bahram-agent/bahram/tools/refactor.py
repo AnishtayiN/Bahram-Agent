@@ -1,5 +1,3 @@
-"""Code refactoring tool for Bahram Agent."""
-
 from __future__ import annotations
 
 import logging
@@ -9,10 +7,9 @@ from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
-
 @dataclass
 class RefactorSuggestion:
-    """A refactoring suggestion."""
+    ""
 
     file: str
     line: int
@@ -21,13 +18,12 @@ class RefactorSuggestion:
     before: str
     after: str
 
-
 class RefactorTool:
-    """Code refactoring suggestions."""
+    ""
 
     def __init__(self) -> None:
         self._rules: list[tuple[str, str, str, str]] = [
-            # (pattern, replacement, description, type)
+
             (r"if (.+) is True", r"if \1", "Simplify boolean check", "simplify"),
             (r"if (.+) is False", r"if not \1", "Simplify boolean check", "simplify"),
             (r"if (.+) == None", r"if \1 is None", "Use 'is' for None comparison", "pythonic"),
@@ -38,7 +34,7 @@ class RefactorTool:
         ]
 
     async def analyze(self, file_path: str) -> list[RefactorSuggestion]:
-        """Analyze file for refactoring opportunities."""
+        ""
         try:
             with open(file_path, "r", encoding="utf-8", errors="replace") as f:
                 content = f.read()
@@ -65,7 +61,7 @@ class RefactorTool:
             return []
 
     def format_suggestions(self, suggestions: list[RefactorSuggestion]) -> str:
-        """Format suggestions as report."""
+        ""
         if not suggestions:
             return "No refactoring suggestions!"
 
@@ -81,7 +77,7 @@ class RefactorTool:
         return "\n".join(lines)
 
     def get_summary(self, suggestions: list[RefactorSuggestion]) -> dict[str, int]:
-        """Get summary of suggestions."""
+        ""
         summary = {}
         for s in suggestions:
             summary[s.type] = summary.get(s.type, 0) + 1

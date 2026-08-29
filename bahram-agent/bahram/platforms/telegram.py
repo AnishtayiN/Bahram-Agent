@@ -1,5 +1,3 @@
-"""Telegram platform integration with full features."""
-
 from __future__ import annotations
 
 import logging
@@ -10,21 +8,8 @@ from bahram.platforms.base import BasePlatform, PlatformMessage
 
 logger = logging.getLogger(__name__)
 
-
 class TelegramPlatform(BasePlatform):
-    """Telegram bot integration with full features.
-
-    Features:
-    - Text messages
-    - Voice messages (with transcription)
-    - Documents and files
-    - Images
-    - Inline keyboards
-    - Reply markup
-    - Message editing
-    - Typing indicators
-    - Session management
-    """
+    ""
 
     def __init__(self, config: Any) -> None:
         super().__init__(config)
@@ -37,7 +22,7 @@ class TelegramPlatform(BasePlatform):
         return "telegram"
 
     async def start(self) -> None:
-        """Start the Telegram bot."""
+        ""
         try:
             from telegram import Update, BotCommand
             from telegram.ext import (
@@ -53,17 +38,14 @@ class TelegramPlatform(BasePlatform):
                 logger.error("Telegram token not configured")
                 return
 
-            # Build application
             self.app = ApplicationBuilder().token(token).build()
 
-            # Add command handlers
             self.app.add_handler(CommandHandler("start", self._handle_start))
             self.app.add_handler(CommandHandler("help", self._handle_help))
             self.app.add_handler(CommandHandler("clear", self._handle_clear))
             self.app.add_handler(CommandHandler("model", self._handle_model))
             self.app.add_handler(CommandHandler("status", self._handle_status))
 
-            # Add message handlers
             self.app.add_handler(
                 MessageHandler(filters.TEXT & ~filters.COMMAND, self._handle_message)
             )
@@ -77,10 +59,8 @@ class TelegramPlatform(BasePlatform):
                 MessageHandler(filters.Document.ALL, self._handle_document)
             )
 
-            # Set bot commands
             await self._set_bot_commands()
 
-            # Start the bot
             await self.app.initialize()
             await self.app.start()
             await self.app.updater.start_polling(drop_pending_updates=True)
@@ -97,7 +77,7 @@ class TelegramPlatform(BasePlatform):
             raise
 
     async def stop(self) -> None:
-        """Stop the Telegram bot."""
+        ""
         if self.app:
             await self.app.updater.stop()
             await self.app.stop()
@@ -105,7 +85,7 @@ class TelegramPlatform(BasePlatform):
             logger.info("Telegram bot stopped")
 
     async def _set_bot_commands(self) -> None:
-        """Set bot commands menu."""
+        ""
         from telegram import BotCommand
 
         commands = [
@@ -119,10 +99,10 @@ class TelegramPlatform(BasePlatform):
         await self.app.bot.set_my_commands(commands)
 
     async def send_message(self, chat_id: str, content: str, parse_mode: str = "Markdown") -> None:
-        """Send a message to a Telegram chat."""
+        ""
         if self.bot:
             try:
-                # Split long messages
+
                 max_length = 4096
                 if len(content) > max_length:
                     chunks = [content[i : i + max_length] for i in range(0, len(content), max_length)]
@@ -140,15 +120,15 @@ class TelegramPlatform(BasePlatform):
                     )
             except Exception as e:
                 logger.error(f"Failed to send message: {e}")
-                # Try without parse mode
+
                 await self.bot.send_message(chat_id=chat_id, text=content)
 
     async def reply(self, message: PlatformMessage, content: str) -> None:
-        """Reply to a Telegram message."""
+        ""
         await self.send_message(message.chat_id, content)
 
     async def edit_message(self, chat_id: str, message_id: str, content: str) -> None:
-        """Edit a message."""
+        ""
         if self.bot:
             try:
                 await self.bot.edit_message_text(
@@ -160,18 +140,18 @@ class TelegramPlatform(BasePlatform):
                 logger.error(f"Failed to edit message: {e}")
 
     async def send_typing(self, chat_id: str) -> None:
-        """Send typing indicator."""
+        ""
         if self.bot:
             await self.bot.send_chat_action(chat_id=chat_id, action="typing")
 
     async def send_voice(self, chat_id: str, voice_path: str) -> None:
-        """Send a voice message."""
+        ""
         if self.bot:
             with open(voice_path, "rb") as voice:
                 await self.bot.send_voice(chat_id=chat_id, voice=voice)
 
     async def send_document(self, chat_id: str, document_path: str, caption: str = "") -> None:
-        """Send a document."""
+        ""
         if self.bot:
             with open(document_path, "rb") as doc:
                 await self.bot.send_document(
@@ -181,7 +161,7 @@ class TelegramPlatform(BasePlatform):
                 )
 
     async def send_photo(self, chat_id: str, photo_path: str, caption: str = "") -> None:
-        """Send a photo."""
+        ""
         if self.bot:
             with open(photo_path, "rb") as photo:
                 await self.bot.send_photo(
@@ -191,13 +171,13 @@ class TelegramPlatform(BasePlatform):
                 )
 
     def _is_allowed(self, user_id: str) -> bool:
-        """Check if user is allowed."""
+        ""
         if not self._allowed_users:
-            return True  # Allow all if no restrictions
+            return True
         return user_id in self._allowed_users
 
     async def _handle_start(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        """Handle /start command."""
+        ""
         user_id = str(update.effective_user.id)
 
         if not self._is_allowed(user_id):
@@ -217,7 +197,7 @@ class TelegramPlatform(BasePlatform):
         await update.message.reply_text(welcome)
 
     async def _handle_help(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        """Handle /help command."""
+        ""
         help_text = (
             "Bahram Agent Help\n\n"
             "Features:\n"
@@ -241,8 +221,8 @@ class TelegramPlatform(BasePlatform):
         await update.message.reply_text(help_text)
 
     async def _handle_clear(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        """Handle /clear command."""
-        # This will be handled by the main agent
+        ""
+
         msg = PlatformMessage(
             platform="telegram",
             user_id=str(update.effective_user.id),
@@ -256,7 +236,7 @@ class TelegramPlatform(BasePlatform):
         await update.message.reply_text("Conversation cleared.")
 
     async def _handle_model(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        """Handle /model command."""
+        ""
         if context.args:
             model = context.args[0]
             msg = PlatformMessage(
@@ -277,7 +257,7 @@ class TelegramPlatform(BasePlatform):
             )
 
     async def _handle_status(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        """Handle /status command."""
+        ""
         status = (
             "Bahram Agent Status\n\n"
             "Version: 1.0.0\n"
@@ -287,7 +267,7 @@ class TelegramPlatform(BasePlatform):
         await update.message.reply_text(status)
 
     async def _handle_message(self, update_or_message: Any, context: Any = None) -> None:
-        """Handle incoming text message."""
+        ""
         if isinstance(update_or_message, PlatformMessage):
             msg = update_or_message
         else:
@@ -316,7 +296,7 @@ class TelegramPlatform(BasePlatform):
         await self._handle_message(msg)
 
     async def _handle_voice(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        """Handle voice message."""
+        ""
         if not update.message:
             return
 
@@ -325,7 +305,6 @@ class TelegramPlatform(BasePlatform):
             await update.message.reply_text("Access denied.")
             return
 
-        # Download voice file
         voice = update.message.voice or update.message.audio
         if voice:
             file = await context.bot.get_file(voice.file_id)
@@ -346,7 +325,7 @@ class TelegramPlatform(BasePlatform):
             await self._handle_message(msg)
 
     async def _handle_image(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        """Handle image message."""
+        ""
         if not update.message:
             return
 
@@ -355,10 +334,9 @@ class TelegramPlatform(BasePlatform):
             await update.message.reply_text("Access denied.")
             return
 
-        # Get the largest photo
         photos = update.message.photo
         if photos:
-            photo = photos[-1]  # Get largest
+            photo = photos[-1]
             file = await context.bot.get_file(photo.file_id)
             photo_path = f"/tmp/photo_{update.message.message_id}.jpg"
             await file.download_to_drive(photo_path)
@@ -378,7 +356,7 @@ class TelegramPlatform(BasePlatform):
             await self._handle_message(msg)
 
     async def _handle_document(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        """Handle document message."""
+        ""
         if not update.message or not update.message.document:
             return
 

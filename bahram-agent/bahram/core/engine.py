@@ -1,5 +1,3 @@
-"""Core agent engine for Bahram."""
-
 from __future__ import annotations
 
 import asyncio
@@ -13,19 +11,17 @@ from bahram.core.config import Config
 
 logger = logging.getLogger(__name__)
 
-
 class MessageRole(str, Enum):
-    """Roles for messages in a conversation."""
+    ""
 
     SYSTEM = "system"
     USER = "user"
     ASSISTANT = "assistant"
     TOOL = "tool"
 
-
 @dataclass
 class Message:
-    """A message in a conversation."""
+    ""
 
     role: MessageRole
     content: str
@@ -34,38 +30,34 @@ class Message:
     timestamp: float = field(default_factory=time.time)
     metadata: dict[str, Any] = field(default_factory=dict)
 
-
 @dataclass
 class ToolCall:
-    """A request to call a tool."""
+    ""
 
     id: str
     name: str
     arguments: dict[str, Any]
 
-
 @dataclass
 class ToolResult:
-    """Result from a tool call."""
+    ""
 
     tool_call_id: str
     content: str
     success: bool
     error: Optional[str] = None
 
-
 @dataclass
 class AgentResponse:
-    """Response from the agent."""
+    ""
 
     content: str
     tool_calls: list[ToolCall] = field(default_factory=list)
     thinking: Optional[str] = None
     metadata: dict[str, Any] = field(default_factory=dict)
 
-
 class LLMProvider(Protocol):
-    """Protocol for LLM providers."""
+    ""
 
     async def complete(
         self,
@@ -73,7 +65,7 @@ class LLMProvider(Protocol):
         tools: list[dict[str, Any]],
         **kwargs: Any,
     ) -> AgentResponse:
-        """Generate a completion."""
+        ""
         ...
 
     async def stream(
@@ -82,12 +74,11 @@ class LLMProvider(Protocol):
         tools: list[dict[str, Any]],
         **kwargs: Any,
     ) -> AsyncIterator[str]:
-        """Stream a completion."""
+        ""
         ...
 
-
 class AgentEngine:
-    """Core engine that runs the agent loop."""
+    ""
 
     def __init__(self, config: Config) -> None:
         self.config = config
@@ -96,24 +87,24 @@ class AgentEngine:
         self._running = False
 
     def register_provider(self, name: str, provider: LLMProvider) -> None:
-        """Register an LLM provider."""
+        ""
         self.providers[name] = provider
         logger.info(f"Registered provider: {name}")
 
     def register_tool(self, name: str, tool: Any) -> None:
-        """Register a tool."""
+        ""
         self.tools[name] = tool
         logger.info(f"Registered tool: {name}")
 
     def get_provider(self, model: str) -> LLMProvider:
-        """Get the provider for a model."""
+        ""
         provider_name = model.split("/")[0] if "/" in model else "anthropic"
         if provider_name not in self.providers:
             raise ValueError(f"Provider '{provider_name}' not registered")
         return self.providers[provider_name]
 
     def get_tools_schema(self) -> list[dict[str, Any]]:
-        """Get the schema for all registered tools."""
+        ""
         schemas = []
         for name, tool in self.tools.items():
             if hasattr(tool, "schema"):
@@ -126,7 +117,7 @@ class AgentEngine:
         model: Optional[str] = None,
         max_iterations: int = 10,
     ) -> AgentResponse:
-        """Run the agent loop until completion or max iterations."""
+        ""
         model = model or self.config.agent.model
         provider = self.get_provider(model)
         tools_schema = self.get_tools_schema()
@@ -136,11 +127,9 @@ class AgentEngine:
 
             response = await provider.complete(messages, tools_schema)
 
-            # If no tool calls, we're done
             if not response.tool_calls:
                 return response
 
-            # Execute tool calls
             for tool_call in response.tool_calls:
                 result = await self.execute_tool(tool_call)
                 messages.append(
@@ -151,7 +140,6 @@ class AgentEngine:
                     )
                 )
 
-            # Add assistant message with tool calls
             messages.append(
                 Message(
                     role=MessageRole.ASSISTANT,
@@ -169,7 +157,7 @@ class AgentEngine:
         model: Optional[str] = None,
         max_iterations: int = 10,
     ) -> AsyncIterator[str]:
-        """Run the agent loop with streaming."""
+        ""
         model = model or self.config.agent.model
         provider = self.get_provider(model)
         tools_schema = self.get_tools_schema()
@@ -180,7 +168,7 @@ class AgentEngine:
 
             async for chunk in provider.stream(messages, tools_schema):
                 if chunk.startswith("[TOOL_CALL:"):
-                    # Parse tool call from stream
+
                     tool_call = self._parse_tool_call(chunk)
                     if tool_call:
                         tool_calls.append(tool_call)
@@ -188,11 +176,9 @@ class AgentEngine:
                     full_content += chunk
                     yield chunk
 
-            # If no tool calls, we're done
             if not tool_calls:
                 return
 
-            # Execute tool calls
             for tool_call in tool_calls:
                 result = await self.execute_tool(tool_call)
                 messages.append(
@@ -203,7 +189,6 @@ class AgentEngine:
                     )
                 )
 
-            # Add assistant message
             messages.append(
                 Message(
                     role=MessageRole.ASSISTANT,
@@ -213,7 +198,7 @@ class AgentEngine:
             )
 
     async def execute_tool(self, tool_call: ToolCall) -> ToolResult:
-        """Execute a tool call."""
+        ""
         tool_name = tool_call.name
 
         if tool_name not in self.tools:
@@ -251,8 +236,8 @@ class AgentEngine:
             )
 
     def _parse_tool_call(self, raw: str) -> Optional[ToolCall]:
-        """Parse a tool call from raw string."""
-        # This is a simplified parser
+        ""
+
         import json
         import re
 

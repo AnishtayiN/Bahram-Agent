@@ -1,5 +1,3 @@
-"""Nous Portal provider."""
-
 from __future__ import annotations
 
 import json
@@ -11,9 +9,8 @@ from bahram.providers.base import BaseProvider
 
 logger = logging.getLogger(__name__)
 
-
 class NousProvider(BaseProvider):
-    """Nous Portal provider for Hermes models."""
+    ""
 
     async def complete(
         self,
@@ -21,7 +18,7 @@ class NousProvider(BaseProvider):
         tools: list[dict[str, Any]],
         **kwargs: Any,
     ) -> AgentResponse:
-        """Generate a completion using Nous Portal API."""
+        ""
         try:
             import httpx
 
@@ -31,14 +28,12 @@ class NousProvider(BaseProvider):
             if not api_key:
                 raise ValueError("Nous Portal API key not configured")
 
-            # Convert messages
             openai_messages = []
             for msg in messages:
                 openai_messages.append(
                     {"role": msg.role.value, "content": msg.content}
                 )
 
-            # Prepare request
             payload = {
                 "model": kwargs.get("model", "hermes-3-llama-3.1-405b"),
                 "messages": openai_messages,
@@ -49,7 +44,6 @@ class NousProvider(BaseProvider):
             if tools:
                 payload["tools"] = tools
 
-            # Make request
             async with httpx.AsyncClient() as client:
                 response = await client.post(
                     f"{base_url}/chat/completions",
@@ -69,7 +63,6 @@ class NousProvider(BaseProvider):
                 choice = data["choices"][0]
                 message = choice["message"]
 
-                # Parse response
                 content = message.get("content", "") or ""
                 tool_calls = []
 
@@ -101,7 +94,7 @@ class NousProvider(BaseProvider):
         tools: list[dict[str, Any]],
         **kwargs: Any,
     ) -> AsyncIterator[str]:
-        """Stream a completion using Nous Portal API."""
+        ""
         try:
             import httpx
 
@@ -111,14 +104,12 @@ class NousProvider(BaseProvider):
             if not api_key:
                 raise ValueError("Nous Portal API key not configured")
 
-            # Convert messages
             openai_messages = []
             for msg in messages:
                 openai_messages.append(
                     {"role": msg.role.value, "content": msg.content}
                 )
 
-            # Prepare request
             payload = {
                 "model": kwargs.get("model", "hermes-3-llama-3.1-405b"),
                 "messages": openai_messages,
@@ -129,7 +120,6 @@ class NousProvider(BaseProvider):
             if tools:
                 payload["tools"] = tools
 
-            # Stream request
             async with httpx.AsyncClient() as client:
                 async with client.stream(
                     "POST",

@@ -1,5 +1,3 @@
-"""Intelligent Code Documentation Generator for Bahram Agent."""
-
 from __future__ import annotations
 
 import logging
@@ -10,18 +8,16 @@ from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
-
 @dataclass
 class DocSection:
-    """A documentation section."""
+    ""
 
     name: str
     content: str
     level: int = 1
 
-
 class SmartDocGenerator:
-    """Intelligent documentation generation with AI-powered summaries."""
+    ""
 
     def __init__(self) -> None:
         self._templates: dict[str, str] = {
@@ -37,7 +33,7 @@ class SmartDocGenerator:
         format: str = "markdown",
         include_examples: bool = True,
     ) -> bool:
-        """Generate documentation from source code."""
+        ""
         try:
             source = Path(source_path)
             if not source.exists():
@@ -63,17 +59,15 @@ class SmartDocGenerator:
         filename: str,
         include_examples: bool,
     ) -> list[DocSection]:
-        """Analyze code and create documentation sections."""
+        ""
         sections = []
 
-        # Module overview
         docstring = self._extract_module_docstring(content)
         sections.append(DocSection(
             name="Overview",
             content=docstring or f"Documentation for {filename}",
         ))
 
-        # Extract and document classes
         classes = self._extract_classes(content)
         if classes:
             class_content = []
@@ -85,7 +79,6 @@ class SmartDocGenerator:
                 content="\n\n".join(class_content),
             ))
 
-        # Extract and document functions
         functions = self._extract_functions(content)
         if functions:
             func_content = []
@@ -97,7 +90,6 @@ class SmartDocGenerator:
                 content="\n\n".join(func_content),
             ))
 
-        # Add examples if requested
         if include_examples:
             examples = self._generate_examples(classes, functions)
             if examples:
@@ -109,19 +101,19 @@ class SmartDocGenerator:
         return sections
 
     def _extract_module_docstring(self, content: str) -> str:
-        """Extract module docstring."""
-        match = re.search(r'"""(.*?)"""', content, re.DOTALL)
+        ""
+        match = re.search(r'""', content, re.DOTALL)
         if match:
             return match.group(1).strip()
-        match = re.search(r"'''(.*?)'''", content, re.DOTALL)
+        match = re.search(r"''", content, re.DOTALL)
         if match:
             return match.group(1).strip()
         return ""
 
     def _extract_classes(self, content: str) -> list[dict]:
-        """Extract classes with docstrings."""
+        ""
         classes = []
-        pattern = r'class\s+(\w+)\s*(?:\(([^)]*)\))?:\s*\n(?:\s+"""(.*?)""")?'
+        pattern = r'class\s+(\w+)\s*(?:\(([^)]*)\))?:\s*\n(?:\s+"")?'
         for match in re.finditer(pattern, content, re.DOTALL):
             classes.append({
                 "name": match.group(1),
@@ -131,9 +123,9 @@ class SmartDocGenerator:
         return classes
 
     def _extract_functions(self, content: str) -> list[dict]:
-        """Extract functions with docstrings."""
+        ""
         functions = []
-        pattern = r'def\s+(\w+)\s*\(([^)]*)\)(?:\s*->\s*(\w+))?:\s*\n(?:\s+"""(.*?)""")?'
+        pattern = r'def\s+(\w+)\s*\(([^)]*)\)(?:\s*->\s*(\w+))?:\s*\n(?:\s+"")?'
         for match in re.finditer(pattern, content, re.DOTALL):
             if not match.group(1).startswith("_"):
                 functions.append({
@@ -145,7 +137,7 @@ class SmartDocGenerator:
         return functions
 
     def _document_class(self, cls: dict) -> str:
-        """Document a class."""
+        ""
         lines = [f"### {cls['name']}"]
         if cls["parent"]:
             lines.append(f" Inherits from: `{cls['parent']}`")
@@ -154,7 +146,7 @@ class SmartDocGenerator:
         return "\n".join(lines)
 
     def _document_function(self, func: dict) -> str:
-        """Document a function."""
+        ""
         lines = [f"#### `{func['name']}({func['args']})`"]
         if func["return_type"]:
             lines.append(f" Returns: `{func['return_type']}`")
@@ -163,7 +155,7 @@ class SmartDocGenerator:
         return "\n".join(lines)
 
     def _generate_examples(self, classes: list, functions: list) -> str:
-        """Generate usage examples."""
+        ""
         examples = ["```python", "# Usage Examples", ""]
 
         for cls in classes[:3]:
@@ -180,7 +172,7 @@ class SmartDocGenerator:
         return "\n".join(examples)
 
     def _render_sections(self, sections: list[DocSection], format: str) -> str:
-        """Render sections to string."""
+        ""
         lines = []
         for section in sections:
             lines.append(f"{'#' * section.level} {section.name}")

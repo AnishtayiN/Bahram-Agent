@@ -1,5 +1,3 @@
-"""Todo tool for Bahram Agent."""
-
 from __future__ import annotations
 
 import json
@@ -10,21 +8,19 @@ from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
-
 @dataclass
 class TodoItem:
-    """A todo item."""
+    ""
 
     id: str
     content: str
-    status: str = "pending"  # pending, in_progress, completed, cancelled
-    priority: str = "medium"  # low, medium, high
+    status: str = "pending"
+    priority: str = "medium"
     created_at: float = 0.0
     completed_at: float = 0.0
 
-
 class TodoTool:
-    """Manage todo lists."""
+    ""
 
     def __init__(self, data_dir: str = "data") -> None:
         self.data_dir = Path(data_dir)
@@ -33,7 +29,7 @@ class TodoTool:
         self._load()
 
     def _load(self) -> None:
-        """Load todos from disk."""
+        ""
         todos_file = self.data_dir / "todos.json"
         if todos_file.exists():
             try:
@@ -46,7 +42,7 @@ class TodoTool:
                 logger.warning(f"Failed to load todos: {e}")
 
     def _save(self) -> None:
-        """Save todos to disk."""
+        ""
         todos_file = self.data_dir / "todos.json"
         data = [
             {
@@ -67,7 +63,7 @@ class TodoTool:
         content: str,
         priority: str = "medium",
     ) -> TodoItem:
-        """Add a todo item."""
+        ""
         import uuid
         import time
 
@@ -83,7 +79,7 @@ class TodoTool:
         return todo
 
     def update_status(self, todo_id: str, status: str) -> bool:
-        """Update todo status."""
+        ""
         if todo_id in self._todos:
             import time
             self._todos[todo_id].status = status
@@ -94,7 +90,7 @@ class TodoTool:
         return False
 
     def delete(self, todo_id: str) -> bool:
-        """Delete a todo item."""
+        ""
         if todo_id in self._todos:
             del self._todos[todo_id]
             self._save()
@@ -102,7 +98,7 @@ class TodoTool:
         return False
 
     def list_todos(self, status: str = None) -> list[dict]:
-        """List todos."""
+        ""
         todos = list(self._todos.values())
         if status:
             todos = [t for t in todos if t.status == status]
@@ -117,7 +113,7 @@ class TodoTool:
         ]
 
     def get_summary(self) -> dict[str, int]:
-        """Get todo summary."""
+        ""
         return {
             "total": len(self._todos),
             "pending": sum(1 for t in self._todos.values() if t.status == "pending"),
@@ -126,7 +122,7 @@ class TodoTool:
         }
 
     def clear_completed(self) -> int:
-        """Clear completed todos."""
+        ""
         completed = [t.id for t in self._todos.values() if t.status == "completed"]
         for todo_id in completed:
             del self._todos[todo_id]

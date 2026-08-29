@@ -1,5 +1,3 @@
-"""Intelligent Workflow Automation for Bahram Agent."""
-
 from __future__ import annotations
 
 import asyncio
@@ -9,10 +7,9 @@ from typing import Any, Callable, Optional
 
 logger = logging.getLogger(__name__)
 
-
 @dataclass
 class WorkflowStep:
-    """A step in a workflow."""
+    ""
 
     id: str
     name: str
@@ -22,10 +19,9 @@ class WorkflowStep:
     status: str = "pending"
     result: Any = None
 
-
 @dataclass
 class Workflow:
-    """A complete workflow."""
+    ""
 
     id: str
     name: str
@@ -33,9 +29,8 @@ class Workflow:
     status: str = "idle"
     current_step: int = 0
 
-
 class WorkflowAutomation:
-    """Intelligent workflow automation."""
+    ""
 
     def __init__(self) -> None:
         self._workflows: dict[str, Workflow] = {}
@@ -43,11 +38,11 @@ class WorkflowAutomation:
         self._history: list[dict] = []
 
     def register_action(self, name: str, action: Callable) -> None:
-        """Register an action."""
+        ""
         self._actions[name] = action
 
     def create_workflow(self, name: str, steps: list[dict]) -> Workflow:
-        """Create a workflow from steps."""
+        ""
         import uuid
 
         workflow_id = str(uuid.uuid4())[:8]
@@ -71,7 +66,7 @@ class WorkflowAutomation:
         return workflow
 
     async def execute(self, workflow_id: str) -> dict[str, Any]:
-        """Execute a workflow."""
+        ""
         workflow = self._workflows.get(workflow_id)
         if not workflow:
             return {"error": f"Workflow '{workflow_id}' not found"}
@@ -80,7 +75,7 @@ class WorkflowAutomation:
         results = []
 
         for step in workflow.steps:
-            # Check dependencies
+
             deps_met = all(
                 any(s.id == dep and s.status == "completed" for s in workflow.steps)
                 for dep in step.dependencies
@@ -89,7 +84,6 @@ class WorkflowAutomation:
             if not deps_met:
                 continue
 
-            # Execute step
             step.status = "running"
             try:
                 action = self._actions.get(step.action)
@@ -118,7 +112,7 @@ class WorkflowAutomation:
         return {"status": "completed", "results": results}
 
     def get_workflow(self, workflow_id: str) -> Optional[dict]:
-        """Get workflow details."""
+        ""
         workflow = self._workflows.get(workflow_id)
         if workflow:
             return {
@@ -138,7 +132,7 @@ class WorkflowAutomation:
         return None
 
     def get_progress(self, workflow_id: str) -> dict[str, Any]:
-        """Get workflow progress."""
+        ""
         workflow = self._workflows.get(workflow_id)
         if workflow:
             total = len(workflow.steps)
@@ -151,7 +145,7 @@ class WorkflowAutomation:
         return {"total": 0, "completed": 0, "progress": 0}
 
     def list_workflows(self) -> list[dict]:
-        """List all workflows."""
+        ""
         return [
             {
                 "id": w.id,
@@ -163,5 +157,5 @@ class WorkflowAutomation:
         ]
 
     def get_history(self) -> list[dict]:
-        """Get execution history."""
+        ""
         return self._history.copy()

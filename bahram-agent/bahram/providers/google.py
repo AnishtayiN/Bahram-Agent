@@ -1,5 +1,3 @@
-"""Google Gemini LLM provider for Bahram Agent."""
-
 from __future__ import annotations
 
 import logging
@@ -7,9 +5,8 @@ from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
-
 class GoogleProvider:
-    """Google Gemini LLM provider."""
+    ""
 
     def __init__(self, api_key: str = "", model: str = "") -> None:
         self.api_key = api_key
@@ -23,11 +20,10 @@ class GoogleProvider:
         max_tokens: int = 4096,
         stream: bool = False,
     ) -> str:
-        """Complete a conversation."""
+        ""
         try:
             import httpx
 
-            # Convert messages to Google format
             contents = []
             for msg in messages:
                 role = "user" if msg["role"] in ("user", "system") else "model"
@@ -66,7 +62,7 @@ class GoogleProvider:
             raise
 
     def get_models(self) -> list[str]:
-        """Get available models."""
+        ""
         return [
             "gemini-pro",
             "gemini-pro-vision",
@@ -75,7 +71,7 @@ class GoogleProvider:
         ]
 
     def get_provider_info(self) -> dict[str, Any]:
-        """Get provider information."""
+        ""
         return {
             "name": "google",
             "configured": bool(self.api_key),

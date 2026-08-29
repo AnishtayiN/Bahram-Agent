@@ -1,5 +1,3 @@
-"""Voice transcription for Bahram Agent."""
-
 from __future__ import annotations
 
 import logging
@@ -10,16 +8,15 @@ from typing import Optional
 
 logger = logging.getLogger(__name__)
 
-
 class VoiceTranscriber:
-    """Voice message transcription."""
+    ""
 
     def __init__(self, method: str = "whisper") -> None:
         self.method = method
         self._whisper_model = None
 
     async def transcribe(self, audio_path: str) -> Optional[str]:
-        """Transcribe an audio file."""
+        ""
         try:
             if self.method == "whisper":
                 return await self._transcribe_whisper(audio_path)
@@ -33,7 +30,7 @@ class VoiceTranscriber:
             return None
 
     async def _transcribe_whisper(self, audio_path: str) -> Optional[str]:
-        """Transcribe using OpenAI Whisper."""
+        ""
         try:
             import whisper
 
@@ -51,7 +48,7 @@ class VoiceTranscriber:
             return None
 
     async def _transcribe_command(self, audio_path: str) -> Optional[str]:
-        """Transcribe using an external command."""
+        ""
         import os
 
         command = os.environ.get("BAHRAM_STT_COMMAND")
@@ -60,7 +57,7 @@ class VoiceTranscriber:
             return None
 
         try:
-            # Format command with audio path
+
             cmd = command.format(audio_path=audio_path)
 
             process = await asyncio.create_subprocess_shell(
@@ -84,7 +81,7 @@ class VoiceTranscriber:
             return None
 
     async def convert_ogg_to_wav(self, ogg_path: str) -> str:
-        """Convert OGG to WAV format."""
+        ""
         wav_path = tempfile.mktemp(suffix=".wav")
 
         try:

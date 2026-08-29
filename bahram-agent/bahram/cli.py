@@ -1,5 +1,3 @@
-"""CLI interface for Bahram Agent."""
-
 from __future__ import annotations
 
 import asyncio
@@ -43,7 +41,6 @@ except ImportError:
 
     console = _MockConsole()
 
-
 if HAS_CLI:
     @app.command()
     def chat(
@@ -52,7 +49,7 @@ if HAS_CLI:
         config: str = typer.Option("config/config.yaml", help="Config file path"),
         session: Optional[str] = typer.Option(None, help="Session ID"),
     ) -> None:
-        """Start an interactive chat session."""
+        ""
         from bahram.core.agent import Agent
         from bahram.core.config import Config
 
@@ -66,7 +63,7 @@ if HAS_CLI:
         list_models: bool = typer.Option(False, "--list", "-l", help="List available models"),
         set_model: Optional[str] = typer.Option(None, "--set", "-s", help="Set default model"),
     ) -> None:
-        """Manage models."""
+        ""
         from bahram.core.config import Config
 
         config = Config.from_file("config/config.yaml")
@@ -90,7 +87,7 @@ if HAS_CLI:
         list_skills: bool = typer.Option(False, "--list", "-l", help="List available skills"),
         skill_name: Optional[str] = typer.Argument(None, help="Skill name"),
     ) -> None:
-        """Manage skills."""
+        ""
         from bahram.skills.manager import SkillManager
         from bahram.core.config import Config
 
@@ -115,7 +112,7 @@ if HAS_CLI:
         host: str = typer.Option("0.0.0.0", help="Host to bind"),
         port: int = typer.Option(8000, help="Port to bind"),
     ) -> None:
-        """Start the API server."""
+        ""
         console.print(f"[info]Starting API server on {host}:{port}...[/info]")
         console.print("[success]Server started[/success]")
 
@@ -123,7 +120,7 @@ if HAS_CLI:
     def gateway(
         platform: str = typer.Option("telegram", help="Platform to connect"),
     ) -> None:
-        """Start the messaging gateway."""
+        ""
         from bahram.core.config import Config
         from bahram.platforms import TelegramPlatform, DiscordPlatform, SlackPlatform
 
@@ -156,11 +153,10 @@ if HAS_CLI:
 
     @app.command()
     def version() -> None:
-        """Show version information."""
+        ""
         from bahram import __version__
 
         console.print(f"[bold]Bahram Agent[/bold] v{__version__}")
-
 
 async def _chat_async(
     agent: "Agent",
@@ -168,18 +164,17 @@ async def _chat_async(
     model: str,
     session: Optional[str],
 ) -> None:
-    """Async chat implementation."""
+    ""
     from bahram.core.engine import AgentResponse
 
     await agent.start()
 
     if message:
-        # Single message mode
+
         response = await agent.chat(message, session_id=session, model=model)
         _print_response(response)
         return
 
-    # Interactive mode
     console.print(
         Panel.fit(
             "[bold cyan]Bahram Agent[/bold cyan]\n"
@@ -209,7 +204,6 @@ async def _chat_async(
             if not user_input.strip():
                 continue
 
-            # Stream response
             console.print("\n[bold cyan]Bahram[/bold cyan] ", end="")
 
             async for chunk in agent.chat_streaming(
@@ -217,7 +211,7 @@ async def _chat_async(
             ):
                 console.print(chunk, end="", highlight=False)
 
-            console.print()  # New line after response
+            console.print()
 
         except KeyboardInterrupt:
             console.print("\n[info]Interrupted[/info]")
@@ -227,9 +221,8 @@ async def _chat_async(
 
     await agent.stop()
 
-
 def _print_response(response: "AgentResponse") -> None:
-    """Print an agent response."""
+    ""
     console.print(
         Panel(
             Markdown(response.content) if response.content else "",
@@ -243,14 +236,12 @@ def _print_response(response: "AgentResponse") -> None:
         for tc in response.tool_calls:
             console.print(f"  - {tc.name}({tc.arguments})")
 
-
 def main() -> None:
-    """Main entry point."""
+    ""
     if app:
         app()
     else:
         console.print("[error]CLI dependencies not installed. Install with: pip install 'bahram-agent[cli]'[/error]")
-
 
 if __name__ == "__main__":
     main()

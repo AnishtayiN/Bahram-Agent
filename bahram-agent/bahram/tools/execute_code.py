@@ -1,5 +1,3 @@
-"""Execute code tool for Bahram Agent."""
-
 from __future__ import annotations
 
 import asyncio
@@ -10,9 +8,8 @@ from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
-
 class ExecuteCodeTool:
-    """Execute Python code safely."""
+    ""
 
     def __init__(self) -> None:
         self._timeout: float = 30.0
@@ -25,7 +22,7 @@ class ExecuteCodeTool:
         language: str = "python",
         timeout: float = None,
     ) -> dict[str, Any]:
-        """Execute code."""
+        ""
         if language == "python":
             return await self._execute_python(code, timeout)
         elif language == "bash":
@@ -34,7 +31,7 @@ class ExecuteCodeTool:
             return {"error": f"Unsupported language: {language}"}
 
     async def _execute_python(self, code: str, timeout: float = None) -> dict[str, Any]:
-        """Execute Python code."""
+        ""
         with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
             f.write(code)
             temp_path = f.name
@@ -67,7 +64,7 @@ class ExecuteCodeTool:
             Path(temp_path).unlink(missing_ok=True)
 
     async def _execute_bash(self, code: str, timeout: float = None) -> dict[str, Any]:
-        """Execute bash code."""
+        ""
         proc = await asyncio.create_subprocess_shell(
             code,
             stdout=asyncio.subprocess.PIPE,
@@ -93,9 +90,9 @@ class ExecuteCodeTool:
             }
 
     def set_timeout(self, timeout: float) -> None:
-        """Set execution timeout."""
+        ""
         self._timeout = timeout
 
     def set_max_output(self, max_output: int) -> None:
-        """Set max output size."""
+        ""
         self._max_output = max_output

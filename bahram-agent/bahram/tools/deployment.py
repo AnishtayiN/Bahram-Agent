@@ -1,5 +1,3 @@
-"""Deployment automation tool for Bahram Agent."""
-
 from __future__ import annotations
 
 import asyncio
@@ -9,33 +7,31 @@ from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
-
 @dataclass
 class DeploymentConfig:
-    """Deployment configuration."""
+    ""
 
     name: str
-    target: str  # docker, kubernetes, aws, gcp, azure
+    target: str
     region: str = ""
     environment: str = "production"
     replicas: int = 1
     resources: dict = field(default_factory=dict)
     env_vars: dict[str, str] = field(default_factory=dict)
 
-
 class DeploymentTool:
-    """Deployment automation tool."""
+    ""
 
     def __init__(self) -> None:
         self._configs: dict[str, DeploymentConfig] = {}
         self._history: list[dict] = []
 
     def add_config(self, config: DeploymentConfig) -> None:
-        """Add deployment config."""
+        ""
         self._configs[config.name] = config
 
     async def deploy(self, config_name: str) -> dict[str, Any]:
-        """Deploy to target."""
+        ""
         config = self._configs.get(config_name)
         if not config:
             return {"error": f"Config '{config_name}' not found"}
@@ -53,7 +49,7 @@ class DeploymentTool:
             return {"error": str(e)}
 
     async def _deploy_docker(self, config: DeploymentConfig) -> dict[str, Any]:
-        """Deploy with Docker."""
+        ""
         proc = await asyncio.create_subprocess_shell(
             f"docker build -t {config.name} . && docker run -d --name {config.name} {config.name}",
             stdout=asyncio.subprocess.PIPE,
@@ -71,32 +67,10 @@ class DeploymentTool:
         return result
 
     async def _deploy_kubernetes(self, config: DeploymentConfig) -> dict[str, Any]:
-        """Deploy with Kubernetes."""
-        # Generate deployment YAML
-        yaml_content = f"""
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: {config.name}
-spec:
-  replicas: {config.replicas}
-  selector:
-    matchLabels:
-      app: {config.name}
-  template:
-    metadata:
-      labels:
-        app: {config.name}
-    spec:
-      containers:
-      - name: {config.name}
-        image: {config.name}:latest
-        resources:
-          limits:
-            cpu: "{config.resources.get('cpu', '100m')}"
-            memory: "{config.resources.get('memory', '128Mi')}"
-"""
-        # Apply with kubectl
+        ""
+
+        yaml_content = f""
+
         proc = await asyncio.create_subprocess_shell(
             f"echo '{yaml_content}' | kubectl apply -f -",
             stdout=asyncio.subprocess.PIPE,
@@ -114,7 +88,7 @@ spec:
         return result
 
     async def _deploy_cloud(self, config: DeploymentConfig, provider: str) -> dict[str, Any]:
-        """Deploy to cloud provider."""
+        ""
         result = {
             "target": provider,
             "status": "success",
@@ -129,11 +103,11 @@ spec:
         return result
 
     def get_history(self) -> list[dict]:
-        """Get deployment history."""
+        ""
         return self._history.copy()
 
     async def rollback(self, config_name: str) -> dict[str, Any]:
-        """Rollback deployment."""
+        ""
         return {
             "status": "success",
             "message": f"Rollback for {config_name} initiated",

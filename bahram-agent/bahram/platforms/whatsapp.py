@@ -1,5 +1,3 @@
-"""WhatsApp platform adapter for Bahram Agent."""
-
 from __future__ import annotations
 
 import json
@@ -8,9 +6,8 @@ from typing import Any, Callable, Optional
 
 logger = logging.getLogger(__name__)
 
-
 class WhatsAppAdapter:
-    """WhatsApp messaging platform adapter."""
+    ""
 
     def __init__(self, phone_number_id: str = "", access_token: str = "", verify_token: str = "") -> None:
         self.phone_number_id = phone_number_id
@@ -19,11 +16,11 @@ class WhatsAppAdapter:
         self._message_fn: Optional[Callable] = None
 
     def set_message_function(self, fn: Callable) -> None:
-        """Set the message handling function."""
+        ""
         self._message_fn = fn
 
     async def handle_webhook(self, data: dict) -> dict[str, Any]:
-        """Handle incoming webhook."""
+        ""
         try:
             entry = data.get("entry", [{}])[0]
             changes = entry.get("changes", [{}])[0]
@@ -46,13 +43,13 @@ class WhatsAppAdapter:
             return {"status": "error", "error": str(e)}
 
     async def verify_webhook(self, mode: str, token: str, challenge: str) -> str:
-        """Verify webhook subscription."""
+        ""
         if mode == "subscribe" and token == self.verify_token:
             return challenge
         return ""
 
     async def send_message(self, chat_id: str, text: str, **kwargs) -> bool:
-        """Send a WhatsApp message."""
+        ""
         try:
             import httpx
 
@@ -77,7 +74,7 @@ class WhatsAppAdapter:
             return False
 
     async def send_image(self, chat_id: str, image_url: str, caption: str = "") -> bool:
-        """Send an image."""
+        ""
         try:
             import httpx
 
@@ -105,7 +102,7 @@ class WhatsAppAdapter:
             return False
 
     def get_platform_info(self) -> dict[str, Any]:
-        """Get platform information."""
+        ""
         return {
             "name": "whatsapp",
             "version": "1.0.0",

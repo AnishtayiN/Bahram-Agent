@@ -1,5 +1,3 @@
-"""MCP Client - Connect to external MCP servers."""
-
 from __future__ import annotations
 
 import asyncio
@@ -12,13 +10,12 @@ from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
-
 @dataclass
 class MCPServerConfig:
-    """Configuration for an MCP server."""
+    ""
 
     name: str
-    type: str = "stdio"  # stdio or http
+    type: str = "stdio"
     command: list[str] = field(default_factory=list)
     url: str = ""
     env: dict[str, str] = field(default_factory=dict)
@@ -26,19 +23,17 @@ class MCPServerConfig:
     enabled: bool = True
     timeout: int = 30
 
-
 @dataclass
 class MCPTool:
-    """Tool from an MCP server."""
+    ""
 
     name: str
     description: str
     input_schema: dict[str, Any]
     server_name: str
 
-
 class MCPClient:
-    """Client for connecting to MCP servers."""
+    ""
 
     def __init__(self) -> None:
         self.servers: dict[str, MCPServerConfig] = {}
@@ -46,7 +41,7 @@ class MCPClient:
         self._connections: dict[str, Any] = {}
 
     def load_config(self, config_path: str) -> None:
-        """Load MCP configuration from file."""
+        ""
         path = Path(config_path)
         if not path.exists():
             return
@@ -73,7 +68,7 @@ class MCPClient:
                 )
 
     async def connect(self, server_name: str) -> bool:
-        """Connect to an MCP server."""
+        ""
         config = self.servers.get(server_name)
         if not config:
             logger.error(f"Server not found: {server_name}")
@@ -96,7 +91,7 @@ class MCPClient:
             return False
 
     async def _connect_stdio(self, config: MCPServerConfig) -> bool:
-        """Connect to a stdio MCP server."""
+        ""
         if not config.command:
             logger.error(f"No command specified for {config.name}")
             return False
@@ -115,7 +110,6 @@ class MCPClient:
                 "type": "stdio",
             }
 
-            # Send initialize request
             init_request = {
                 "jsonrpc": "2.0",
                 "id": 1,
@@ -134,7 +128,7 @@ class MCPClient:
             response = await self._receive_message(config.name)
 
             if response and "result" in response:
-                # Request tools
+
                 tools_request = {
                     "jsonrpc": "2.0",
                     "id": 2,
@@ -164,7 +158,7 @@ class MCPClient:
             return False
 
     async def _connect_http(self, config: MCPServerConfig) -> bool:
-        """Connect to an HTTP MCP server."""
+        ""
         try:
             import httpx
 
@@ -195,7 +189,6 @@ class MCPClient:
                         "headers": config.headers,
                     }
 
-                    # Get tools
                     tools_response = await client.post(
                         config.url,
                         json={
@@ -229,7 +222,7 @@ class MCPClient:
             return False
 
     async def _send_message(self, server_name: str, message: dict) -> None:
-        """Send a message to an MCP server."""
+        ""
         conn = self._connections.get(server_name)
         if not conn:
             return
@@ -241,7 +234,7 @@ class MCPClient:
             await process.stdin.drain()
 
     async def _receive_message(self, server_name: str) -> Optional[dict]:
-        """Receive a message from an MCP server."""
+        ""
         conn = self._connections.get(server_name)
         if not conn:
             return None
@@ -260,7 +253,7 @@ class MCPClient:
         return None
 
     async def call_tool(self, tool_name: str, arguments: dict[str, Any]) -> str:
-        """Call a tool on an MCP server."""
+        ""
         tool = self.tools.get(tool_name)
         if not tool:
             return f"Tool not found: {tool_name}"
@@ -296,7 +289,7 @@ class MCPClient:
             return f"Error calling tool: {e}"
 
     async def disconnect(self, server_name: str) -> None:
-        """Disconnect from an MCP server."""
+        ""
         conn = self._connections.pop(server_name, None)
         if conn and conn["type"] == "stdio":
             process = conn.get("process")
@@ -304,16 +297,15 @@ class MCPClient:
                 process.terminate()
                 await process.wait()
 
-        # Remove tools from this server
         self.tools = {k: v for k, v in self.tools.items() if v.server_name != server_name}
 
     async def disconnect_all(self) -> None:
-        """Disconnect from all servers."""
+        ""
         for server_name in list(self._connections.keys()):
             await self.disconnect(server_name)
 
     def get_tools_schema(self) -> list[dict[str, Any]]:
-        """Get schema for all MCP tools."""
+        ""
         schemas = []
         for name, tool in self.tools.items():
             schemas.append({
@@ -327,9 +319,9 @@ class MCPClient:
         return schemas
 
     def list_servers(self) -> list[str]:
-        """List all configured servers."""
+        ""
         return list(self.servers.keys())
 
     def list_tools(self) -> list[str]:
-        """List all available tools."""
+        ""
         return list(self.tools.keys())

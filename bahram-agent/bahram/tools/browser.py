@@ -1,5 +1,3 @@
-"""Browser tool for Bahram Agent."""
-
 from __future__ import annotations
 
 import asyncio
@@ -9,19 +7,17 @@ from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
-
 @dataclass
 class BrowserState:
-    """Browser state."""
+    ""
 
     url: str = ""
     title: str = ""
     content: str = ""
     screenshot: bytes = b""
 
-
 class BrowserTool:
-    """Browser automation tool."""
+    ""
 
     def __init__(self) -> None:
         self._browser = None
@@ -29,7 +25,7 @@ class BrowserTool:
         self._headless: bool = True
 
     async def start(self, headless: bool = True) -> bool:
-        """Start the browser."""
+        ""
         try:
             from playwright.async_api import async_playwright
 
@@ -47,14 +43,14 @@ class BrowserTool:
             return False
 
     async def stop(self) -> None:
-        """Stop the browser."""
+        ""
         if self._browser:
             await self._browser.close()
         if self._playwright:
             await self._playwright.stop()
 
     async def navigate(self, url: str) -> dict[str, Any]:
-        """Navigate to a URL."""
+        ""
         if not self._page:
             return {"error": "Browser not started"}
 
@@ -72,7 +68,7 @@ class BrowserTool:
             return {"error": str(e)}
 
     async def click(self, selector: str) -> bool:
-        """Click an element."""
+        ""
         if not self._page:
             return False
 
@@ -84,7 +80,7 @@ class BrowserTool:
             return False
 
     async def type_text(self, selector: str, text: str) -> bool:
-        """Type text into an element."""
+        ""
         if not self._page:
             return False
 
@@ -96,7 +92,7 @@ class BrowserTool:
             return False
 
     async def get_content(self) -> str:
-        """Get page content."""
+        ""
         if not self._page:
             return ""
 
@@ -106,7 +102,7 @@ class BrowserTool:
             return ""
 
     async def screenshot(self) -> Optional[bytes]:
-        """Take a screenshot."""
+        ""
         if not self._page:
             return None
 
@@ -116,7 +112,7 @@ class BrowserTool:
             return None
 
     async def evaluate(self, expression: str) -> Any:
-        """Evaluate JavaScript."""
+        ""
         if not self._page:
             return None
 
@@ -126,5 +122,5 @@ class BrowserTool:
             return {"error": str(e)}
 
     def is_running(self) -> bool:
-        """Check if browser is running."""
+        ""
         return self._browser is not None

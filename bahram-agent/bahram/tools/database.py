@@ -1,5 +1,3 @@
-"""Database operations tool for Bahram Agent."""
-
 from __future__ import annotations
 
 import asyncio
@@ -9,28 +7,26 @@ from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
-
 @dataclass
 class DBConfig:
-    """Database configuration."""
+    ""
 
-    db_type: str  # sqlite, postgresql, mysql
+    db_type: str
     host: str = "localhost"
     port: int = 5432
     database: str = ""
     user: str = ""
     password: str = ""
 
-
 class DatabaseTool:
-    """Database operations tool."""
+    ""
 
     def __init__(self, config: DBConfig = None) -> None:
         self.config = config
         self._connection = None
 
     async def connect(self) -> bool:
-        """Connect to database."""
+        ""
         if not self.config:
             return False
 
@@ -47,7 +43,7 @@ class DatabaseTool:
             return False
 
     async def _connect_sqlite(self) -> bool:
-        """Connect to SQLite."""
+        ""
         try:
             import aiosqlite
             self._connection = await aiosqlite.connect(self.config.database)
@@ -57,7 +53,7 @@ class DatabaseTool:
             return False
 
     async def _connect_postgresql(self) -> bool:
-        """Connect to PostgreSQL."""
+        ""
         try:
             import asyncpg
             self._connection = await asyncpg.connect(
@@ -73,7 +69,7 @@ class DatabaseTool:
             return False
 
     async def _connect_mysql(self) -> bool:
-        """Connect to MySQL."""
+        ""
         try:
             import aiomysql
             self._connection = await aiomysql.connect(
@@ -89,7 +85,7 @@ class DatabaseTool:
             return False
 
     async def execute(self, query: str, params: tuple = None) -> list[dict]:
-        """Execute a query."""
+        ""
         if not self._connection:
             return []
 
@@ -114,14 +110,14 @@ class DatabaseTool:
             return []
 
     async def insert(self, table: str, data: dict) -> bool:
-        """Insert data into table."""
+        ""
         columns = ", ".join(data.keys())
         placeholders = ", ".join(["?" if self.config.db_type == "sqlite" else "%s"] * len(data))
         query = f"INSERT INTO {table} ({columns}) VALUES ({placeholders})"
         return await self.execute(query, tuple(data.values())) is not None
 
     async def close(self) -> None:
-        """Close connection."""
+        ""
         if self._connection:
             await self._connection.close()
             self._connection = None

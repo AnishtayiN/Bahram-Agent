@@ -1,5 +1,3 @@
-"""Docker container tool for Bahram Agent."""
-
 from __future__ import annotations
 
 import asyncio
@@ -9,10 +7,9 @@ from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
-
 @dataclass
 class ContainerConfig:
-    """Container configuration."""
+    ""
 
     image: str = "python:3.11-slim"
     name: str = ""
@@ -23,15 +20,14 @@ class ContainerConfig:
     env: dict[str, str] = field(default_factory=dict)
     working_dir: str = "/workspace"
 
-
 class ContainerResources:
-    """Manage container resources."""
+    ""
 
     def __init__(self) -> None:
         self._active_containers: dict[str, dict] = {}
 
     async def create_container(self, config: ContainerConfig) -> str:
-        """Create a Docker container."""
+        ""
         import uuid
 
         name = config.name or f"bahram-agent-{uuid.uuid4().hex[:8]}"
@@ -45,11 +41,9 @@ class ContainerResources:
             "--workdir", config.working_dir,
         ]
 
-        # Add volumes
         for host_path, container_path in config.volumes.items():
             cmd.extend(["-v", f"{host_path}:{container_path}"])
 
-        # Add environment
         for key, value in config.env.items():
             cmd.extend(["-e", f"{key}={value}"])
 
@@ -73,7 +67,7 @@ class ContainerResources:
             raise RuntimeError(f"Failed to create container: {stderr.decode()}")
 
     async def start_container(self, name: str) -> bool:
-        """Start a container."""
+        ""
         proc = await asyncio.create_subprocess_exec(
             "docker", "start", name,
             stdout=asyncio.subprocess.PIPE,
@@ -83,7 +77,7 @@ class ContainerResources:
         return proc.returncode == 0
 
     async def stop_container(self, name: str, timeout: int = 10) -> bool:
-        """Stop a container."""
+        ""
         proc = await asyncio.create_subprocess_exec(
             "docker", "stop", "-t", str(timeout), name,
             stdout=asyncio.subprocess.PIPE,
@@ -93,7 +87,7 @@ class ContainerResources:
         return proc.returncode == 0
 
     async def remove_container(self, name: str, force: bool = False) -> bool:
-        """Remove a container."""
+        ""
         cmd = ["docker", "rm"]
         if force:
             cmd.append("-f")
@@ -117,7 +111,7 @@ class ContainerResources:
         command: str,
         timeout: float = 60.0,
     ) -> dict[str, Any]:
-        """Execute command in container."""
+        ""
         proc = await asyncio.create_subprocess_exec(
             "docker", "exec", name, "sh", "-c", command,
             stdout=asyncio.subprocess.PIPE,
@@ -143,7 +137,7 @@ class ContainerResources:
             }
 
     async def get_container_stats(self, name: str) -> dict[str, Any]:
-        """Get container resource usage."""
+        ""
         proc = await asyncio.create_subprocess_exec(
             "docker", "stats", name, "--no-stream", "--format",
             "{{.CPUPerc}}|{{.MemUsage}}|{{.NetIO}}|{{.BlockIO}}",
@@ -164,7 +158,7 @@ class ContainerResources:
         return {"error": "Failed to get stats"}
 
     async def list_containers(self, all: bool = False) -> list[dict]:
-        """List containers."""
+        ""
         cmd = ["docker", "ps", "--format", "{{.Names}}|{{.Image}}|{{.Status}}"]
         if all:
             cmd.append("-a")
@@ -189,9 +183,8 @@ class ContainerResources:
                         })
         return containers
 
-
 class ContainerSecurity:
-    """Enforce security policies for containers."""
+    ""
 
     def __init__(self) -> None:
         self._blocked_images: list[str] = []
@@ -200,13 +193,12 @@ class ContainerSecurity:
         self._allowed_registries: list[str] = ["docker.io", "gcr.io"]
 
     def check_image(self, image: str) -> tuple[bool, str]:
-        """Check if image is allowed."""
-        # Check blocked images
+        ""
+
         for blocked in self._blocked_images:
             if blocked in image:
                 return False, f"Image '{image}' is blocked"
 
-        # Check registry
         registry = image.split("/")[0] if "/" in image else "docker.io"
         if registry not in self._allowed_registries:
             return False, f"Registry '{registry}' is not allowed"
@@ -214,7 +206,7 @@ class ContainerSecurity:
         return True, "OK"
 
     def apply_security(self, config: ContainerConfig) -> ContainerConfig:
-        """Apply security policies to config."""
-        # Enforce resource limits
-        config.network = "none"  # No network by default
+        ""
+
+        config.network = "none"
         return config

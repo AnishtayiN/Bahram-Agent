@@ -1,5 +1,3 @@
-"""LM Studio provider."""
-
 from __future__ import annotations
 
 import json
@@ -11,9 +9,8 @@ from bahram.providers.base import BaseProvider
 
 logger = logging.getLogger(__name__)
 
-
 class LMStudioProvider(BaseProvider):
-    """LM Studio provider for local models."""
+    ""
 
     async def complete(
         self,
@@ -21,20 +18,18 @@ class LMStudioProvider(BaseProvider):
         tools: list[dict[str, Any]],
         **kwargs: Any,
     ) -> AgentResponse:
-        """Generate a completion using LM Studio API."""
+        ""
         try:
             import httpx
 
             base_url = self.config.base_url or "http://localhost:1234/v1"
 
-            # Convert messages
             openai_messages = []
             for msg in messages:
                 openai_messages.append(
                     {"role": msg.role.value, "content": msg.content}
                 )
 
-            # Prepare request
             payload = {
                 "model": kwargs.get("model", "local-model"),
                 "messages": openai_messages,
@@ -45,7 +40,6 @@ class LMStudioProvider(BaseProvider):
             if tools:
                 payload["tools"] = tools
 
-            # Make request
             async with httpx.AsyncClient() as client:
                 response = await client.post(
                     f"{base_url}/chat/completions",
@@ -92,7 +86,7 @@ class LMStudioProvider(BaseProvider):
         tools: list[dict[str, Any]],
         **kwargs: Any,
     ) -> AsyncIterator[str]:
-        """Stream a completion using LM Studio API."""
+        ""
         try:
             import httpx
 

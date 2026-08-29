@@ -1,5 +1,3 @@
-"""Learning journey with automatic curve detection for Bahram Agent."""
-
 from __future__ import annotations
 
 import json
@@ -12,38 +10,34 @@ from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
-
 class CurveType(str, Enum):
-    """Learning curve types."""
+    ""
 
     PLATEAU = "plateau"
     CLIMBING = "climbing"
     DECLINING = "declining"
     MASTERY = "mastery"
 
-
 @dataclass
 class LearningPoint:
-    """A point on the learning curve."""
+    ""
 
     timestamp: float
     metric: float
     description: str
     context: dict = field(default_factory=dict)
 
-
 @dataclass
 class LearningCurve:
-    """Detected learning curve."""
+    ""
 
     curve_type: CurveType
     confidence: float
     description: str
     suggested_action: str
 
-
 class LearningJourney:
-    """Track and detect learning curves automatically."""
+    ""
 
     def __init__(self, data_dir: str = "data/memory") -> None:
         self.data_dir = Path(data_dir)
@@ -53,7 +47,7 @@ class LearningJourney:
         self._load()
 
     def _load(self) -> None:
-        """Load learning data from disk."""
+        ""
         journey_file = self.data_dir / "journey.json"
         if journey_file.exists():
             try:
@@ -69,7 +63,7 @@ class LearningJourney:
                 logger.warning(f"Failed to load journey: {e}")
 
     def _save(self) -> None:
-        """Save learning data to disk."""
+        ""
         journey_file = self.data_dir / "journey.json"
         data = {
             "points": [
@@ -95,7 +89,7 @@ class LearningJourney:
             json.dump(data, f, indent=2)
 
     def record(self, metric: float, description: str = "", context: dict = None) -> None:
-        """Record a learning point."""
+        ""
         point = LearningPoint(
             timestamp=time.time(),
             metric=metric,
@@ -105,7 +99,6 @@ class LearningJourney:
         self._points.append(point)
         self._save()
 
-        # Auto-detect curves
         if len(self._points) >= 3:
             curve = self._detect_curve()
             if curve and (not self._curves or self._curves[-1].curve_type != curve.curve_type):
@@ -114,15 +107,13 @@ class LearningJourney:
                 logger.info(f"Learning curve detected: {curve.curve_type.value} ({curve.confidence:.0%})")
 
     def _detect_curve(self) -> Optional[LearningCurve]:
-        """Detect current learning curve from recent points."""
+        ""
         if len(self._points) < 3:
             return None
 
-        # Use last 10 points
         recent = self._points[-10:]
         metrics = [p.metric for p in recent]
 
-        # Calculate trend
         if len(metrics) < 2:
             return None
 
@@ -136,7 +127,6 @@ class LearningJourney:
         total = max(abs(avg_first), abs(avg_second), 1)
         change_pct = diff / total
 
-        # Detect curve type
         if abs(change_pct) < 0.05:
             curve_type = CurveType.PLATEAU
             confidence = 0.8
@@ -171,7 +161,7 @@ class LearningJourney:
         )
 
     def get_summary(self) -> dict[str, Any]:
-        """Get journey summary."""
+        ""
         if not self._points:
             return {"status": "no_data"}
 
@@ -187,7 +177,7 @@ class LearningJourney:
         }
 
     def get_curve_history(self) -> list[dict]:
-        """Get curve history."""
+        ""
         return [
             {
                 "curve_type": c.curve_type.value,
@@ -199,7 +189,7 @@ class LearningJourney:
         ]
 
     def reset(self) -> None:
-        """Reset journey data."""
+        ""
         self._points.clear()
         self._curves.clear()
         self._save()

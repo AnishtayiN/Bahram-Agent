@@ -1,5 +1,3 @@
-"""Custom endpoint provider."""
-
 from __future__ import annotations
 
 import json
@@ -11,9 +9,8 @@ from bahram.providers.base import BaseProvider
 
 logger = logging.getLogger(__name__)
 
-
 class CustomProvider(BaseProvider):
-    """Custom endpoint provider for any OpenAI-compatible API."""
+    ""
 
     async def complete(
         self,
@@ -21,7 +18,7 @@ class CustomProvider(BaseProvider):
         tools: list[dict[str, Any]],
         **kwargs: Any,
     ) -> AgentResponse:
-        """Generate a completion using custom endpoint."""
+        ""
         try:
             import httpx
 
@@ -31,14 +28,12 @@ class CustomProvider(BaseProvider):
             if not base_url:
                 raise ValueError("Custom endpoint URL not configured")
 
-            # Convert messages
             openai_messages = []
             for msg in messages:
                 openai_messages.append(
                     {"role": msg.role.value, "content": msg.content}
                 )
 
-            # Prepare request
             payload = {
                 "model": kwargs.get("model", "default"),
                 "messages": openai_messages,
@@ -49,12 +44,10 @@ class CustomProvider(BaseProvider):
             if tools:
                 payload["tools"] = tools
 
-            # Prepare headers
             headers = {"Content-Type": "application/json"}
             if api_key:
                 headers["Authorization"] = f"Bearer {api_key}"
 
-            # Make request
             async with httpx.AsyncClient() as client:
                 response = await client.post(
                     f"{base_url}/chat/completions",
@@ -101,7 +94,7 @@ class CustomProvider(BaseProvider):
         tools: list[dict[str, Any]],
         **kwargs: Any,
     ) -> AsyncIterator[str]:
-        """Stream a completion using custom endpoint."""
+        ""
         try:
             import httpx
 

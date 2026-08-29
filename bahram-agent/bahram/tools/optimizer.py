@@ -1,5 +1,3 @@
-"""Intelligent Performance Optimizer for Bahram Agent."""
-
 from __future__ import annotations
 
 import logging
@@ -9,27 +7,25 @@ from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
-
 @dataclass
 class OptimizationSuggestion:
-    """An optimization suggestion."""
+    ""
 
     file: str
     line: int
-    type: str  # performance, memory, readability
-    severity: str  # high, medium, low
+    type: str
+    severity: str
     description: str
     before: str
     after: str
-    impact: str  # high, medium, low
-
+    impact: str
 
 class PerformanceOptimizer:
-    """Intelligent performance optimization suggestions."""
+    ""
 
     def __init__(self) -> None:
         self._rules: list[tuple[str, str, str, str, str]] = [
-            # (pattern, replacement, description, type, impact)
+
             (r"for .+ in range\(len\((.+)\)\)", r"for i, item in enumerate(\1)", "Use enumerate instead of range(len())", "performance", "medium"),
             (r"\.append\((.+)\)\s*\n", r".append(\1)  # Consider list comprehension\n", "Consider list comprehension for multiple appends", "performance", "medium"),
             (r"if (.+) in \[(.+)\]", r"if \1 in {\2}", "Use set for membership testing", "performance", "high"),
@@ -41,7 +37,7 @@ class PerformanceOptimizer:
         ]
 
     async def analyze(self, file_path: str) -> list[OptimizationSuggestion]:
-        """Analyze file for optimization opportunities."""
+        ""
         try:
             with open(file_path, "r", encoding="utf-8", errors="replace") as f:
                 content = f.read()
@@ -70,13 +66,12 @@ class PerformanceOptimizer:
             return []
 
     def format_suggestions(self, suggestions: list[OptimizationSuggestion]) -> str:
-        """Format suggestions as report."""
+        ""
         if not suggestions:
             return "No optimization suggestions!"
 
         lines = ["## Performance Optimization Report", ""]
 
-        # Group by impact
         by_impact = {}
         for s in suggestions:
             if s.impact not in by_impact:
@@ -97,7 +92,7 @@ class PerformanceOptimizer:
         return "\n".join(lines)
 
     def get_summary(self, suggestions: list[OptimizationSuggestion]) -> dict[str, int]:
-        """Get summary of suggestions."""
+        ""
         summary = {"high": 0, "medium": 0, "low": 0}
         for s in suggestions:
             summary[s.impact] = summary.get(s.impact, 0) + 1

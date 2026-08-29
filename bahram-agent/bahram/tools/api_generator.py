@@ -1,5 +1,3 @@
-"""API endpoint generator for Bahram Agent."""
-
 from __future__ import annotations
 
 import logging
@@ -8,10 +6,9 @@ from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
-
 @dataclass
 class APIEndpoint:
-    """An API endpoint definition."""
+    ""
 
     path: str
     method: str
@@ -20,9 +17,8 @@ class APIEndpoint:
     parameters: list[dict] = field(default_factory=list)
     response_schema: dict = field(default_factory=dict)
 
-
 class APIGenerator:
-    """Generate API endpoints from specifications."""
+    ""
 
     def __init__(self) -> None:
         self._endpoints: list[APIEndpoint] = []
@@ -33,11 +29,11 @@ class APIGenerator:
         }
 
     def add_endpoint(self, endpoint: APIEndpoint) -> None:
-        """Add an endpoint."""
+        ""
         self._endpoints.append(endpoint)
 
     def generate(self, framework: str = "fastapi") -> str:
-        """Generate API code."""
+        ""
         template = self._templates.get(framework, "")
         if not template:
             return f"# Unsupported framework: {framework}"
@@ -49,34 +45,17 @@ class APIGenerator:
         return code
 
     def _generate_endpoint(self, endpoint: APIEndpoint, framework: str) -> str:
-        """Generate a single endpoint."""
+        ""
         if framework == "fastapi":
-            return f"""
-@app.{endpoint.method.lower()}("{endpoint.path}")
-async def {endpoint.handler}({self._get_params(endpoint)}):
-    \"\"\"{endpoint.description}\"\"\"
-    # TODO: Implement {endpoint.handler}
-    pass
-"""
+            return f""
         elif framework == "flask":
-            return f"""
-@app.route("{endpoint.path}", methods=["{endpoint.method}"])
-def {endpoint.handler}({self._get_params(endpoint)}):
-    \"\"\"{endpoint.description}\"\"\"
-    # TODO: Implement {endpoint.handler}
-    pass
-"""
+            return f""
         elif framework == "express":
-            return f"""
-app.{endpoint.method.toLowerCase()}('{endpoint.path}', (req, res) => {{
-    // TODO: Implement {endpoint.handler}
-    res.json({{}});
-}});
-"""
+            return f""
         return ""
 
     def _get_params(self, endpoint: APIEndpoint) -> str:
-        """Get parameters string."""
+        ""
         params = []
         for param in endpoint.parameters:
             if param.get("required"):
@@ -86,30 +65,16 @@ app.{endpoint.method.toLowerCase()}('{endpoint.path}', (req, res) => {{
         return ", ".join(params)
 
     def _get_fastapi_template(self) -> str:
-        return """from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
-
-app = FastAPI()
-
-"""
+        return ""
 
     def _get_flask_template(self) -> str:
-        return """from flask import Flask, request, jsonify
-
-app = Flask(__name__)
-
-"""
+        return ""
 
     def _get_express_template(self) -> str:
-        return """const express = require('express');
-const app = express();
-
-app.use(express.json());
-
-"""
+        return ""
 
     def generate_openapi(self) -> dict:
-        """Generate OpenAPI specification."""
+        ""
         paths = {}
         for endpoint in self._endpoints:
             if endpoint.path not in paths:

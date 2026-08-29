@@ -1,5 +1,3 @@
-"""File operations tools."""
-
 from __future__ import annotations
 
 import logging
@@ -11,9 +9,8 @@ from bahram.tools.base import BaseTool
 
 logger = logging.getLogger(__name__)
 
-
 class ReadTool(BaseTool):
-    """Tool for reading files."""
+    ""
 
     @property
     def name(self) -> str:
@@ -21,9 +18,7 @@ class ReadTool(BaseTool):
 
     @property
     def description(self) -> str:
-        return """Read the contents of a file.
-Returns the file content with line numbers.
-Useful for understanding code, configuration, or any text file."""
+        return ""
 
     @property
     def parameters(self) -> dict[str, Any]:
@@ -47,7 +42,7 @@ Useful for understanding code, configuration, or any text file."""
         }
 
     async def execute(self, **kwargs: Any) -> str:
-        """Read a file."""
+        ""
         file_path = kwargs.get("file_path", "")
         offset = kwargs.get("offset", 0)
         limit = kwargs.get("limit", 2000)
@@ -67,10 +62,8 @@ Useful for understanding code, configuration, or any text file."""
             with open(path, "r", encoding="utf-8", errors="replace") as f:
                 lines = f.readlines()
 
-            # Apply offset and limit
             lines = lines[offset : offset + limit]
 
-            # Format with line numbers
             formatted = []
             for i, line in enumerate(lines, start=offset + 1):
                 formatted.append(f"{i}: {line.rstrip()}")
@@ -80,9 +73,8 @@ Useful for understanding code, configuration, or any text file."""
         except Exception as e:
             return f"Error reading file: {e}"
 
-
 class WriteTool(BaseTool):
-    """Tool for writing files."""
+    ""
 
     @property
     def name(self) -> str:
@@ -90,9 +82,7 @@ class WriteTool(BaseTool):
 
     @property
     def description(self) -> str:
-        return """Write content to a file.
-Creates the file if it doesn't exist, overwrites if it does.
-Use with caution - this modifies the filesystem."""
+        return ""
 
     @property
     def parameters(self) -> dict[str, Any]:
@@ -116,7 +106,7 @@ Use with caution - this modifies the filesystem."""
         }
 
     async def execute(self, **kwargs: Any) -> str:
-        """Write to a file."""
+        ""
         file_path = kwargs.get("file_path", "")
         content = kwargs.get("content", "")
         create_dirs = kwargs.get("create_dirs", True)
@@ -127,7 +117,7 @@ Use with caution - this modifies the filesystem."""
         path = Path(file_path)
 
         try:
-            # Create parent directories if needed
+
             if create_dirs:
                 path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -140,9 +130,8 @@ Use with caution - this modifies the filesystem."""
         except Exception as e:
             return f"Error writing file: {e}"
 
-
 class EditTool(BaseTool):
-    """Tool for editing files with string replacement."""
+    ""
 
     @property
     def name(self) -> str:
@@ -150,9 +139,7 @@ class EditTool(BaseTool):
 
     @property
     def description(self) -> str:
-        return """Edit a file by replacing exact string matches.
-This is safer than writing the entire file as it preserves the rest of the content.
-Use this for making targeted changes to existing files."""
+        return ""
 
     @property
     def parameters(self) -> dict[str, Any]:
@@ -180,7 +167,7 @@ Use this for making targeted changes to existing files."""
         }
 
     async def execute(self, **kwargs: Any) -> str:
-        """Edit a file."""
+        ""
         file_path = kwargs.get("file_path", "")
         old_string = kwargs.get("old_string", "")
         new_string = kwargs.get("new_string", "")
@@ -201,22 +188,18 @@ Use this for making targeted changes to existing files."""
             with open(path, "r", encoding="utf-8") as f:
                 content = f.read()
 
-            # Check if old_string exists
             if old_string not in content:
                 return f"Error: old_string not found in {file_path}"
 
-            # Count occurrences
             count = content.count(old_string)
             if count > 1 and not replace_all:
                 return f"Error: Found {count} occurrences of old_string. Use replace_all or provide more context."
 
-            # Perform replacement
             if replace_all:
                 new_content = content.replace(old_string, new_string)
             else:
                 new_content = content.replace(old_string, new_string, 1)
 
-            # Write back
             with open(path, "w", encoding="utf-8") as f:
                 f.write(new_content)
 

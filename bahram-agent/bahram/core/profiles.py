@@ -1,5 +1,3 @@
-"""Profile management for Bahram Agent."""
-
 from __future__ import annotations
 
 import json
@@ -10,10 +8,9 @@ from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
-
 @dataclass
 class AgentProfile:
-    """An agent profile."""
+    ""
 
     name: str
     display_name: str
@@ -27,9 +24,8 @@ class AgentProfile:
     is_default: bool = False
     metadata: dict = field(default_factory=dict)
 
-
 class ProfileManager:
-    """Manage multiple agent profiles."""
+    ""
 
     def __init__(self, data_dir: str = "data/profiles") -> None:
         self.data_dir = Path(data_dir)
@@ -39,7 +35,7 @@ class ProfileManager:
         self._load()
 
     def _load(self) -> None:
-        """Load profiles from disk."""
+        ""
         profiles_file = self.data_dir / "profiles.json"
         if profiles_file.exists():
             try:
@@ -52,7 +48,7 @@ class ProfileManager:
                 logger.warning(f"Failed to load profiles: {e}")
 
     def _save(self) -> None:
-        """Save profiles to disk."""
+        ""
         profiles_file = self.data_dir / "profiles.json"
         data = [
             {
@@ -85,7 +81,7 @@ class ProfileManager:
         temperature: float = 0.7,
         max_tokens: int = 4096,
     ) -> AgentProfile:
-        """Create a new profile."""
+        ""
         profile = AgentProfile(
             name=name,
             display_name=display_name,
@@ -102,22 +98,22 @@ class ProfileManager:
         return profile
 
     def get_profile(self, name: str) -> Optional[AgentProfile]:
-        """Get a profile."""
+        ""
         return self._profiles.get(name)
 
     def set_current(self, name: str) -> bool:
-        """Set current profile."""
+        ""
         if name in self._profiles:
             self._current_profile = name
             return True
         return False
 
     def get_current(self) -> AgentProfile:
-        """Get current profile."""
+        ""
         return self._profiles.get(self._current_profile, self._profiles.get("default"))
 
     def list_profiles(self) -> list[dict]:
-        """List all profiles."""
+        ""
         return [
             {
                 "name": p.name,
@@ -130,7 +126,7 @@ class ProfileManager:
         ]
 
     def delete_profile(self, name: str) -> bool:
-        """Delete a profile."""
+        ""
         if name in self._profiles and name != "default":
             del self._profiles[name]
             if self._current_profile == name:
@@ -140,7 +136,7 @@ class ProfileManager:
         return False
 
     def update_profile(self, name: str, **kwargs) -> bool:
-        """Update a profile."""
+        ""
         profile = self._profiles.get(name)
         if profile:
             for key, value in kwargs.items():

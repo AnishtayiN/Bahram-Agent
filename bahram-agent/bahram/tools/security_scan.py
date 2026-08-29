@@ -1,5 +1,3 @@
-"""Security scanner tool for Bahram Agent."""
-
 from __future__ import annotations
 
 import logging
@@ -10,25 +8,23 @@ from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
-
 @dataclass
 class SecurityIssue:
-    """A security issue."""
+    ""
 
     file: str
     line: int
-    severity: str  # critical, high, medium, low
+    severity: str
     category: str
     description: str
     recommendation: str
 
-
 class SecurityScanner:
-    """Scan code for security vulnerabilities."""
+    ""
 
     def __init__(self) -> None:
         self._patterns: list[tuple[str, str, str, str, str]] = [
-            # (pattern, severity, category, description, recommendation)
+
             (r"eval\(", "critical", "code_injection", "eval() usage", "Avoid eval(), use ast.literal_eval()"),
             (r"exec\(", "critical", "code_injection", "exec() usage", "Avoid exec()"),
             (r"os\.system\(", "high", "command_injection", "os.system() usage", "Use subprocess with shell=False"),
@@ -45,7 +41,7 @@ class SecurityScanner:
         ]
 
     async def scan_file(self, file_path: str) -> list[SecurityIssue]:
-        """Scan a file for security issues."""
+        ""
         try:
             with open(file_path, "r", encoding="utf-8", errors="replace") as f:
                 content = f.read()
@@ -71,7 +67,7 @@ class SecurityScanner:
             return []
 
     async def scan_directory(self, dir_path: str) -> list[SecurityIssue]:
-        """Scan a directory for security issues."""
+        ""
         issues = []
         path = Path(dir_path)
 
@@ -82,13 +78,12 @@ class SecurityScanner:
         return issues
 
     def get_report(self, issues: list[SecurityIssue]) -> str:
-        """Get security report."""
+        ""
         if not issues:
             return "No security issues found!"
 
         lines = ["## Security Report", ""]
 
-        # Group by severity
         by_severity = {}
         for issue in issues:
             if issue.severity not in by_severity:
@@ -113,7 +108,7 @@ class SecurityScanner:
         return "\n".join(lines)
 
     def get_summary(self, issues: list[SecurityIssue]) -> dict[str, int]:
-        """Get security summary."""
+        ""
         summary = {"critical": 0, "high": 0, "medium": 0, "low": 0}
         for issue in issues:
             summary[issue.severity] = summary.get(issue.severity, 0) + 1

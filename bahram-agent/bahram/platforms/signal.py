@@ -1,5 +1,3 @@
-"""Signal platform adapter for Bahram Agent."""
-
 from __future__ import annotations
 
 import json
@@ -8,9 +6,8 @@ from typing import Any, Callable, Optional
 
 logger = logging.getLogger(__name__)
 
-
 class SignalAdapter:
-    """Signal messaging platform adapter."""
+    ""
 
     def __init__(self, number: str = "", api_url: str = "http://localhost:8080") -> None:
         self.number = number
@@ -18,11 +15,11 @@ class SignalAdapter:
         self._message_fn: Optional[Callable] = None
 
     def set_message_function(self, fn: Callable) -> None:
-        """Set the message handling function."""
+        ""
         self._message_fn = fn
 
     async def handle_webhook(self, data: dict) -> dict[str, Any]:
-        """Handle incoming webhook from signal-cli-rest-api."""
+        ""
         try:
             envelope = data.get("envelope", {})
 
@@ -45,7 +42,7 @@ class SignalAdapter:
             return {"status": "error", "error": str(e)}
 
     async def send_message(self, chat_id: str, text: str, **kwargs) -> bool:
-        """Send a Signal message."""
+        ""
         try:
             import httpx
 
@@ -65,7 +62,7 @@ class SignalAdapter:
             return False
 
     async def send_image(self, chat_id: str, image_path: str) -> bool:
-        """Send an image."""
+        ""
         try:
             import httpx
 
@@ -86,7 +83,7 @@ class SignalAdapter:
             return False
 
     def get_platform_info(self) -> dict[str, Any]:
-        """Get platform information."""
+        ""
         return {
             "name": "signal",
             "version": "1.0.0",

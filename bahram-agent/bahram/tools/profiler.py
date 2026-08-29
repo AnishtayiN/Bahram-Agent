@@ -1,5 +1,3 @@
-"""Performance profiler tool for Bahram Agent."""
-
 from __future__ import annotations
 
 import cProfile
@@ -12,34 +10,32 @@ from typing import Any, Optional, Callable
 
 logger = logging.getLogger(__name__)
 
-
 @dataclass
 class ProfileResult:
-    """Profile result."""
+    ""
 
     function: str
     calls: int
     total_time: float
     per_call: float
 
-
 class Profiler:
-    """Code profiler."""
+    ""
 
     def __init__(self) -> None:
         self._profiler = cProfile.Profile()
         self._results: list[ProfileResult] = []
 
     def start(self) -> None:
-        """Start profiling."""
+        ""
         self._profiler.enable()
 
     def stop(self) -> None:
-        """Stop profiling."""
+        ""
         self._profiler.disable()
 
     def get_stats(self, top_n: int = 20) -> list[ProfileResult]:
-        """Get profiling statistics."""
+        ""
         stream = io.StringIO()
         stats = pstats.Stats(self._profiler, stream=stream)
         stats.sort_stats("cumulative")
@@ -59,7 +55,7 @@ class Profiler:
         return sorted(results, key=lambda x: x.total_time, reverse=True)
 
     def format_report(self, results: list[ProfileResult]) -> str:
-        """Format profile report."""
+        ""
         lines = ["## Profile Report", ""]
         lines.append(f"{'Function':<60} {'Calls':>8} {'Total':>10} {'Per Call':>10}")
         lines.append("-" * 90)
@@ -70,19 +66,18 @@ class Profiler:
         return "\n".join(lines)
 
     def reset(self) -> None:
-        """Reset profiler."""
+        ""
         self._profiler = cProfile.Profile()
         self._results.clear()
 
-
 class FunctionTimer:
-    """Time function execution."""
+    ""
 
     def __init__(self) -> None:
         self._timings: dict[str, list[float]] = {}
 
     def time(self, func: Callable) -> Callable:
-        """Decorator to time function execution."""
+        ""
         import functools
 
         @functools.wraps(func)
@@ -117,7 +112,7 @@ class FunctionTimer:
         return sync_wrapper
 
     def get_report(self) -> str:
-        """Get timing report."""
+        ""
         lines = ["## Timing Report", ""]
         lines.append(f"{'Function':<50} {'Calls':>8} {'Total':>10} {'Avg':>10}")
         lines.append("-" * 80)
@@ -130,5 +125,5 @@ class FunctionTimer:
         return "\n".join(lines)
 
     def reset(self) -> None:
-        """Reset timings."""
+        ""
         self._timings.clear()

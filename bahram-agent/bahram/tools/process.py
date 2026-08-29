@@ -1,5 +1,3 @@
-"""Process management tool for Bahram Agent."""
-
 from __future__ import annotations
 
 import asyncio
@@ -10,10 +8,9 @@ from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
-
 @dataclass
 class ProcessInfo:
-    """Information about a running process."""
+    ""
 
     pid: int
     name: str
@@ -23,9 +20,8 @@ class ProcessInfo:
     cpu_percent: float = 0.0
     memory_percent: float = 0.0
 
-
 class ProcessManager:
-    """Manage background processes."""
+    ""
 
     def __init__(self) -> None:
         self._processes: dict[int, ProcessInfo] = {}
@@ -38,7 +34,7 @@ class ProcessManager:
         cwd: str = None,
         env: dict[str, str] = None,
     ) -> ProcessInfo:
-        """Start a background process."""
+        ""
         import time
 
         proc = await asyncio.create_subprocess_shell(
@@ -58,13 +54,12 @@ class ProcessManager:
         )
         self._processes[proc.pid] = info
 
-        # Monitor process
         asyncio.create_task(self._monitor(proc, info))
 
         return info
 
     async def _monitor(self, proc: asyncio.subprocess.Process, info: ProcessInfo) -> None:
-        """Monitor a process."""
+        ""
         try:
             await proc.wait()
             info.status = "completed" if proc.returncode == 0 else "failed"
@@ -73,7 +68,7 @@ class ProcessManager:
             logger.warning(f"Process monitoring failed: {e}")
 
     async def stop(self, pid: int, force: bool = False) -> bool:
-        """Stop a process."""
+        ""
         try:
             if force:
                 os.kill(pid, signal.SIGKILL)
@@ -87,11 +82,11 @@ class ProcessManager:
             return False
 
     async def get_info(self, pid: int) -> Optional[ProcessInfo]:
-        """Get process information."""
+        ""
         return self._processes.get(pid)
 
     def list_processes(self) -> list[dict]:
-        """List running processes."""
+        ""
         return [
             {
                 "pid": p.pid,
@@ -104,7 +99,7 @@ class ProcessManager:
         ]
 
     async def cleanup(self) -> int:
-        """Cleanup finished processes."""
+        ""
         to_remove = [
             pid for pid, info in self._processes.items()
             if info.status in ("completed", "failed")

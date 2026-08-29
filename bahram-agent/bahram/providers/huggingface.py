@@ -1,5 +1,3 @@
-"""Hugging Face LLM provider for Bahram Agent."""
-
 from __future__ import annotations
 
 import logging
@@ -7,9 +5,8 @@ from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
-
 class HuggingFaceProvider:
-    """Hugging Face LLM provider."""
+    ""
 
     def __init__(self, api_key: str = "", model: str = "") -> None:
         self.api_key = api_key
@@ -23,7 +20,7 @@ class HuggingFaceProvider:
         max_tokens: int = 4096,
         stream: bool = False,
     ) -> str:
-        """Complete a conversation."""
+        ""
         try:
             import httpx
 
@@ -60,7 +57,7 @@ class HuggingFaceProvider:
             raise
 
     def get_models(self) -> list[str]:
-        """Get available models."""
+        ""
         return [
             "meta-llama/Meta-Llama-3.1-8B-Instruct",
             "meta-llama/Meta-Llama-3.1-70B-Instruct",
@@ -69,7 +66,7 @@ class HuggingFaceProvider:
         ]
 
     def get_provider_info(self) -> dict[str, Any]:
-        """Get provider information."""
+        ""
         return {
             "name": "huggingface",
             "configured": bool(self.api_key),

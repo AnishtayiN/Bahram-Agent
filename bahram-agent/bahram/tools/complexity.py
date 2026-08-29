@@ -1,5 +1,3 @@
-"""Intelligent Code Complexity Analyzer for Bahram Agent."""
-
 from __future__ import annotations
 
 import logging
@@ -9,20 +7,18 @@ from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
-
 @dataclass
 class ComplexityMetric:
-    """A complexity metric."""
+    ""
 
     name: str
     value: float
     threshold: float
-    status: str  # good, warning, critical
+    status: str
     description: str = ""
 
-
 class ComplexityAnalyzer:
-    """Analyze code complexity and maintainability."""
+    ""
 
     def __init__(self) -> None:
         self._thresholds = {
@@ -34,7 +30,7 @@ class ComplexityAnalyzer:
         }
 
     async def analyze(self, file_path: str) -> dict[str, Any]:
-        """Analyze code complexity."""
+        ""
         try:
             with open(file_path, "r", encoding="utf-8", errors="replace") as f:
                 content = f.read()
@@ -47,7 +43,6 @@ class ComplexityAnalyzer:
                 "nesting_depth": self._max_nesting_depth(content),
             }
 
-            # Calculate overall score
             scores = []
             for name, value in metrics.items():
                 threshold = self._thresholds.get(name, {})
@@ -72,8 +67,8 @@ class ComplexityAnalyzer:
             return {"error": str(e)}
 
     def _cyclomatic_complexity(self, code: str) -> int:
-        """Calculate cyclomatic complexity."""
-        # Count decision points
+        ""
+
         patterns = [
             r"\bif\b", r"\belif\b", r"\belse\b",
             r"\bfor\b", r"\bwhile\b",
@@ -86,7 +81,7 @@ class ComplexityAnalyzer:
         return complexity
 
     def _cognitive_complexity(self, code: str) -> int:
-        """Calculate cognitive complexity."""
+        ""
         complexity = 0
         nesting = 0
         for line in code.split("\n"):
@@ -101,7 +96,7 @@ class ComplexityAnalyzer:
         return complexity
 
     def _avg_lines_per_function(self, code: str) -> float:
-        """Calculate average lines per function."""
+        ""
         functions = re.findall(r"def\s+\w+\s*\([^)]*\):", code)
         if not functions:
             return 0
@@ -110,7 +105,7 @@ class ComplexityAnalyzer:
         return total_lines / len(functions)
 
     def _avg_params_per_function(self, code: str) -> float:
-        """Calculate average parameters per function."""
+        ""
         params = re.findall(r"def\s+\w+\s*\(([^)]*)\)", code)
         if not params:
             return 0
@@ -119,7 +114,7 @@ class ComplexityAnalyzer:
         return total_params / len(params)
 
     def _max_nesting_depth(self, code: str) -> int:
-        """Calculate maximum nesting depth."""
+        ""
         max_depth = 0
         current_depth = 0
         for line in code.split("\n"):
@@ -132,7 +127,7 @@ class ComplexityAnalyzer:
         return max_depth
 
     def get_report(self, analysis: dict) -> str:
-        """Get complexity report."""
+        ""
         if "error" in analysis:
             return f"Error: {analysis['error']}"
 

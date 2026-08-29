@@ -1,5 +1,3 @@
-"""Trajectory generation for Bahram Agent."""
-
 from __future__ import annotations
 
 import json
@@ -11,10 +9,9 @@ from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
-
 @dataclass
 class TrajectoryStep:
-    """A step in a trajectory."""
+    ""
 
     step_id: int
     action: str
@@ -23,10 +20,9 @@ class TrajectoryStep:
     timestamp: float
     duration: float = 0.0
 
-
 @dataclass
 class Trajectory:
-    """A complete trajectory."""
+    ""
 
     id: str
     name: str
@@ -35,9 +31,8 @@ class Trajectory:
     end_time: float = 0.0
     status: str = "running"
 
-
 class TrajectoryGenerator:
-    """Generate and track trajectories."""
+    ""
 
     def __init__(self, data_dir: str = "data/trajectories") -> None:
         self.data_dir = Path(data_dir)
@@ -46,7 +41,7 @@ class TrajectoryGenerator:
         self._current: Optional[Trajectory] = None
 
     def start(self, name: str) -> Trajectory:
-        """Start a new trajectory."""
+        ""
         import hashlib
         traj_id = hashlib.md5(f"{name}{time.time()}".encode()).hexdigest()[:12]
 
@@ -60,7 +55,7 @@ class TrajectoryGenerator:
         return trajectory
 
     def add_step(self, action: str, input_text: str, output: str) -> None:
-        """Add a step to current trajectory."""
+        ""
         if not self._current:
             return
 
@@ -74,7 +69,7 @@ class TrajectoryGenerator:
         self._current.steps.append(step)
 
     def finish(self, status: str = "completed") -> Optional[Trajectory]:
-        """Finish current trajectory."""
+        ""
         if not self._current:
             return None
 
@@ -86,7 +81,7 @@ class TrajectoryGenerator:
         return result
 
     def _save(self, trajectory: Trajectory) -> None:
-        """Save trajectory to disk."""
+        ""
         traj_file = self.data_dir / f"{trajectory.id}.json"
         data = {
             "id": trajectory.id,
@@ -110,11 +105,11 @@ class TrajectoryGenerator:
             json.dump(data, f, indent=2)
 
     def get_trajectory(self, traj_id: str) -> Optional[Trajectory]:
-        """Get a trajectory by ID."""
+        ""
         return self._trajectories.get(traj_id)
 
     def list_trajectories(self) -> list[dict]:
-        """List all trajectories."""
+        ""
         return [
             {
                 "id": t.id,
@@ -127,7 +122,7 @@ class TrajectoryGenerator:
         ]
 
     def format_trajectory(self, traj_id: str) -> str:
-        """Format a trajectory as text."""
+        ""
         traj = self.get_trajectory(traj_id)
         if not traj:
             return "Trajectory not found"

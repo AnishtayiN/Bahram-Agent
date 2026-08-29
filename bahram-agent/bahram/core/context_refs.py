@@ -1,5 +1,3 @@
-"""Context references for Bahram Agent."""
-
 from __future__ import annotations
 
 import json
@@ -10,19 +8,17 @@ from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
-
 @dataclass
 class ContextRef:
-    """A reference to context content."""
+    ""
 
     id: str
     content: str
     source: str
     metadata: dict = field(default_factory=dict)
 
-
 class ContextRefs:
-    """Manage context references for message enhancement."""
+    ""
 
     def __init__(self, data_dir: str = "data/context") -> None:
         self.data_dir = Path(data_dir)
@@ -31,7 +27,7 @@ class ContextRefs:
         self._load()
 
     def _load(self) -> None:
-        """Load refs from disk."""
+        ""
         refs_file = self.data_dir / "context_refs.json"
         if refs_file.exists():
             try:
@@ -44,7 +40,7 @@ class ContextRefs:
                 logger.warning(f"Failed to load context refs: {e}")
 
     def _save(self) -> None:
-        """Save refs to disk."""
+        ""
         refs_file = self.data_dir / "context_refs.json"
         data = [
             {
@@ -59,7 +55,7 @@ class ContextRefs:
             json.dump(data, f, indent=2)
 
     def add_ref(self, content: str, source: str = "", metadata: dict = None) -> ContextRef:
-        """Add a context reference."""
+        ""
         import hashlib
         import time
 
@@ -75,11 +71,11 @@ class ContextRefs:
         return ref
 
     def get_ref(self, ref_id: str) -> Optional[ContextRef]:
-        """Get a context reference."""
+        ""
         return self._refs.get(ref_id)
 
     def search_refs(self, query: str) -> list[ContextRef]:
-        """Search context references."""
+        ""
         query_lower = query.lower()
         results = []
         for ref in self._refs.values():
@@ -88,7 +84,7 @@ class ContextRefs:
         return results
 
     def delete_ref(self, ref_id: str) -> bool:
-        """Delete a context reference."""
+        ""
         if ref_id in self._refs:
             del self._refs[ref_id]
             self._save()
@@ -96,7 +92,7 @@ class ContextRefs:
         return False
 
     def get_context_for_message(self, message: str, max_refs: int = 5) -> str:
-        """Get relevant context for a message."""
+        ""
         refs = self.search_refs(message)[:max_refs]
         if not refs:
             return ""
@@ -108,7 +104,7 @@ class ContextRefs:
         return "\n".join(context_parts)
 
     def list_refs(self) -> list[dict]:
-        """List all references."""
+        ""
         return [
             {
                 "id": r.id,

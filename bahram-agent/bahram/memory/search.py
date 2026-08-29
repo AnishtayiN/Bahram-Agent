@@ -1,5 +1,3 @@
-"""Session search for Bahram Agent."""
-
 from __future__ import annotations
 
 import json
@@ -9,19 +7,17 @@ from typing import Optional
 
 logger = logging.getLogger(__name__)
 
-
 class SessionSearch:
-    """Full-text search across sessions."""
+    ""
 
     def __init__(self, data_dir: str = "data/sessions") -> None:
         self.data_dir = Path(data_dir)
         self.data_dir.mkdir(parents=True, exist_ok=True)
 
     def index_session(self, session_id: str, messages: list[dict]) -> None:
-        """Index a session for search."""
+        ""
         index_file = self.data_dir / f"{session_id}.json"
 
-        # Build searchable content
         content_parts = []
         for msg in messages:
             role = msg.get("role", "")
@@ -43,7 +39,7 @@ class SessionSearch:
         query: str,
         limit: int = 10,
     ) -> list[dict]:
-        """Search sessions for query."""
+        ""
         results = []
         query_lower = query.lower()
 
@@ -54,7 +50,7 @@ class SessionSearch:
 
                 content = data.get("content", "").lower()
                 if query_lower in content:
-                    # Find matching messages
+
                     messages = data.get("messages", [])
                     matches = []
                     for msg in messages:
@@ -70,12 +66,11 @@ class SessionSearch:
             except Exception as e:
                 logger.warning(f"Failed to search {index_file}: {e}")
 
-        # Sort by match count
         results.sort(key=lambda x: x["match_count"], reverse=True)
         return results[:limit]
 
     def get_session(self, session_id: str) -> Optional[dict]:
-        """Get a session by ID."""
+        ""
         index_file = self.data_dir / f"{session_id}.json"
         if index_file.exists():
             with open(index_file) as f:
@@ -83,5 +78,5 @@ class SessionSearch:
         return None
 
     def list_sessions(self) -> list[str]:
-        """List all indexed session IDs."""
+        ""
         return [f.stem for f in self.data_dir.glob("*.json")]

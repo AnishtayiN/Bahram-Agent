@@ -1,5 +1,3 @@
-"""OpenRouter LLM provider for Bahram Agent."""
-
 from __future__ import annotations
 
 import logging
@@ -7,9 +5,8 @@ from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
-
 class OpenRouterProvider:
-    """OpenRouter LLM provider."""
+    ""
 
     def __init__(self, api_key: str = "", model: str = "") -> None:
         self.api_key = api_key
@@ -24,7 +21,7 @@ class OpenRouterProvider:
         max_tokens: int = 4096,
         stream: bool = False,
     ) -> str:
-        """Complete a conversation."""
+        ""
         try:
             import httpx
 
@@ -66,7 +63,7 @@ class OpenRouterProvider:
         temperature: float = 0.7,
         max_tokens: int = 4096,
     ):
-        """Stream a completion."""
+        ""
         try:
             import httpx
 
@@ -107,7 +104,7 @@ class OpenRouterProvider:
             raise ImportError("httpx not installed. Run: pip install httpx")
 
     def get_models(self) -> list[str]:
-        """Get available models."""
+        ""
         return [
             "anthropic/claude-3.5-sonnet",
             "openai/gpt-4o",
@@ -118,7 +115,7 @@ class OpenRouterProvider:
         ]
 
     def get_provider_info(self) -> dict[str, Any]:
-        """Get provider information."""
+        ""
         return {
             "name": "openrouter",
             "configured": bool(self.api_key),

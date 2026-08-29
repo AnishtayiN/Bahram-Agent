@@ -1,5 +1,3 @@
-"""Plugin manager for loading and managing plugins."""
-
 from __future__ import annotations
 
 import importlib.util
@@ -11,9 +9,8 @@ from bahram.plugins.base import BasePlugin
 
 logger = logging.getLogger(__name__)
 
-
 class PluginManager:
-    """Manages loading and execution of plugins."""
+    ""
 
     def __init__(self, plugin_dirs: list[str] = None) -> None:
         self.plugin_dirs = plugin_dirs or ["plugins", "~/.bahram/plugins"]
@@ -21,7 +18,7 @@ class PluginManager:
         self._hooks: dict[str, list[Callable]] = {}
 
     async def load_plugins(self) -> None:
-        """Load all plugins from plugin directories."""
+        ""
         import os
 
         for plugin_dir in self.plugin_dirs:
@@ -41,7 +38,7 @@ class PluginManager:
         logger.info(f"Loaded {len(self.plugins)} plugins")
 
     async def _load_plugin(self, plugin_file: Path) -> None:
-        """Load a single plugin from a file."""
+        ""
         module_name = plugin_file.stem
         spec = importlib.util.spec_from_file_location(module_name, plugin_file)
 
@@ -51,7 +48,6 @@ class PluginManager:
         module = importlib.util.module_from_spec(spec)
         await spec.loader.exec_module(module)
 
-        # Look for a class that extends BasePlugin
         for attr_name in dir(module):
             attr = getattr(module, attr_name)
             if (
@@ -65,15 +61,15 @@ class PluginManager:
                 break
 
     def get_plugin(self, name: str) -> Optional[BasePlugin]:
-        """Get a plugin by name."""
+        ""
         return self.plugins.get(name)
 
     def list_plugins(self) -> list[str]:
-        """List all loaded plugin names."""
+        ""
         return list(self.plugins.keys())
 
     async def register_all(self, context: Any) -> None:
-        """Register all plugins with the agent."""
+        ""
         for plugin in self.plugins.values():
             try:
                 await plugin.register(context)
@@ -82,7 +78,7 @@ class PluginManager:
                 logger.error(f"Failed to register plugin {plugin.metadata.name}: {e}")
 
     async def on_startup(self) -> None:
-        """Call on_startup for all plugins."""
+        ""
         for plugin in self.plugins.values():
             try:
                 await plugin.on_startup()
@@ -90,7 +86,7 @@ class PluginManager:
                 logger.error(f"Plugin startup error: {e}")
 
     async def on_shutdown(self) -> None:
-        """Call on_shutdown for all plugins."""
+        ""
         for plugin in self.plugins.values():
             try:
                 await plugin.on_shutdown()
@@ -98,7 +94,7 @@ class PluginManager:
                 logger.error(f"Plugin shutdown error: {e}")
 
     async def on_message(self, message: Any) -> Optional[Any]:
-        """Call on_message for all plugins."""
+        ""
         for plugin in self.plugins.values():
             try:
                 result = await plugin.on_message(message)
@@ -109,7 +105,7 @@ class PluginManager:
         return None
 
     async def on_tool_call(self, tool_name: str, arguments: dict) -> Optional[dict]:
-        """Call on_tool_call for all plugins."""
+        ""
         for plugin in self.plugins.values():
             try:
                 result = await plugin.on_tool_call(tool_name, arguments)
@@ -120,7 +116,7 @@ class PluginManager:
         return None
 
     async def on_tool_result(self, tool_name: str, result: Any) -> Optional[Any]:
-        """Call on_tool_result for all plugins."""
+        ""
         for plugin in self.plugins.values():
             try:
                 new_result = await plugin.on_tool_result(tool_name, result)
@@ -131,7 +127,7 @@ class PluginManager:
         return None
 
     async def on_error(self, error: Exception) -> None:
-        """Call on_error for all plugins."""
+        ""
         for plugin in self.plugins.values():
             try:
                 await plugin.on_error(error)
@@ -139,13 +135,13 @@ class PluginManager:
                 logger.error(f"Plugin error handler error: {e}")
 
     def register_hook(self, event: str, callback: Callable) -> None:
-        """Register a hook callback."""
+        ""
         if event not in self._hooks:
             self._hooks[event] = []
         self._hooks[event].append(callback)
 
     async def dispatch_hook(self, event: str, *args, **kwargs) -> None:
-        """Dispatch a hook event."""
+        ""
         for callback in self._hooks.get(event, []):
             try:
                 await callback(*args, **kwargs)

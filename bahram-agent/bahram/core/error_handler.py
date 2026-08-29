@@ -1,5 +1,3 @@
-"""Intelligent Error Handler for Bahram Agent."""
-
 from __future__ import annotations
 
 import logging
@@ -9,19 +7,17 @@ from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
-
 @dataclass
 class ErrorSolution:
-    """A solution for an error."""
+    ""
 
     error_type: str
     solution: str
     confidence: float
     steps: list[str] = field(default_factory=list)
 
-
 class ErrorHandler:
-    """Intelligent error handling and solutions."""
+    ""
 
     def __init__(self) -> None:
         self._solutions: dict[str, list[ErrorSolution]] = {
@@ -116,19 +112,17 @@ class ErrorHandler:
         }
 
     def handle_error(self, error: Exception) -> ErrorSolution:
-        """Handle an error and suggest solution."""
+        ""
         error_type = type(error).__name__
         error_msg = str(error)
 
-        # Check for known solutions
         solutions = self._solutions.get(error_type, [])
         if solutions:
             solution = solutions[0]
-            # Customize solution with error message
+
             solution.solution = f"{solution.solution}: {error_msg}"
             return solution
 
-        # Generic solution
         return ErrorSolution(
             error_type=error_type,
             solution=f"Error: {error_msg}",
@@ -137,18 +131,18 @@ class ErrorHandler:
         )
 
     def get_solution(self, error_type: str) -> Optional[ErrorSolution]:
-        """Get solution for error type."""
+        ""
         solutions = self._solutions.get(error_type, [])
         return solutions[0] if solutions else None
 
     def add_solution(self, solution: ErrorSolution) -> None:
-        """Add a custom solution."""
+        ""
         if solution.error_type not in self._solutions:
             self._solutions[solution.error_type] = []
         self._solutions[solution.error_type].append(solution)
 
     def format_error(self, error: Exception, solution: ErrorSolution = None) -> str:
-        """Format error with solution."""
+        ""
         lines = [
             f"**Error:** `{type(error).__name__}`",
             f"**Message:** {error}",
@@ -166,7 +160,7 @@ class ErrorHandler:
         return "\n".join(lines)
 
     def get_all_solutions(self) -> dict[str, list[str]]:
-        """Get all solutions."""
+        ""
         return {
             error_type: [s.solution for s in solutions]
             for error_type, solutions in self._solutions.items()

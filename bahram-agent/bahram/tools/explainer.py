@@ -1,5 +1,3 @@
-"""Intelligent Code Explanation Tool for Bahram Agent."""
-
 from __future__ import annotations
 
 import logging
@@ -9,20 +7,18 @@ from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
-
 @dataclass
 class CodeExplanation:
-    """Code explanation."""
+    ""
 
     line: int
     code: str
     explanation: str
-    complexity: str  # simple, moderate, complex
+    complexity: str
     concepts: list[str] = field(default_factory=list)
 
-
 class CodeExplainer:
-    """Intelligent code explanation and learning."""
+    ""
 
     def __init__(self) -> None:
         self._patterns: dict[str, str] = {
@@ -44,7 +40,7 @@ class CodeExplainer:
         }
 
     async def explain(self, code: str) -> list[CodeExplanation]:
-        """Explain code line by line."""
+        ""
         explanations = []
         lines = code.split("\n")
 
@@ -56,15 +52,14 @@ class CodeExplainer:
         return explanations
 
     async def _explain_line(self, line: str) -> Optional[CodeExplanation]:
-        """Explain a single line of code."""
+        ""
         if not line or line.startswith("#"):
             return None
 
-        # Find matching pattern
         for pattern, template in self._patterns.items():
             match = re.search(pattern, line)
             if match:
-                # Extract named groups or use match groups
+
                 explanation = template
                 concepts = self._extract_concepts(line)
 
@@ -76,7 +71,6 @@ class CodeExplainer:
                     concepts=concepts,
                 )
 
-        # Default explanation
         return CodeExplanation(
             line=0,
             code=line,
@@ -86,7 +80,7 @@ class CodeExplainer:
         )
 
     def _extract_concepts(self, line: str) -> list[str]:
-        """Extract programming concepts from line."""
+        ""
         concepts = []
         if "def " in line:
             concepts.append("function")
@@ -113,7 +107,7 @@ class CodeExplainer:
         return concepts
 
     def _assess_complexity(self, line: str) -> str:
-        """Assess code complexity."""
+        ""
         complex_patterns = [r"lambda", r"async", r"await", r"with", r"yield"]
         moderate_patterns = [r"for", r"while", r"if.*else", r"try"]
 
@@ -128,7 +122,7 @@ class CodeExplainer:
         return "simple"
 
     def format_explanations(self, explanations: list[CodeExplanation]) -> str:
-        """Format explanations as report."""
+        ""
         if not explanations:
             return "No code to explain!"
 

@@ -1,5 +1,3 @@
-"""Web fetch tool for Bahram Agent."""
-
 from __future__ import annotations
 
 import logging
@@ -7,13 +5,12 @@ from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
-
 class WebFetchTool:
-    """Fetch content from URLs."""
+    ""
 
     def __init__(self) -> None:
         self._timeout: float = 30.0
-        self._max_size: int = 1024 * 1024  # 1MB
+        self._max_size: int = 1024 * 1024
 
     async def fetch(
         self,
@@ -21,7 +18,7 @@ class WebFetchTool:
         format: str = "text",
         timeout: float = None,
     ) -> dict[str, Any]:
-        """Fetch content from a URL."""
+        ""
         try:
             import httpx
 
@@ -58,19 +55,19 @@ class WebFetchTool:
             return {"error": str(e)}
 
     async def fetch_text(self, url: str) -> str:
-        """Fetch text content from a URL."""
+        ""
         result = await self.fetch(url, format="text")
         return result.get("content", result.get("error", ""))
 
     async def fetch_json(self, url: str) -> Any:
-        """Fetch JSON content from a URL."""
+        ""
         result = await self.fetch(url, format="json")
         return result.get("content", result.get("error", ""))
 
     def set_timeout(self, timeout: float) -> None:
-        """Set request timeout."""
+        ""
         self._timeout = timeout
 
     def set_max_size(self, max_size: int) -> None:
-        """Set max response size."""
+        ""
         self._max_size = max_size

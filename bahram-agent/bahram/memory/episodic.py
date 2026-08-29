@@ -1,5 +1,3 @@
-"""Episodic memory for storing experiences and events."""
-
 from __future__ import annotations
 
 import json
@@ -12,13 +10,8 @@ from bahram.memory.base import BaseMemory, MemoryEntry
 
 logger = logging.getLogger(__name__)
 
-
 class EpisodicMemory(BaseMemory):
-    """Memory system for storing experiences and events.
-
-    Episodic memory stores distinct events or experiences,
-    like completing a task, encountering an error, or learning something new.
-    """
+    ""
 
     def __init__(self, storage_path: str = "data/episodes.json") -> None:
         self.storage_path = Path(storage_path)
@@ -26,7 +19,7 @@ class EpisodicMemory(BaseMemory):
         self._load()
 
     def _load(self) -> None:
-        """Load episodes from disk."""
+        ""
         if self.storage_path.exists():
             try:
                 with open(self.storage_path) as f:
@@ -45,7 +38,7 @@ class EpisodicMemory(BaseMemory):
                 logger.error(f"Failed to load episodes: {e}")
 
     def _save(self) -> None:
-        """Save episodes to disk."""
+        ""
         try:
             self.storage_path.parent.mkdir(parents=True, exist_ok=True)
             data = [
@@ -65,13 +58,12 @@ class EpisodicMemory(BaseMemory):
             logger.error(f"Failed to save episodes: {e}")
 
     async def add(self, content: str, metadata: Optional[dict[str, Any]] = None) -> str:
-        """Add an episodic memory."""
+        ""
         import uuid
 
         memory_id = str(uuid.uuid4())
         metadata = metadata or {}
 
-        # Add timestamp to metadata
         metadata["recorded_at"] = datetime.now().isoformat()
 
         entry = MemoryEntry(
@@ -85,7 +77,7 @@ class EpisodicMemory(BaseMemory):
         return memory_id
 
     async def get(self, memory_id: str) -> Optional[MemoryEntry]:
-        """Get an episode by ID."""
+        ""
         entry = self._memories.get(memory_id)
         if entry:
             entry.access_count += 1
@@ -93,7 +85,7 @@ class EpisodicMemory(BaseMemory):
         return entry
 
     async def search(self, query: str, limit: int = 10) -> list[MemoryEntry]:
-        """Search episodes by content."""
+        ""
         query_lower = query.lower()
         results = []
 
@@ -101,12 +93,11 @@ class EpisodicMemory(BaseMemory):
             if query_lower in entry.content.lower():
                 results.append(entry)
 
-        # Sort by importance and recency
         results.sort(key=lambda x: (x.importance, x.timestamp), reverse=True)
         return results[:limit]
 
     async def update(self, memory_id: str, content: str) -> bool:
-        """Update an episode."""
+        ""
         if memory_id in self._memories:
             self._memories[memory_id].content = content
             self._save()
@@ -114,7 +105,7 @@ class EpisodicMemory(BaseMemory):
         return False
 
     async def delete(self, memory_id: str) -> bool:
-        """Delete an episode."""
+        ""
         if memory_id in self._memories:
             del self._memories[memory_id]
             self._save()
@@ -122,20 +113,20 @@ class EpisodicMemory(BaseMemory):
         return False
 
     async def list_all(self, limit: int = 100) -> list[MemoryEntry]:
-        """List all episodes."""
+        ""
         entries = list(self._memories.values())
         entries.sort(key=lambda x: x.timestamp, reverse=True)
         return entries[:limit]
 
     async def clear(self) -> None:
-        """Clear all episodes."""
+        ""
         self._memories.clear()
         self._save()
 
     async def record_task_completion(
         self, task: str, result: str, tools_used: list[str]
     ) -> str:
-        """Record a task completion episode."""
+        ""
         content = f"Completed task: {task}\nResult: {result}"
         metadata = {
             "type": "task_complete",
@@ -146,7 +137,7 @@ class EpisodicMemory(BaseMemory):
         return await self.add(content, metadata)
 
     async def record_error(self, error: str, context: str) -> str:
-        """Record an error episode."""
+        ""
         content = f"Encountered error: {error}\nContext: {context}"
         metadata = {
             "type": "error",
@@ -156,7 +147,7 @@ class EpisodicMemory(BaseMemory):
         return await self.add(content, metadata)
 
     async def record_learning(self, learning: str, source: str) -> str:
-        """Record a learning episode."""
+        ""
         content = f"Learned: {learning}\nSource: {source}"
         metadata = {
             "type": "learning",

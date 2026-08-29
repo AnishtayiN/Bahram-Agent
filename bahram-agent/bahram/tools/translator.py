@@ -1,5 +1,3 @@
-"""Intelligent Code Translation Tool for Bahram Agent."""
-
 from __future__ import annotations
 
 import logging
@@ -9,10 +7,9 @@ from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
-
 @dataclass
 class TranslationRule:
-    """A translation rule."""
+    ""
 
     name: str
     source_lang: str
@@ -21,9 +18,8 @@ class TranslationRule:
     target_pattern: str
     description: str = ""
 
-
 class CodeTranslator:
-    """Translate code between programming languages."""
+    ""
 
     def __init__(self) -> None:
         self._rules: dict[str, list[TranslationRule]] = {
@@ -62,7 +58,7 @@ class CodeTranslator:
         source_lang: str,
         target_lang: str,
     ) -> str:
-        """Translate code between languages."""
+        ""
         rules_key = f"{source_lang}_to_{target_lang}"
         rules = self._rules.get(rules_key, [])
 
@@ -77,7 +73,7 @@ class CodeTranslator:
         return translated
 
     def get_supported_translations(self) -> list[dict]:
-        """Get supported translations."""
+        ""
         translations = []
         for key in self._rules.keys():
             source, target = key.split("_to_")
@@ -89,7 +85,7 @@ class CodeTranslator:
         return translations
 
     def get_rules(self, source_lang: str, target_lang: str) -> list[dict]:
-        """Get translation rules."""
+        ""
         rules_key = f"{source_lang}_to_{target_lang}"
         rules = self._rules.get(rules_key, [])
         return [

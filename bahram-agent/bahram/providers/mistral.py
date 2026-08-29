@@ -1,5 +1,3 @@
-"""Mistral LLM provider for Bahram Agent."""
-
 from __future__ import annotations
 
 import logging
@@ -7,9 +5,8 @@ from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
-
 class MistralProvider:
-    """Mistral LLM provider."""
+    ""
 
     def __init__(self, api_key: str = "", model: str = "") -> None:
         self.api_key = api_key
@@ -23,7 +20,7 @@ class MistralProvider:
         max_tokens: int = 4096,
         stream: bool = False,
     ) -> str:
-        """Complete a conversation."""
+        ""
         try:
             import httpx
 
@@ -57,7 +54,7 @@ class MistralProvider:
             raise
 
     def get_models(self) -> list[str]:
-        """Get available models."""
+        ""
         return [
             "mistral-large-latest",
             "mistral-medium-latest",
@@ -67,7 +64,7 @@ class MistralProvider:
         ]
 
     def get_provider_info(self) -> dict[str, Any]:
-        """Get provider information."""
+        ""
         return {
             "name": "mistral",
             "configured": bool(self.api_key),

@@ -1,5 +1,3 @@
-"""LSP (Language Server Protocol) tool for Bahram Agent."""
-
 from __future__ import annotations
 
 import asyncio
@@ -10,19 +8,17 @@ from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
-
 @dataclass
 class LSPServer:
-    """LSP server info."""
+    ""
 
     name: str
     command: str
     language: str
     process: Any = None
 
-
 class LSPTool:
-    """Language Server Protocol integration."""
+    ""
 
     def __init__(self) -> None:
         self._servers: dict[str, LSPServer] = {}
@@ -34,7 +30,7 @@ class LSPTool:
         command: str,
         language: str,
     ) -> None:
-        """Register an LSP server."""
+        ""
         self._servers[name] = LSPServer(
             name=name,
             command=command,
@@ -42,7 +38,7 @@ class LSPTool:
         )
 
     async def start_server(self, name: str) -> bool:
-        """Start an LSP server."""
+        ""
         server = self._servers.get(name)
         if not server:
             return False
@@ -63,7 +59,7 @@ class LSPTool:
             return False
 
     async def stop_server(self, name: str) -> bool:
-        """Stop an LSP server."""
+        ""
         server = self._servers.get(name)
         if not server or not server.process:
             return False
@@ -85,7 +81,7 @@ class LSPTool:
         line: int,
         character: int,
     ) -> list[dict]:
-        """Request completion."""
+        ""
         server = self._servers.get(server_name)
         if not server or not server.process:
             return []
@@ -105,7 +101,6 @@ class LSPTool:
             server.process.stdin.write(message.encode())
             await server.process.stdin.drain()
 
-            # Read response (simplified)
             response = await asyncio.wait_for(
                 server.process.stdout.readline(),
                 timeout=5.0,
@@ -118,5 +113,5 @@ class LSPTool:
             return []
 
     def is_running(self, name: str) -> bool:
-        """Check if server is running."""
+        ""
         return self._initialized.get(name, False)

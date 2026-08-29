@@ -1,5 +1,3 @@
-"""Documentation generator tool for Bahram Agent."""
-
 from __future__ import annotations
 
 import logging
@@ -8,9 +6,8 @@ from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
-
 class DocumentationGenerator:
-    """Generate documentation from code."""
+    ""
 
     def __init__(self) -> None:
         self._templates: dict[str, str] = {
@@ -20,7 +17,7 @@ class DocumentationGenerator:
         }
 
     async def generate(self, source_path: str, output_path: str, doc_type: str = "readme") -> bool:
-        """Generate documentation."""
+        ""
         try:
             source = Path(source_path)
             if not source.exists():
@@ -45,10 +42,9 @@ class DocumentationGenerator:
             return False
 
     async def _generate_readme(self, source: Path) -> str:
-        """Generate README from source."""
+        ""
         lines = [f"# {source.name}", ""]
 
-        # Scan for Python files
         for py_file in sorted(source.glob("**/*.py")):
             rel_path = py_file.relative_to(source)
             docstring = self._extract_docstring(py_file)
@@ -60,14 +56,13 @@ class DocumentationGenerator:
         return "\n".join(lines)
 
     async def _generate_api_docs(self, source: Path) -> str:
-        """Generate API documentation."""
+        ""
         lines = ["# API Documentation", ""]
 
         for py_file in sorted(source.glob("**/*.py")):
             rel_path = py_file.relative_to(source)
             content = py_file.read_text(errors="replace")
 
-            # Extract classes and functions
             import re
             classes = re.findall(r"class (\w+).*:", content)
             functions = re.findall(r"def (\w+)\(.*\):", content)
@@ -84,28 +79,18 @@ class DocumentationGenerator:
         return "\n".join(lines)
 
     async def _generate_changelog(self, source: Path) -> str:
-        """Generate changelog."""
-        return """# Changelog
-
-## [1.0.0] - 2024-01-01
-### Added
-- Initial release
-- Core AI agent functionality
-- Multiple LLM provider support
-- Tool system
-- Memory system
-- Security features
-"""
+        ""
+        return ""
 
     def _extract_docstring(self, file_path: Path) -> str:
-        """Extract docstring from Python file."""
+        ""
         try:
             content = file_path.read_text(errors="replace")
             import re
-            match = re.search(r'"""(.*?)"""', content, re.DOTALL)
+            match = re.search(r'""', content, re.DOTALL)
             if match:
                 return match.group(1).strip()
-            match = re.search(r"'''(.*?)'''", content, re.DOTALL)
+            match = re.search(r"''", content, re.DOTALL)
             if match:
                 return match.group(1).strip()
         except Exception:

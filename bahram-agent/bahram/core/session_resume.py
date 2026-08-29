@@ -1,5 +1,3 @@
-"""Session resume after gateway restart for Bahram Agent."""
-
 from __future__ import annotations
 
 import json
@@ -11,10 +9,9 @@ from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
-
 @dataclass
 class SessionState:
-    """Session state for resume."""
+    ""
 
     session_id: str
     platform: str
@@ -24,9 +21,8 @@ class SessionState:
     context: dict = field(default_factory=dict)
     conversation_history: list[dict] = field(default_factory=list)
 
-
 class SessionResumeManager:
-    """Manage session state for gateway restarts."""
+    ""
 
     def __init__(self, data_dir: str = "data/gateway") -> None:
         self.data_dir = Path(data_dir)
@@ -35,7 +31,7 @@ class SessionResumeManager:
         self._load()
 
     def _load(self) -> None:
-        """Load sessions from disk."""
+        ""
         sessions_file = self.data_dir / "sessions.json"
         if sessions_file.exists():
             try:
@@ -48,7 +44,7 @@ class SessionResumeManager:
                 logger.warning(f"Failed to load sessions: {e}")
 
     def _save(self) -> None:
-        """Save sessions to disk."""
+        ""
         sessions_file = self.data_dir / "sessions.json"
         data = [
             {
@@ -58,7 +54,7 @@ class SessionResumeManager:
                 "last_message": s.last_message,
                 "timestamp": s.timestamp,
                 "context": s.context,
-                "conversation_history": s.conversation_history[-10:],  # Keep last 10
+                "conversation_history": s.conversation_history[-10:],
             }
             for s in self._sessions.values()
         ]
@@ -74,7 +70,7 @@ class SessionResumeManager:
         context: dict = None,
         history: list[dict] = None,
     ) -> None:
-        """Save session state."""
+        ""
         self._sessions[session_id] = SessionState(
             session_id=session_id,
             platform=platform,
@@ -87,11 +83,11 @@ class SessionResumeManager:
         self._save()
 
     def get_session(self, session_id: str) -> Optional[SessionState]:
-        """Get session by ID."""
+        ""
         return self._sessions.get(session_id)
 
     def get_recent_sessions(self, platform: str = None, limit: int = 10) -> list[dict]:
-        """Get recent sessions."""
+        ""
         sessions = list(self._sessions.values())
         if platform:
             sessions = [s for s in sessions if s.platform == platform]
@@ -109,7 +105,7 @@ class SessionResumeManager:
         ]
 
     def cleanup_old(self, max_age_seconds: int = 86400) -> int:
-        """Cleanup old sessions."""
+        ""
         now = time.time()
         to_remove = [
             sid for sid, session in self._sessions.items()

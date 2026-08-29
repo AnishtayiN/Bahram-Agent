@@ -1,5 +1,3 @@
-"""Home Assistant integration for Bahram Agent."""
-
 from __future__ import annotations
 
 import logging
@@ -7,16 +5,15 @@ from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
-
 class HomeAssistantTool:
-    """Home Assistant device control."""
+    ""
 
     def __init__(self, url: str = "", token: str = "") -> None:
         self.url = url.rstrip("/")
         self.token = token
 
     async def list_entities(self, domain: str = "") -> dict[str, Any]:
-        """List Home Assistant entities."""
+        ""
         if not self.url or not self.token:
             return {"error": "Home Assistant not configured"}
 
@@ -44,7 +41,7 @@ class HomeAssistantTool:
             return {"error": str(e)}
 
     async def get_state(self, entity_id: str) -> dict[str, Any]:
-        """Get state of an entity."""
+        ""
         if not self.url or not self.token:
             return {"error": "Home Assistant not configured"}
 
@@ -75,7 +72,7 @@ class HomeAssistantTool:
         entity_id: str,
         data: dict = None,
     ) -> dict[str, Any]:
-        """Call a Home Assistant service."""
+        ""
         if not self.url or not self.token:
             return {"error": "Home Assistant not configured"}
 

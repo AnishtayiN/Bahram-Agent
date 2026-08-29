@@ -1,5 +1,3 @@
-"""Kimi/Moonshot provider."""
-
 from __future__ import annotations
 
 import json
@@ -11,9 +9,8 @@ from bahram.providers.base import BaseProvider
 
 logger = logging.getLogger(__name__)
 
-
 class KimiProvider(BaseProvider):
-    """Kimi/Moonshot provider."""
+    ""
 
     async def complete(
         self,
@@ -21,7 +18,7 @@ class KimiProvider(BaseProvider):
         tools: list[dict[str, Any]],
         **kwargs: Any,
     ) -> AgentResponse:
-        """Generate a completion using Kimi API."""
+        ""
         try:
             import httpx
 
@@ -97,7 +94,7 @@ class KimiProvider(BaseProvider):
         tools: list[dict[str, Any]],
         **kwargs: Any,
     ) -> AsyncIterator[str]:
-        """Stream a completion using Kimi API."""
+        ""
         try:
             import httpx
 

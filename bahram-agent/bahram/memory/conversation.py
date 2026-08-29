@@ -1,5 +1,3 @@
-"""Conversation memory for storing chat history."""
-
 from __future__ import annotations
 
 import json
@@ -12,9 +10,8 @@ from bahram.memory.base import BaseMemory, MemoryEntry
 
 logger = logging.getLogger(__name__)
 
-
 class ConversationMemory(BaseMemory):
-    """Memory system for conversation history."""
+    ""
 
     def __init__(self, storage_path: str = "data/conversations.json") -> None:
         self.storage_path = Path(storage_path)
@@ -22,7 +19,7 @@ class ConversationMemory(BaseMemory):
         self._load()
 
     def _load(self) -> None:
-        """Load memories from disk."""
+        ""
         if self.storage_path.exists():
             try:
                 with open(self.storage_path) as f:
@@ -41,7 +38,7 @@ class ConversationMemory(BaseMemory):
                 logger.error(f"Failed to load memories: {e}")
 
     def _save(self) -> None:
-        """Save memories to disk."""
+        ""
         try:
             self.storage_path.parent.mkdir(parents=True, exist_ok=True)
             data = [
@@ -61,7 +58,7 @@ class ConversationMemory(BaseMemory):
             logger.error(f"Failed to save memories: {e}")
 
     async def add(self, content: str, metadata: Optional[dict[str, Any]] = None) -> str:
-        """Add a conversation memory."""
+        ""
         import uuid
 
         memory_id = str(uuid.uuid4())
@@ -76,7 +73,7 @@ class ConversationMemory(BaseMemory):
         return memory_id
 
     async def get(self, memory_id: str) -> Optional[MemoryEntry]:
-        """Get a memory by ID."""
+        ""
         entry = self._memories.get(memory_id)
         if entry:
             entry.access_count += 1
@@ -84,7 +81,7 @@ class ConversationMemory(BaseMemory):
         return entry
 
     async def search(self, query: str, limit: int = 10) -> list[MemoryEntry]:
-        """Search memories by content."""
+        ""
         query_lower = query.lower()
         results = []
 
@@ -92,12 +89,11 @@ class ConversationMemory(BaseMemory):
             if query_lower in entry.content.lower():
                 results.append(entry)
 
-        # Sort by importance and recency
         results.sort(key=lambda x: (x.importance, x.timestamp), reverse=True)
         return results[:limit]
 
     async def update(self, memory_id: str, content: str) -> bool:
-        """Update a memory entry."""
+        ""
         if memory_id in self._memories:
             self._memories[memory_id].content = content
             self._save()
@@ -105,7 +101,7 @@ class ConversationMemory(BaseMemory):
         return False
 
     async def delete(self, memory_id: str) -> bool:
-        """Delete a memory entry."""
+        ""
         if memory_id in self._memories:
             del self._memories[memory_id]
             self._save()
@@ -113,24 +109,24 @@ class ConversationMemory(BaseMemory):
         return False
 
     async def list_all(self, limit: int = 100) -> list[MemoryEntry]:
-        """List all memories."""
+        ""
         entries = list(self._memories.values())
         entries.sort(key=lambda x: x.timestamp, reverse=True)
         return entries[:limit]
 
     async def clear(self) -> None:
-        """Clear all memories."""
+        ""
         self._memories.clear()
         self._save()
 
     async def get_recent(self, limit: int = 10) -> list[MemoryEntry]:
-        """Get recent memories."""
+        ""
         entries = list(self._memories.values())
         entries.sort(key=lambda x: x.timestamp, reverse=True)
         return entries[:limit]
 
     async def get_important(self, limit: int = 10) -> list[MemoryEntry]:
-        """Get most important memories."""
+        ""
         entries = list(self._memories.values())
         entries.sort(key=lambda x: x.importance, reverse=True)
         return entries[:limit]

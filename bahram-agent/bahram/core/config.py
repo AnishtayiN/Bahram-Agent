@@ -1,5 +1,3 @@
-"""Configuration management for Bahram Agent."""
-
 from __future__ import annotations
 
 import os
@@ -7,10 +5,9 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Optional
 
-
 @dataclass
 class ProviderConfig:
-    """Configuration for an LLM provider."""
+    ""
 
     api_key: str = ""
     base_url: Optional[str] = None
@@ -18,10 +15,9 @@ class ProviderConfig:
     temperature: float = 0.7
     max_tokens: int = 4096
 
-
 @dataclass
 class MemoryConfig:
-    """Memory system configuration."""
+    ""
 
     enabled: bool = True
     database: str = "data/memory.db"
@@ -30,20 +26,18 @@ class MemoryConfig:
     auto_summarize: bool = True
     summary_threshold: int = 50
 
-
 @dataclass
 class SkillsConfig:
-    """Skills system configuration."""
+    ""
 
     enabled: bool = True
     directory: str = "skills"
     auto_create: bool = True
     auto_improve: bool = True
 
-
 @dataclass
 class ToolsConfig:
-    """Tools configuration."""
+    ""
 
     enabled: list[str] = field(
         default_factory=lambda: ["bash", "read", "write", "edit", "glob", "grep"]
@@ -54,10 +48,9 @@ class ToolsConfig:
     webfetch_timeout: int = 30
     webfetch_max_size: int = 1048576
 
-
 @dataclass
 class PlatformConfig:
-    """Platform integration configuration."""
+    ""
 
     enabled: bool = False
     token: str = ""
@@ -65,49 +58,44 @@ class PlatformConfig:
     guild_id: str = ""
     app_token: str = ""
 
-
 @dataclass
 class SchedulerConfig:
-    """Scheduler configuration."""
+    ""
 
     enabled: bool = True
     max_concurrent: int = 5
     check_interval: int = 60
 
-
 @dataclass
 class SecurityConfig:
-    """Security configuration."""
+    ""
 
     sandbox_mode: bool = False
     allowed_commands: list[str] = field(default_factory=list)
     blocked_commands: list[str] = field(default_factory=list)
     require_approval: list[str] = field(default_factory=lambda: ["bash", "write", "edit"])
 
-
 @dataclass
 class LoggingConfig:
-    """Logging configuration."""
+    ""
 
     level: str = "INFO"
     file: str = "logs/bahram.log"
     max_size: str = "10MB"
     backup_count: int = 5
 
-
 @dataclass
 class ServerConfig:
-    """API server configuration."""
+    ""
 
     enabled: bool = False
     host: str = "0.0.0.0"
     port: int = 8000
     auth_token: str = ""
 
-
 @dataclass
 class AgentConfig:
-    """Agent configuration."""
+    ""
 
     name: str = "Bahram"
     version: str = "1.0.0"
@@ -116,10 +104,9 @@ class AgentConfig:
     small_model: str = "anthropic/claude-haiku-3.5"
     system_prompt: str = ""
 
-
 @dataclass
 class Config:
-    """Main configuration for Bahram Agent."""
+    ""
 
     agent: AgentConfig = field(default_factory=AgentConfig)
     providers: dict[str, ProviderConfig] = field(default_factory=dict)
@@ -134,7 +121,7 @@ class Config:
 
     @classmethod
     def from_file(cls, path: str | Path) -> Config:
-        """Load configuration from a YAML file."""
+        ""
         path = Path(path)
         if not path.exists():
             return cls()
@@ -144,7 +131,7 @@ class Config:
             with open(path) as f:
                 data = yaml.safe_load(f)
         except ImportError:
-            # Fallback to JSON if yaml not available
+
             import json
             with open(path) as f:
                 data = json.load(f)
@@ -152,14 +139,13 @@ class Config:
             print(f"Warning: Failed to load config: {e}")
             return cls()
 
-        # Expand environment variables
         data = cls._expand_env_vars(data)
 
         return cls._from_dict(data)
 
     @classmethod
     def _from_dict(cls, data: dict[str, Any]) -> Config:
-        """Create config from dictionary."""
+        ""
         config = cls()
 
         if "agent" in data:
@@ -198,7 +184,7 @@ class Config:
 
     @classmethod
     def _expand_env_vars(cls, obj: Any) -> Any:
-        """Recursively expand environment variables in config."""
+        ""
         if isinstance(obj, str):
             if obj.startswith("${") and obj.endswith("}"):
                 var_name = obj[2:-1]
@@ -211,12 +197,12 @@ class Config:
         return obj
 
     def get_provider(self, name: str) -> ProviderConfig:
-        """Get a provider configuration by name."""
+        ""
         if name not in self.providers:
             raise ValueError(f"Provider '{name}' not configured")
         return self.providers[name]
 
     def get_model_provider(self, model: str) -> tuple[str, ProviderConfig]:
-        """Get the provider for a given model."""
+        ""
         provider_name = model.split("/")[0] if "/" in model else "anthropic"
         return provider_name, self.get_provider(provider_name)

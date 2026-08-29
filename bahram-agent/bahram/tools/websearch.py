@@ -1,5 +1,3 @@
-"""Web search tool for Bahram Agent."""
-
 from __future__ import annotations
 
 import logging
@@ -7,9 +5,8 @@ from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
-
 class WebSearchTool:
-    """Search the web."""
+    ""
 
     def __init__(self) -> None:
         self._search_engine: str = "google"
@@ -21,11 +18,10 @@ class WebSearchTool:
         num_results: int = None,
         engine: str = None,
     ) -> list[dict]:
-        """Search the web."""
+        ""
         try:
             import httpx
 
-            # Use DuckDuckGo Instant Answers API (no key required)
             async with httpx.AsyncClient() as client:
                 response = await client.get(
                     "https://api.duckduckgo.com/",
@@ -42,7 +38,6 @@ class WebSearchTool:
                     data = response.json()
                     results = []
 
-                    # Abstract
                     if data.get("Abstract"):
                         results.append({
                             "title": data.get("Heading", ""),
@@ -50,7 +45,6 @@ class WebSearchTool:
                             "url": data.get("AbstractURL", ""),
                         })
 
-                    # Related topics
                     for topic in data.get("RelatedTopics", [])[:num_results or self._max_results]:
                         if isinstance(topic, dict) and "Text" in topic:
                             results.append({
@@ -69,7 +63,7 @@ class WebSearchTool:
             return [{"error": str(e)}]
 
     async def search_and_summarize(self, query: str) -> str:
-        """Search and return summarized results."""
+        ""
         results = await self.search(query, num_results=5)
 
         if not results:
@@ -88,9 +82,9 @@ class WebSearchTool:
         return "\n".join(lines)
 
     def set_search_engine(self, engine: str) -> None:
-        """Set search engine."""
+        ""
         self._search_engine = engine
 
     def set_max_results(self, max_results: int) -> None:
-        """Set max results."""
+        ""
         self._max_results = max_results

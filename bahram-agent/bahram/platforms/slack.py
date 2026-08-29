@@ -1,5 +1,3 @@
-"""Slack platform adapter for Bahram Agent."""
-
 from __future__ import annotations
 
 import json
@@ -9,9 +7,8 @@ from typing import Any, Callable, Optional
 
 logger = logging.getLogger(__name__)
 
-
 class SlackAdapter:
-    """Slack messaging platform adapter."""
+    ""
 
     def __init__(self, token: str = "", signing_secret: str = "") -> None:
         self.token = token
@@ -20,11 +17,11 @@ class SlackAdapter:
         self._message_fn: Optional[Callable] = None
 
     def set_message_function(self, fn: Callable) -> None:
-        """Set the message handling function."""
+        ""
         self._message_fn = fn
 
     async def start(self) -> None:
-        """Start the Slack adapter."""
+        ""
         if not self.token:
             logger.warning("Slack token not configured")
             return
@@ -56,7 +53,7 @@ class SlackAdapter:
             logger.error(f"Failed to start Slack adapter: {e}")
 
     async def send_message(self, chat_id: str, text: str, **kwargs) -> bool:
-        """Send a message to Slack."""
+        ""
         if not self._app:
             return False
 
@@ -72,12 +69,12 @@ class SlackAdapter:
             return False
 
     async def send_dm(self, user_id: str, text: str) -> bool:
-        """Send a direct message."""
+        ""
         if not self._app:
             return False
 
         try:
-            # Open DM channel
+
             response = await self._app.client.conversations_open(users=[user_id])
             channel_id = response["channel"]["id"]
 
@@ -87,7 +84,7 @@ class SlackAdapter:
             return False
 
     def get_platform_info(self) -> dict[str, Any]:
-        """Get platform information."""
+        ""
         return {
             "name": "slack",
             "version": "1.0.0",

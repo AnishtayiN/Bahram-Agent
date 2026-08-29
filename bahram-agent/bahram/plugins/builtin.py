@@ -1,5 +1,3 @@
-"""Built-in plugins for Bahram Agent."""
-
 from __future__ import annotations
 
 import logging
@@ -7,9 +5,8 @@ from typing import Any, Callable
 
 logger = logging.getLogger(__name__)
 
-
 class BuiltInPlugin:
-    """Base class for built-in plugins."""
+    ""
 
     def __init__(self) -> None:
         self.name = ""
@@ -17,24 +14,23 @@ class BuiltInPlugin:
         self.enabled = True
 
     async def on_message(self, message: dict) -> dict:
-        """Hook into incoming messages."""
+        ""
         return message
 
     async def on_response(self, response: str) -> str:
-        """Hook into outgoing responses."""
+        ""
         return response
 
     async def on_tool_call(self, tool: str, args: dict) -> dict:
-        """Hook into tool calls."""
+        ""
         return args
 
     async def on_error(self, error: Exception) -> None:
-        """Hook into errors."""
+        ""
         pass
 
-
 class LoggingPlugin(BuiltInPlugin):
-    """Log all interactions."""
+    ""
 
     def __init__(self) -> None:
         super().__init__()
@@ -49,9 +45,8 @@ class LoggingPlugin(BuiltInPlugin):
         logger.debug(f"Response: {response[:100]}...")
         return response
 
-
 class MetricsPlugin(BuiltInPlugin):
-    """Collect metrics."""
+    ""
 
     def __init__(self) -> None:
         super().__init__()
@@ -82,9 +77,8 @@ class MetricsPlugin(BuiltInPlugin):
     def get_metrics(self) -> dict:
         return self._metrics.copy()
 
-
 class CachePlugin(BuiltInPlugin):
-    """Cache responses."""
+    ""
 
     def __init__(self) -> None:
         super().__init__()
@@ -100,7 +94,6 @@ class CachePlugin(BuiltInPlugin):
 
     async def on_response(self, response: str) -> str:
         return response
-
 
 BUILTIN_PLUGINS = {
     "logging": LoggingPlugin,

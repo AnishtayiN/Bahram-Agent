@@ -1,5 +1,3 @@
-"""AI Code Generator - Generate complete applications from descriptions."""
-
 from __future__ import annotations
 
 import logging
@@ -9,19 +7,17 @@ from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
-
 @dataclass
 class GeneratedFile:
-    """A generated file."""
+    ""
 
     path: str
     content: str
     language: str
     description: str = ""
 
-
 class AICodeGenerator:
-    """Generate complete applications from natural language descriptions."""
+    ""
 
     def __init__(self) -> None:
         self._templates: dict[str, dict] = {
@@ -56,7 +52,7 @@ class AICodeGenerator:
         framework: str = "fastapi",
         output_dir: str = "generated",
     ) -> list[GeneratedFile]:
-        """Generate application from description."""
+        ""
         template = self._templates.get(framework, {})
         if not template:
             return []
@@ -75,7 +71,6 @@ class AICodeGenerator:
                 language=file_spec["language"],
             ))
 
-        # Write files
         output_path = Path(output_dir)
         output_path.mkdir(parents=True, exist_ok=True)
 
@@ -93,7 +88,7 @@ class AICodeGenerator:
         language: str,
         framework: str,
     ) -> str:
-        """Generate a single file."""
+        ""
         if language == "python" and framework == "fastapi":
             return self._generate_fastapi_main(description)
         elif language == "python" and framework == "cli":
@@ -111,94 +106,13 @@ class AICodeGenerator:
         return ""
 
     def _generate_fastapi_main(self, description: str) -> str:
-        return f'''"""Generated FastAPI application.
-
-Description: {description}
-"""
-
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
-from typing import Any, Optional
-import uvicorn
-
-app = FastAPI(title="Generated API")
-
-
-class Item(BaseModel):
-    name: str
-    description: Optional[str] = None
-    price: float
-
-
-@app.get("/")
-async def root():
-    return {{"message": "Welcome to the Generated API"}}
-
-
-@app.get("/health")
-async def health():
-    return {{"status": "healthy"}}
-
-
-@app.post("/items/")
-async def create_item(item: Item):
-    return {{"item": item, "status": "created"}}
-
-
-@app.get("/items/{{item_id}}")
-async def read_item(item_id: int):
-    return {{"item_id": item_id}}
-
-
-if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000)
-'''
+        return f''
 
     def _generate_cli_main(self, description: str) -> str:
-        return f'''"""Generated CLI application.
-
-Description: {description}
-"""
-
-import argparse
-import sys
-
-
-def main():
-    parser = argparse.ArgumentParser(description="{description}")
-    parser.add_argument("--name", type=str, help="Name parameter")
-    parser.add_argument("--verbose", action="store_true", help="Verbose output")
-    
-    args = parser.parse_args()
-    
-    if args.verbose:
-        print(f"Running with name: {{args.name}}")
-    
-    print("Hello from generated CLI!")
-
-
-if __name__ == "__main__":
-    main()
-'''
+        return f''
 
     def _generate_react_app(self, description: str) -> str:
-        return f'''import React from 'react';
-
-interface AppProps {{
-  title?: string;
-}}
-
-const App: React.FC<AppProps> = ({{ title = '{description}' }}) => {{
-  return (
-    <div className="app">
-      <h1>{{{{title}}}}</h1>
-      <p>This is a generated React application.</p>
-    </div>
-  );
-}};
-
-export default App;
-'''
+        return f''
 
     def _generate_requirements(self, framework: str) -> str:
         requirements = {
@@ -208,63 +122,12 @@ export default App;
         return requirements.get(framework, "")
 
     def _generate_package_json(self, description: str) -> str:
-        return f'''{{
-  "name": "generated-app",
-  "version": "1.0.0",
-  "description": "{description}",
-  "main": "src/index.tsx",
-  "scripts": {{
-    "start": "react-scripts start",
-    "build": "react-scripts build"
-  }},
-  "dependencies": {{
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0"
-  }}
-}}
-'''
+        return f''
 
     def _generate_dockerfile(self, framework: str) -> str:
         if framework == "fastapi":
-            return '''FROM python:3.11-slim
-
-WORKDIR /app
-
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-
-COPY . .
-
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
-'''
+            return ''
         return ""
 
     def _generate_readme(self, description: str, framework: str) -> str:
-        return f"""# Generated Application
-
-{description}
-
-## Framework
-
-{framework}
-
-## Installation
-
-```bash
-# Install dependencies
-pip install -r requirements.txt
-```
-
-## Running
-
-```bash
-python main.py
-```
-
-## API Endpoints
-
-- `GET /` - Root endpoint
-- `GET /health` - Health check
-- `POST /items/` - Create item
-- `GET /items/{id}` - Get item
-"""
+        return f""

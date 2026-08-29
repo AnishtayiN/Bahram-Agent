@@ -1,5 +1,3 @@
-"""Background task notifications for Bahram Agent."""
-
 from __future__ import annotations
 
 import asyncio
@@ -10,14 +8,13 @@ from typing import Any, Callable, Optional
 
 logger = logging.getLogger(__name__)
 
-
 @dataclass
 class BackgroundTask:
-    """A background task."""
+    ""
 
     task_id: str
     name: str
-    status: str = "pending"  # pending, running, completed, failed
+    status: str = "pending"
     result: Any = None
     error: str = ""
     start_time: float = 0.0
@@ -25,16 +22,15 @@ class BackgroundTask:
     notify_chat_id: str = ""
     notify_platform: str = ""
 
-
 class BackgroundNotifier:
-    """Manage background task notifications."""
+    ""
 
     def __init__(self) -> None:
         self._tasks: dict[str, BackgroundTask] = {}
         self._notify_fn: Optional[Callable] = None
 
     def set_notify_function(self, fn: Callable) -> None:
-        """Set notification function."""
+        ""
         self._notify_fn = fn
 
     def start_task(
@@ -44,7 +40,7 @@ class BackgroundNotifier:
         notify_chat_id: str = "",
         notify_platform: str = "",
     ) -> None:
-        """Start tracking a background task."""
+        ""
         self._tasks[task_id] = BackgroundTask(
             task_id=task_id,
             name=name,
@@ -55,7 +51,7 @@ class BackgroundNotifier:
         )
 
     def complete_task(self, task_id: str, result: Any = None) -> None:
-        """Mark task as completed."""
+        ""
         if task_id in self._tasks:
             task = self._tasks[task_id]
             task.status = "completed"
@@ -64,7 +60,7 @@ class BackgroundNotifier:
             self._send_notification(task, f"Task '{task.name}' completed")
 
     def fail_task(self, task_id: str, error: str) -> None:
-        """Mark task as failed."""
+        ""
         if task_id in self._tasks:
             task = self._tasks[task_id]
             task.status = "failed"
@@ -73,7 +69,7 @@ class BackgroundNotifier:
             self._send_notification(task, f"Task '{task.name}' failed: {error}")
 
     def _send_notification(self, task: BackgroundTask, message: str) -> None:
-        """Send notification."""
+        ""
         if not self._notify_fn or not task.notify_chat_id:
             return
 
@@ -88,7 +84,7 @@ class BackgroundNotifier:
             logger.warning(f"Failed to send notification: {e}")
 
     def get_active_tasks(self) -> list[dict]:
-        """Get active tasks."""
+        ""
         return [
             {
                 "id": t.task_id,
@@ -101,7 +97,7 @@ class BackgroundNotifier:
         ]
 
     def get_task(self, task_id: str) -> Optional[dict]:
-        """Get task info."""
+        ""
         task = self._tasks.get(task_id)
         if task:
             return {
@@ -114,7 +110,7 @@ class BackgroundNotifier:
         return None
 
     def cleanup_old(self, max_age_seconds: int = 3600) -> int:
-        """Cleanup old completed tasks."""
+        ""
         now = time.time()
         to_remove = [
             tid for tid, task in self._tasks.items()

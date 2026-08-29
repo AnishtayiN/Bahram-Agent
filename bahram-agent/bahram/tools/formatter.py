@@ -1,5 +1,3 @@
-"""Intelligent Code Formatter for Bahram Agent."""
-
 from __future__ import annotations
 
 import logging
@@ -9,10 +7,9 @@ from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
-
 @dataclass
 class FormatRule:
-    """A formatting rule."""
+    ""
 
     name: str
     language: str
@@ -20,9 +17,8 @@ class FormatRule:
     replacement: str
     description: str = ""
 
-
 class SmartFormatter:
-    """Intelligent code formatting and style enforcement."""
+    ""
 
     def __init__(self) -> None:
         self._rules: dict[str, list[FormatRule]] = {
@@ -50,7 +46,7 @@ class SmartFormatter:
         language: str,
         rules: list[str] = None,
     ) -> tuple[str, list[dict]]:
-        """Format code and return changes."""
+        ""
         rules_list = self._rules.get(language, [])
         if rules:
             rules_list = [r for r in rules_list if r.name in rules]
@@ -71,7 +67,7 @@ class SmartFormatter:
         return formatted, changes
 
     async def check_style(self, code: str, language: str) -> list[dict]:
-        """Check code style without modifying."""
+        ""
         rules_list = self._rules.get(language, [])
         issues = []
 
@@ -87,7 +83,7 @@ class SmartFormatter:
         return issues
 
     def get_rules(self, language: str) -> list[dict]:
-        """Get formatting rules for language."""
+        ""
         rules = self._rules.get(language, [])
         return [
             {
@@ -99,7 +95,7 @@ class SmartFormatter:
         ]
 
     def add_rule(self, rule: FormatRule) -> None:
-        """Add a custom rule."""
+        ""
         if rule.language not in self._rules:
             self._rules[rule.language] = []
         self._rules[rule.language].append(rule)

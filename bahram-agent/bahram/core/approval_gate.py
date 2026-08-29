@@ -1,5 +1,3 @@
-"""Write approval gates for Bahram Agent."""
-
 from __future__ import annotations
 
 import logging
@@ -9,10 +7,9 @@ from typing import Any, Optional, Callable
 
 logger = logging.getLogger(__name__)
 
-
 @dataclass
 class ApprovalGate:
-    """An approval gate for file writes."""
+    ""
 
     name: str
     pattern: str
@@ -21,9 +18,8 @@ class ApprovalGate:
     auto_approve: bool = False
     approver: str = ""
 
-
 class ApprovalGateManager:
-    """Manage write approval gates."""
+    ""
 
     def __init__(self, data_dir: str = "data/security") -> None:
         self.data_dir = Path(data_dir)
@@ -33,8 +29,8 @@ class ApprovalGateManager:
         self._load()
 
     def _load(self) -> None:
-        """Load gates from config."""
-        # Default gates
+        ""
+
         self._gates = [
             ApprovalGate(
                 name="critical_files",
@@ -63,18 +59,13 @@ class ApprovalGateManager:
         ]
 
     def check_write(self, file_path: str) -> tuple[bool, str]:
-        """Check if a write requires approval.
-
-        Returns:
-            Tuple of (requires_approval, reason)
-        """
+        ""
         path = Path(file_path)
 
         for gate in self._gates:
             if not gate.require_approval:
                 continue
 
-            # Simple pattern matching
             if self._matches_pattern(path, gate.pattern):
                 if gate.auto_approve:
                     return False, "Auto-approved"
@@ -84,29 +75,29 @@ class ApprovalGateManager:
         return False, "No approval required"
 
     def _matches_pattern(self, path: Path, pattern: str) -> bool:
-        """Check if path matches pattern."""
+        ""
         path_str = str(path)
         patterns = [p.strip() for p in pattern.split(",")]
 
         for p in patterns:
             if p.startswith("**/"):
-                # Glob pattern
+
                 suffix = p[3:]
                 if path_str.endswith(suffix) or path.match(p):
                     return True
             elif p.startswith("/"):
-                # Absolute path
+
                 if path_str.startswith(p):
                     return True
             else:
-                # Simple suffix
+
                 if path_str.endswith(p):
                     return True
 
         return False
 
     def request_approval(self, write_id: str, file_path: str, reason: str) -> dict:
-        """Request approval for a write."""
+        ""
         self._pending[write_id] = {
             "file_path": file_path,
             "reason": reason,
@@ -115,21 +106,21 @@ class ApprovalGateManager:
         return self._pending[write_id]
 
     def approve(self, write_id: str) -> bool:
-        """Approve a pending write."""
+        ""
         if write_id in self._pending:
             self._pending[write_id]["status"] = "approved"
             return True
         return False
 
     def deny(self, write_id: str) -> bool:
-        """Deny a pending write."""
+        ""
         if write_id in self._pending:
             self._pending[write_id]["status"] = "denied"
             return True
         return False
 
     def get_pending(self) -> list[dict]:
-        """Get pending approvals."""
+        ""
         return [
             {"id": k, **v}
             for k, v in self._pending.items()
@@ -137,5 +128,5 @@ class ApprovalGateManager:
         ]
 
     def add_gate(self, gate: ApprovalGate) -> None:
-        """Add a custom gate."""
+        ""
         self._gates.append(gate)

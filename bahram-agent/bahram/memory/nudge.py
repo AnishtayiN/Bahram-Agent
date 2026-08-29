@@ -1,5 +1,3 @@
-"""Memory system with nudge support for Bahram Agent."""
-
 from __future__ import annotations
 
 import json
@@ -10,9 +8,8 @@ from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
-
 class MemoryNudge:
-    """Memory system with periodic nudges for persistence."""
+    ""
 
     def __init__(self, memory_dir: str = "data/memory") -> None:
         self.memory_dir = Path(memory_dir)
@@ -21,7 +18,7 @@ class MemoryNudge:
         self._load_nudges()
 
     def _load_nudges(self) -> None:
-        """Load nudges from disk."""
+        ""
         nudge_file = self.memory_dir / "nudges.json"
         if nudge_file.exists():
             try:
@@ -31,7 +28,7 @@ class MemoryNudge:
                 logger.error(f"Failed to load nudges: {e}")
 
     def _save_nudges(self) -> None:
-        """Save nudges to disk."""
+        ""
         nudge_file = self.memory_dir / "nudges.json"
         try:
             with open(nudge_file, "w") as f:
@@ -40,7 +37,7 @@ class MemoryNudge:
             logger.error(f"Failed to save nudges: {e}")
 
     def set_nudge(self, key: str, message: str, interval_minutes: int = 60) -> None:
-        """Set a periodic nudge."""
+        ""
         self._nudges[key] = {
             "message": message,
             "interval": interval_minutes,
@@ -51,12 +48,12 @@ class MemoryNudge:
         logger.info(f"Set nudge: {key}")
 
     def remove_nudge(self, key: str) -> None:
-        """Remove a nudge."""
+        ""
         self._nudges.pop(key, None)
         self._save_nudges()
 
     def get_pending_nudges(self) -> list[dict[str, Any]]:
-        """Get nudges that are due."""
+        ""
         now = datetime.now()
         pending = []
 
@@ -70,17 +67,17 @@ class MemoryNudge:
         return pending
 
     def mark_nudged(self, key: str) -> None:
-        """Mark a nudge as sent."""
+        ""
         if key in self._nudges:
             self._nudges[key]["last_nudge"] = datetime.now().isoformat()
             self._save_nudges()
 
     def list_nudges(self) -> dict[str, dict]:
-        """List all nudges."""
+        ""
         return self._nudges.copy()
 
     def save_lesson(self, lesson: str, context: str = "") -> str:
-        """Save a lesson to memory."""
+        ""
         import uuid
 
         lesson_id = str(uuid.uuid4())[:8]
@@ -104,7 +101,7 @@ class MemoryNudge:
             return ""
 
     def search_lessons(self, query: str) -> list[dict]:
-        """Search lessons by content."""
+        ""
         lessons = []
         query_lower = query.lower()
 
@@ -120,7 +117,7 @@ class MemoryNudge:
         return lessons
 
     def get_recent_lessons(self, limit: int = 10) -> list[dict]:
-        """Get recent lessons."""
+        ""
         lessons = []
         for lesson_file in self.memory_dir.glob("lesson_*.json"):
             try:

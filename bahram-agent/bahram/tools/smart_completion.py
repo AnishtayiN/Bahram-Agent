@@ -1,5 +1,3 @@
-"""Intelligent Code Completion with Context Awareness."""
-
 from __future__ import annotations
 
 import logging
@@ -9,10 +7,9 @@ from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
-
 @dataclass
 class CompletionContext:
-    """Context for code completion."""
+    ""
 
     file_path: str
     line: int
@@ -21,9 +18,8 @@ class CompletionContext:
     code_before: str
     code_after: str = ""
 
-
 class SmartCodeCompletion:
-    """Intelligent code completion with context awareness."""
+    ""
 
     def __init__(self) -> None:
         self._snippets: dict[str, list[dict]] = {
@@ -56,14 +52,12 @@ class SmartCodeCompletion:
         context: CompletionContext,
         trigger: str = "",
     ) -> list[dict]:
-        """Get completions based on context."""
+        ""
         completions = []
         language = context.language
 
-        # Get snippets for language
         snippets = self._snippets.get(language, [])
 
-        # Filter by trigger if provided
         for snippet in snippets:
             if trigger and not snippet["trigger"].startswith(trigger):
                 continue
@@ -75,37 +69,32 @@ class SmartCodeCompletion:
                 "priority": 1 if trigger and snippet["trigger"] == trigger else 0,
             })
 
-        # Add context-aware completions
         context_completions = self._get_context_completions(context)
         completions.extend(context_completions)
 
         return sorted(completions, key=lambda x: x["priority"], reverse=True)
 
     def _get_context_completions(self, context: CompletionContext) -> list[dict]:
-        """Get context-aware completions."""
+        ""
         completions = []
         lines = context.code_before.split("\n")
 
-        # Analyze current context
         if lines:
             last_line = lines[-1].strip()
 
-            # After 'import' or 'from'
             if last_line.startswith("import ") or last_line.startswith("from "):
                 completions.extend(self._get_import_completions(context))
 
-            # After 'def' or 'class'
             if last_line.startswith("def ") or last_line.startswith("class "):
                 completions.extend(self._get_definition_completions(context))
 
-            # Inside function (indented)
             if len(lines) > 1 and last_line.startswith("    "):
                 completions.extend(self._get_function_body_completions(context))
 
         return completions
 
     def _get_import_completions(self, context: CompletionContext) -> list[dict]:
-        """Get import completions."""
+        ""
         common_imports = [
             "os", "sys", "json", "logging", "asyncio", "pathlib",
             "typing", "dataclasses", "datetime", "time", "re",
@@ -118,7 +107,7 @@ class SmartCodeCompletion:
         ]
 
     def _get_definition_completions(self, context: CompletionContext) -> list[dict]:
-        """Get definition completions."""
+        ""
         return [
             {"text": "def __init__(self):", "description": "Constructor", "priority": 1},
             {"text": "def __str__(self):", "description": "String representation", "priority": 1},
@@ -126,7 +115,7 @@ class SmartCodeCompletion:
         ]
 
     def _get_function_body_completions(self, context: CompletionContext) -> list[dict]:
-        """Get function body completions."""
+        ""
         return [
             {"text": "return", "description": "Return statement", "priority": 1},
             {"text": "if condition:", "description": "If statement", "priority": 1},
@@ -134,7 +123,7 @@ class SmartCodeCompletion:
         ]
 
     def get_snippet(self, language: str, trigger: str) -> Optional[str]:
-        """Get snippet for trigger."""
+        ""
         snippets = self._snippets.get(language, [])
         for snippet in snippets:
             if snippet["trigger"] == trigger:

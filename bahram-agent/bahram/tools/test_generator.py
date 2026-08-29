@@ -1,5 +1,3 @@
-"""Intelligent Test Generator for Bahram Agent."""
-
 from __future__ import annotations
 
 import logging
@@ -10,48 +8,22 @@ from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
-
 @dataclass
 class GeneratedTest:
-    """A generated test."""
+    ""
 
     name: str
     code: str
     file_path: str
-    test_type: str  # unit, integration, e2e
-
+    test_type: str
 
 class TestGenerator:
-    """Intelligent test generation from code."""
+    ""
 
     def __init__(self) -> None:
         self._test_templates: dict[str, str] = {
-            "unit": '''"""Unit test for {module}."""
-
-import pytest
-from {module} import {class_name}
-
-
-class Test{class_name}:
-    """Tests for {class_name}."""
-
-    def setup_method(self):
-        """Setup test fixtures."""
-        self.instance = {class_name}({init_args})
-
-    {test_methods}
-''',
-            "integration": '''"""Integration test for {module}."""
-
-import pytest
-from {module} import {class_name}
-
-
-class Test{class_name}Integration:
-    """Integration tests for {class_name}."""
-
-    {test_methods}
-''',
+            "unit": '',
+            "integration": '',
         }
 
     async def generate_tests(
@@ -60,7 +32,7 @@ class Test{class_name}Integration:
         output_dir: str,
         test_type: str = "unit",
     ) -> list[GeneratedTest]:
-        """Generate tests for source file."""
+        ""
         try:
             source = Path(source_path)
             if not source.exists():
@@ -72,7 +44,6 @@ class Test{class_name}Integration:
 
             tests = []
 
-            # Generate tests for classes
             for cls in classes:
                 test_code = await self._generate_class_tests(cls, test_type)
                 test_file = Path(output_dir) / f"test_{source.stem}.py"
@@ -83,7 +54,6 @@ class Test{class_name}Integration:
                     test_type=test_type,
                 ))
 
-            # Generate tests for functions
             for func in functions:
                 test_code = await self._generate_function_tests(func, test_type)
                 test_file = Path(output_dir) / f"test_{source.stem}.py"
@@ -94,7 +64,6 @@ class Test{class_name}Integration:
                     test_type=test_type,
                 ))
 
-            # Write test files
             if tests:
                 output = Path(output_dir)
                 output.mkdir(parents=True, exist_ok=True)
@@ -108,7 +77,7 @@ class Test{class_name}Integration:
             return []
 
     def _extract_classes(self, content: str) -> list[dict]:
-        """Extract classes from code."""
+        ""
         classes = []
         pattern = r"class\s+(\w+)\s*(?:\(([^)]*)\))?:"
         for match in re.finditer(pattern, content):
@@ -119,7 +88,7 @@ class Test{class_name}Integration:
         return classes
 
     def _extract_functions(self, content: str) -> list[dict]:
-        """Extract functions from code."""
+        ""
         functions = []
         pattern = r"def\s+(\w+)\s*\(([^)]*)\)"
         for match in re.finditer(pattern, content):
@@ -131,16 +100,8 @@ class Test{class_name}Integration:
         return functions
 
     async def _generate_class_tests(self, cls: dict, test_type: str) -> str:
-        """Generate tests for a class."""
-        test_methods = f"""
-    def test_init(self):
-        \"\"\"Test initialization.\"\"\"
-        assert self.instance is not None
-
-    def test_str(self):
-        \"\"\"Test string representation.\"\"\"
-        assert str(self.instance) is not None
-"""
+        ""
+        test_methods = f""
         return self._test_templates.get(test_type, "").format(
             module="module",
             class_name=cls["name"],
@@ -149,19 +110,14 @@ class Test{class_name}Integration:
         )
 
     async def _generate_function_tests(self, func: dict, test_type: str) -> str:
-        """Generate tests for a function."""
-        return f'''
-def test_{func["name"]}():
-    """Test {func["name"]}."""
-    # TODO: Implement test
-    pass
-'''
+        ""
+        return f''
 
     def _combine_tests(self, tests: list[GeneratedTest]) -> str:
-        """Combine tests into single file."""
-        lines = ['"""Generated tests."""', "", "import pytest", ""]
+        ""
+        lines = ['""', "", "import pytest", ""]
         for test in tests:
-            # Extract just the test functions/classes
+
             for line in test.code.split("\n"):
                 if line.strip() and not line.startswith('"""') and not line.startswith("from "):
                     lines.append(line)

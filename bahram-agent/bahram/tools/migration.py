@@ -1,5 +1,3 @@
-"""Intelligent Code Migration Tool for Bahram Agent."""
-
 from __future__ import annotations
 
 import logging
@@ -10,10 +8,9 @@ from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
-
 @dataclass
 class MigrationRule:
-    """A migration rule."""
+    ""
 
     name: str
     source_pattern: str
@@ -21,9 +18,8 @@ class MigrationRule:
     language: str
     description: str = ""
 
-
 class CodeMigration:
-    """Intelligent code migration and version upgrades."""
+    ""
 
     def __init__(self) -> None:
         self._rules: dict[str, list[MigrationRule]] = {
@@ -50,7 +46,7 @@ class CodeMigration:
         migration_type: str,
         dry_run: bool = False,
     ) -> dict[str, Any]:
-        """Migrate code."""
+        ""
         rules = self._rules.get(migration_type, [])
         if not rules:
             return {"error": f"Unknown migration type: {migration_type}"}
@@ -71,7 +67,7 @@ class CodeMigration:
         rules: list[MigrationRule],
         dry_run: bool,
     ) -> dict[str, Any]:
-        """Migrate a single file."""
+        ""
         try:
             content = source.read_text(errors="replace")
             changes = []
@@ -110,7 +106,7 @@ class CodeMigration:
         rules: list[MigrationRule],
         dry_run: bool,
     ) -> dict[str, Any]:
-        """Migrate a directory."""
+        ""
         results = []
         for py_file in source.rglob("*.py"):
             rel_path = py_file.relative_to(source)
@@ -125,11 +121,11 @@ class CodeMigration:
         }
 
     def get_migration_types(self) -> list[str]:
-        """Get available migration types."""
+        ""
         return list(self._rules.keys())
 
     def get_rules(self, migration_type: str) -> list[dict]:
-        """Get rules for migration type."""
+        ""
         rules = self._rules.get(migration_type, [])
         return [
             {

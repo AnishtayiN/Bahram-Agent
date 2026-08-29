@@ -1,5 +1,3 @@
-"""Intelligent Task Planner for Bahram Agent."""
-
 from __future__ import annotations
 
 import logging
@@ -8,21 +6,19 @@ from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
-
 @dataclass
 class TaskStep:
-    """A step in a task plan."""
+    ""
 
     id: str
     description: str
     dependencies: list[str] = field(default_factory=list)
-    status: str = "pending"  # pending, in_progress, completed, failed
+    status: str = "pending"
     result: Any = None
-
 
 @dataclass
 class TaskPlan:
-    """A complete task plan."""
+    ""
 
     id: str
     goal: str
@@ -30,16 +26,15 @@ class TaskPlan:
     status: str = "planning"
     created_at: float = 0.0
 
-
 class TaskPlanner:
-    """Intelligent task planning and decomposition."""
+    ""
 
     def __init__(self) -> None:
         self._plans: dict[str, TaskPlan] = {}
         self._step_counter = 0
 
     async def create_plan(self, goal: str, context: dict = None) -> TaskPlan:
-        """Create a plan from a goal."""
+        ""
         import uuid
         import time
 
@@ -51,7 +46,6 @@ class TaskPlanner:
             created_at=time.time(),
         )
 
-        # Analyze goal and create steps
         steps = await self._analyze_goal(goal, context)
         plan.steps = steps
         plan.status = "ready"
@@ -60,10 +54,9 @@ class TaskPlanner:
         return plan
 
     async def _analyze_goal(self, goal: str, context: dict = None) -> list[TaskStep]:
-        """Analyze goal and create steps."""
+        ""
         steps = []
 
-        # Simple heuristic - decompose based on common patterns
         goal_lower = goal.lower()
 
         if "create" in goal_lower or "build" in goal_lower:
@@ -80,7 +73,7 @@ class TaskPlanner:
         return steps
 
     async def _plan_creation(self, goal: str) -> list[TaskStep]:
-        """Plan for creation tasks."""
+        ""
         return [
             TaskStep(id="1", description="Understand requirements"),
             TaskStep(id="2", description="Design solution architecture"),
@@ -90,7 +83,7 @@ class TaskPlanner:
         ]
 
     async def _plan_fix(self, goal: str) -> list[TaskStep]:
-        """Plan for fix tasks."""
+        ""
         return [
             TaskStep(id="1", description="Reproduce the issue"),
             TaskStep(id="2", description="Identify root cause"),
@@ -99,7 +92,7 @@ class TaskPlanner:
         ]
 
     async def _plan_testing(self, goal: str) -> list[TaskStep]:
-        """Plan for testing tasks."""
+        ""
         return [
             TaskStep(id="1", description="Identify test cases"),
             TaskStep(id="2", description="Write test code"),
@@ -108,7 +101,7 @@ class TaskPlanner:
         ]
 
     async def _plan_deployment(self, goal: str) -> list[TaskStep]:
-        """Plan for deployment tasks."""
+        ""
         return [
             TaskStep(id="1", description="Prepare deployment environment"),
             TaskStep(id="2", description="Configure deployment settings"),
@@ -117,7 +110,7 @@ class TaskPlanner:
         ]
 
     async def _plan_generic(self, goal: str) -> list[TaskStep]:
-        """Plan for generic tasks."""
+        ""
         return [
             TaskStep(id="1", description="Analyze requirements"),
             TaskStep(id="2", description="Create implementation plan"),
@@ -126,7 +119,7 @@ class TaskPlanner:
         ]
 
     def update_step(self, plan_id: str, step_id: str, status: str, result: Any = None) -> bool:
-        """Update step status."""
+        ""
         plan = self._plans.get(plan_id)
         if plan:
             for step in plan.steps:
@@ -137,7 +130,7 @@ class TaskPlanner:
         return False
 
     def get_plan(self, plan_id: str) -> Optional[dict]:
-        """Get plan details."""
+        ""
         plan = self._plans.get(plan_id)
         if plan:
             return {
@@ -157,12 +150,12 @@ class TaskPlanner:
         return None
 
     def get_next_step(self, plan_id: str) -> Optional[TaskStep]:
-        """Get next step to execute."""
+        ""
         plan = self._plans.get(plan_id)
         if plan:
             for step in plan.steps:
                 if step.status == "pending":
-                    # Check if dependencies are met
+
                     deps_met = all(
                         any(s.id == dep and s.status == "completed" for s in plan.steps)
                         for dep in step.dependencies
@@ -172,7 +165,7 @@ class TaskPlanner:
         return None
 
     def get_progress(self, plan_id: str) -> dict[str, Any]:
-        """Get plan progress."""
+        ""
         plan = self._plans.get(plan_id)
         if plan:
             total = len(plan.steps)

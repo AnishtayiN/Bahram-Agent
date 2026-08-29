@@ -1,5 +1,3 @@
-"""Per-channel model and prompt overrides for Bahram Agent."""
-
 from __future__ import annotations
 
 import json
@@ -10,10 +8,9 @@ from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
-
 @dataclass
 class ChannelOverride:
-    """Channel-specific model/prompt override."""
+    ""
 
     channel_id: str
     model: str = ""
@@ -21,9 +18,8 @@ class ChannelOverride:
     system_prompt: str = ""
     personality: str = ""
 
-
 class ChannelOverrideManager:
-    """Manage per-channel overrides."""
+    ""
 
     def __init__(self, config_dir: str = "data/gateway") -> None:
         self.config_dir = Path(config_dir)
@@ -32,7 +28,7 @@ class ChannelOverrideManager:
         self._load_overrides()
 
     def _load_overrides(self) -> None:
-        """Load overrides from disk."""
+        ""
         overrides_file = self.config_dir / "channel_overrides.json"
         if overrides_file.exists():
             try:
@@ -46,7 +42,7 @@ class ChannelOverrideManager:
                 logger.warning(f"Failed to load overrides: {e}")
 
     def _save_overrides(self) -> None:
-        """Save overrides to disk."""
+        ""
         overrides_file = self.config_dir / "channel_overrides.json"
         data = {}
         for platform, channels in self._overrides.items():
@@ -71,7 +67,7 @@ class ChannelOverrideManager:
         system_prompt: str = "",
         personality: str = "",
     ) -> ChannelOverride:
-        """Set a channel override."""
+        ""
         if platform not in self._overrides:
             self._overrides[platform] = {}
 
@@ -87,11 +83,11 @@ class ChannelOverrideManager:
         return override
 
     def get_override(self, platform: str, channel_id: str) -> Optional[ChannelOverride]:
-        """Get override for a channel."""
+        ""
         return self._overrides.get(platform, {}).get(channel_id)
 
     def remove_override(self, platform: str, channel_id: str) -> bool:
-        """Remove a channel override."""
+        ""
         if platform in self._overrides and channel_id in self._overrides[platform]:
             del self._overrides[platform][channel_id]
             self._save_overrides()
@@ -99,7 +95,7 @@ class ChannelOverrideManager:
         return False
 
     def list_overrides(self, platform: str = None) -> list[dict]:
-        """List overrides."""
+        ""
         results = []
         platforms = [platform] if platform else self._overrides.keys()
         for p in platforms:

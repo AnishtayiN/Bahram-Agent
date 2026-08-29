@@ -1,5 +1,3 @@
-"""Clarify tool for Bahram Agent."""
-
 from __future__ import annotations
 
 import logging
@@ -7,9 +5,8 @@ from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
-
 class ClarifyTool:
-    """Ask for clarification when needed."""
+    ""
 
     def __init__(self) -> None:
         self._pending_clarifications: dict[str, dict] = {}
@@ -22,7 +19,7 @@ class ClarifyTool:
         options: list[str] = None,
         required: bool = True,
     ) -> dict[str, Any]:
-        """Request clarification from user."""
+        ""
         import uuid
         import time
 
@@ -45,7 +42,7 @@ class ClarifyTool:
         }
 
     def get_clarification(self, clarification_id: str) -> Optional[dict]:
-        """Get pending clarification."""
+        ""
         return self._pending_clarifications.get(clarification_id)
 
     def answer_clarification(
@@ -53,7 +50,7 @@ class ClarifyTool:
         clarification_id: str,
         answer: str,
     ) -> bool:
-        """Answer a clarification."""
+        ""
         if clarification_id in self._pending_clarifications:
             clarification = self._pending_clarifications.pop(clarification_id)
             self._clarification_history.append({
@@ -65,19 +62,19 @@ class ClarifyTool:
         return False
 
     def has_pending(self) -> bool:
-        """Check if there are pending clarifications."""
+        ""
         return len(self._pending_clarifications) > 0
 
     def get_pending_count(self) -> int:
-        """Get count of pending clarifications."""
+        ""
         return len(self._pending_clarifications)
 
     def get_history(self) -> list[dict]:
-        """Get clarification history."""
+        ""
         return self._clarification_history.copy()
 
     def clear_pending(self) -> int:
-        """Clear all pending clarifications."""
+        ""
         count = len(self._pending_clarifications)
         self._pending_clarifications.clear()
         return count

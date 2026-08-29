@@ -1,5 +1,3 @@
-"""Intelligent Auto-Complete for Bahram Agent."""
-
 from __future__ import annotations
 
 import logging
@@ -9,19 +7,17 @@ from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
-
 @dataclass
 class Completion:
-    """A completion suggestion."""
+    ""
 
     text: str
     description: str = ""
     priority: int = 0
     category: str = ""
 
-
 class AutoComplete:
-    """Intelligent code and command auto-completion."""
+    ""
 
     def __init__(self) -> None:
         self._history: list[str] = []
@@ -45,7 +41,7 @@ class AutoComplete:
         }
 
     def add_to_history(self, text: str) -> None:
-        """Add text to history."""
+        ""
         if text not in self._history:
             self._history.append(text)
             if len(self._history) > 1000:
@@ -57,10 +53,9 @@ class AutoComplete:
         language: str = "python",
         context: str = "",
     ) -> list[Completion]:
-        """Get completions for text."""
+        ""
         completions = []
 
-        # Pattern-based completions
         patterns = self._patterns.get(language, [])
         for pattern in patterns:
             if pattern.lower().startswith(text.lower()):
@@ -71,7 +66,6 @@ class AutoComplete:
                     category="keyword",
                 ))
 
-        # History-based completions
         for hist in reversed(self._history):
             if text.lower() in hist.lower() and hist != text:
                 completions.append(Completion(
@@ -81,7 +75,6 @@ class AutoComplete:
                     category="history",
                 ))
 
-        # Remove duplicates and sort
         seen = set()
         unique = []
         for c in sorted(completions, key=lambda x: x.priority, reverse=True):
@@ -92,11 +85,11 @@ class AutoComplete:
         return unique[:10]
 
     def complete_command(self, text: str) -> list[Completion]:
-        """Complete shell command."""
+        ""
         return self.complete(text, language="bash")
 
     def complete_import(self, text: str) -> list[Completion]:
-        """Complete import statement."""
+        ""
         completions = []
         common_modules = [
             "os", "sys", "json", "logging", "asyncio", "pathlib",
@@ -114,7 +107,7 @@ class AutoComplete:
         return completions
 
     def complete_function(self, text: str, context: str = "") -> list[Completion]:
-        """Complete function call."""
+        ""
         completions = []
         common_functions = [
             "print()", "len()", "range()", "str()", "int()", "float()",
@@ -132,6 +125,6 @@ class AutoComplete:
         return completions
 
     def get_suggestions(self, text: str) -> list[str]:
-        """Get simple string suggestions."""
+        ""
         completions = self.complete(text)
         return [c.text for c in completions]

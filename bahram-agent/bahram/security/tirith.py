@@ -1,5 +1,3 @@
-"""Tirith-style pre-execution content scanner for Bahram Agent."""
-
 from __future__ import annotations
 
 import logging
@@ -9,23 +7,21 @@ from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
-
 @dataclass
 class ScanResult:
-    """Result of a content scan."""
+    ""
 
     safe: bool
     issues: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
     blocked: list[str] = field(default_factory=list)
 
-
 class TirithScanner:
-    """Pre-execution content scanner."""
+    ""
 
     def __init__(self) -> None:
         self._dangerous_patterns: list[tuple[str, str, str]] = [
-            # (pattern, severity, description)
+
             (r"rm\s+-rf\s+/", "critical", "Recursive delete from root"),
             (r"mkfs\.", "critical", "Format filesystem"),
             (r"dd\s+if=.*of=/dev/", "critical", "Direct disk write"),
@@ -46,12 +42,11 @@ class TirithScanner:
         ]
 
     def scan(self, content: str) -> ScanResult:
-        """Scan content for security issues."""
+        ""
         issues = []
         warnings = []
         blocked = []
 
-        # Check dangerous patterns
         for pattern, severity, description in self._dangerous_patterns:
             if re.search(pattern, content, re.IGNORECASE):
                 if severity == "critical":
@@ -61,7 +56,6 @@ class TirithScanner:
                 else:
                     warnings.append(description)
 
-        # Check blocked patterns
         for pattern in self._blocked_patterns:
             if re.search(pattern, content, re.IGNORECASE):
                 blocked.append(f"Potential secret exposure: {pattern}")
@@ -75,23 +69,23 @@ class TirithScanner:
         )
 
     def scan_command(self, command: str) -> ScanResult:
-        """Scan a command before execution."""
+        ""
         return self.scan(command)
 
     def scan_code(self, code: str) -> ScanResult:
-        """Scan code before execution."""
+        ""
         return self.scan(code)
 
     def add_dangerous_pattern(self, pattern: str, severity: str, description: str) -> None:
-        """Add a dangerous pattern."""
+        ""
         self._dangerous_patterns.append((pattern, severity, description))
 
     def add_blocked_pattern(self, pattern: str) -> None:
-        """Add a blocked pattern."""
+        ""
         self._blocked_patterns.append(pattern)
 
     def get_scan_report(self, content: str) -> str:
-        """Get a formatted scan report."""
+        ""
         result = self.scan(content)
 
         lines = ["=== Security Scan Report ===", ""]

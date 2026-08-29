@@ -1,5 +1,3 @@
-"""Supply-chain checker for Bahram Agent."""
-
 from __future__ import annotations
 
 import json
@@ -11,19 +9,17 @@ from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
-
 @dataclass
 class SupplyChainIssue:
-    """A supply-chain issue."""
+    ""
 
     package: str
-    severity: str  # "low", "medium", "high", "critical"
+    severity: str
     description: str
     recommendation: str
 
-
 class SupplyChainChecker:
-    """Check supply-chain security."""
+    ""
 
     def __init__(self, data_dir: str = "data/security") -> None:
         self.data_dir = Path(data_dir)
@@ -31,11 +27,11 @@ class SupplyChainChecker:
         self._issues: list[SupplyChainIssue] = []
 
     def check_python_packages(self) -> list[SupplyChainIssue]:
-        """Check Python packages for issues."""
+        ""
         issues = []
 
         try:
-            # Check for known vulnerable packages
+
             result = subprocess.run(
                 ["pip", "list", "--format=json"],
                 capture_output=True,
@@ -45,7 +41,7 @@ class SupplyChainChecker:
 
             if result.returncode == 0:
                 packages = json.loads(result.stdout)
-                # Check against known vulnerable packages
+
                 vulnerable = self._get_vulnerable_packages()
                 for pkg in packages:
                     name = pkg.get("name", "").lower()
@@ -63,7 +59,7 @@ class SupplyChainChecker:
         return issues
 
     def _get_vulnerable_packages(self) -> dict[str, str]:
-        """Get known vulnerable packages."""
+        ""
         return {
             "requests": "CVE-2023-32681",
             "flask": "CVE-2023-30861",
@@ -73,12 +69,12 @@ class SupplyChainChecker:
         }
 
     def check_file_permissions(self, path: str) -> list[SupplyChainIssue]:
-        """Check file permissions."""
+        ""
         issues = []
         file_path = Path(path)
 
         if file_path.exists():
-            # Check if file is world-writable
+
             import stat
             mode = file_path.stat().st_mode
             if mode & stat.S_IWOTH:
@@ -92,7 +88,7 @@ class SupplyChainChecker:
         return issues
 
     def scan_dependencies(self, requirements_file: str = "requirements.txt") -> list[SupplyChainIssue]:
-        """Scan dependencies file."""
+        ""
         issues = []
         req_path = Path(requirements_file)
 
@@ -102,7 +98,7 @@ class SupplyChainChecker:
                 for line in content.split("\n"):
                     line = line.strip()
                     if line and not line.startswith("#"):
-                        # Check for unpinned versions
+
                         if "==" not in line and ">=" not in line and "<=" not in line:
                             issues.append(SupplyChainIssue(
                                 package=line,
@@ -116,7 +112,7 @@ class SupplyChainChecker:
         return issues
 
     def get_all_issues(self) -> list[dict]:
-        """Get all issues."""
+        ""
         issues = []
         issues.extend(self.check_python_packages())
         issues.extend(self.scan_dependencies())

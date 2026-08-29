@@ -1,5 +1,3 @@
-"""Curator - auto-curation of skills for Bahram Agent."""
-
 from __future__ import annotations
 
 import logging
@@ -10,20 +8,18 @@ from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
-
 @dataclass
 class CurationAction:
-    """A curation action."""
+    ""
 
-    action: str  # suggest, merge, split, archive, delete
+    action: str
     skill_name: str
     reason: str
     details: dict = field(default_factory=dict)
     timestamp: str = field(default_factory=lambda: datetime.now().isoformat())
 
-
 class Curator:
-    """Auto-curate and maintain skills."""
+    ""
 
     def __init__(self, skills_dir: str = "skills") -> None:
         self.skills_dir = Path(skills_dir)
@@ -37,10 +33,9 @@ class Curator:
         }
 
     def analyze_skills(self) -> list[CurationAction]:
-        """Analyze skills and suggest curation actions."""
+        ""
         actions = []
 
-        # Check for duplicate/overlapping skills
         skills = self._load_all_skills()
         overlaps = self._find_overlapping(skills)
         for overlap in overlaps:
@@ -50,7 +45,6 @@ class Curator:
                 reason=overlap["reason"],
             ))
 
-        # Check for unused skills
         unused = self._find_unused_skills(skills)
         for skill in unused:
             actions.append(CurationAction(
@@ -59,7 +53,6 @@ class Curator:
                 reason="Skill has not been used in 30+ days",
             ))
 
-        # Check for skills that could be split
         large = self._find_large_skills(skills)
         for skill in large:
             actions.append(CurationAction(
@@ -72,7 +65,7 @@ class Curator:
         return actions
 
     def _load_all_skills(self) -> list[dict]:
-        """Load all skills from directory."""
+        ""
         skills = []
         if self.skills_dir.exists():
             for skill_file in self.skills_dir.rglob("SKILL.md"):
@@ -89,7 +82,7 @@ class Curator:
         return skills
 
     def _find_overlapping(self, skills: list[dict]) -> list[dict]:
-        """Find potentially overlapping skills."""
+        ""
         overlaps = []
         for i, s1 in enumerate(skills):
             for s2 in skills[i+1:]:
@@ -102,7 +95,7 @@ class Curator:
         return overlaps
 
     def _calculate_similarity(self, text1: str, text2: str) -> float:
-        """Calculate text similarity (Jaccard)."""
+        ""
         words1 = set(text1.lower().split())
         words2 = set(text2.lower().split())
         if not words1 or not words2:
@@ -112,18 +105,18 @@ class Curator:
         return len(intersection) / len(union)
 
     def _find_unused_skills(self, skills: list[dict]) -> list[str]:
-        """Find skills that appear unused."""
-        # Placeholder - check usage stats
+        ""
+
         return []
 
     def _find_large_skills(self, skills: list[dict]) -> list[dict]:
-        """Find unusually large skills."""
+        ""
         return [s for s in skills if s["size"] > 10000]
 
     def get_stats(self) -> dict:
-        """Get curation statistics."""
+        ""
         return self._stats.copy()
 
     def get_pending_actions(self) -> list[CurationAction]:
-        """Get pending curation actions."""
+        ""
         return self._actions.copy()
