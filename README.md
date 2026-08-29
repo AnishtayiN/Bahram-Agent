@@ -1,8 +1,72 @@
 # Bahram Agent ☤
 
-Advanced self-improving AI agent inspired by [Hermes Agent](https://github.com/NousResearch/hermes-agent) from Nous Research.
+<p align="center">
+  <img src="https://img.shields.io/badge/version-1.0.0-blue" alt="Version">
+  <img src="https://img.shields.io/badge/license-MIT-green" alt="License">
+  <img src="https://img.shields.io/badge/python-3.10+-yellow" alt="Python">
+  <img src="https://img.shields.io/badge/hermes-inspired-orange" alt="Hermes Inspired">
+</p>
 
-## Quick Install
+## درباره بهرام / About Bahram
+
+**بَهرام** (Bahram) نام یکی از شخصیت‌های اساطیری و تاریخی ایران باستان است. بهرام در فرهنگ ایرانی نماد **شجاعت، قدرت و پیروزی** است. این نام از دوران باستان تا امروز در ایران محبوب بوده و پادشاهان بزرگی مانند بهرام گور (یکی از شاهان ساسانی) از این نام استفاده می‌کردند.
+
+**Bahram** is one of the most iconic names in ancient Persian mythology and history. The name symbolizes **courage, strength, and victory** in Iranian culture. It has been cherished from ancient times to the present day, with great kings like Bahram V (Bahram Gur) of the Sassanid Empire bearing this name.
+
+### چرا بهرام؟ / Why Bahram?
+
+انتخاب نام **بهرام** برای این هوش مصنوعی به دلایل زیر است:
+
+1. **باستانی بودن**: بهرام یادآور تمدن کهن ایران است
+2. **مقدس بودن**: این نام در فرهنگ ایرانی ارزش ویژه‌ای دارد
+3. **نماد قدرت**: بهرام نماد قدرت و توانایی است
+4. **ایرانی بودن**: ادای احترام به فرهنگ و تاریخ غنی ایران
+
+The name **Bahram** was chosen for this AI because:
+1. **Ancient Heritage**: Reminiscent of Iran's ancient civilization
+2. **Sacred Significance**: Holds special value in Iranian culture
+3. **Symbol of Power**: Represents strength and capability
+4. **Persian Identity**: Honoring Iran's rich culture and history
+
+---
+
+## ✨ Features
+
+Bahram Agent is an advanced self-improving AI agent inspired by [Hermes Agent](https://github.com/NousResearch/hermes-agent) from Nous Research.
+
+### 🧠 Core Intelligence
+- **Self-Improving Learning Loop** - Creates skills from experience, improves them during use
+- **17+ LLM Providers** - Anthropic, OpenAI, OpenRouter, Nous, NVIDIA, Groq, and more
+- **Context Compression** - Intelligent context window management
+- **Fallback Providers** - Automatic failover to backup models
+
+### 🛠️ Tools & Capabilities
+- **8+ Built-in Tools** - Bash, file operations, web search, code analysis
+- **MCP Integration** - Connect to external tool servers
+- **Plugin System** - Extend with custom tools and hooks
+- **Batch Processing** - Process multiple prompts efficiently
+
+### 💾 Memory & Learning
+- **3 Memory Systems** - Conversation, episodic, and semantic memory
+- **Honcho User Modeling** - Dialectic user profiling across sessions
+- **Memory Nudge** - Periodic reminders for knowledge persistence
+- **Trajectory Generation** - Export training data for model improvement
+
+### 🎯 Skills & Automation
+- **Skills System** - Auto-triggering, reusable capabilities
+- **Skill Hub** - Browse, install, and manage skills from registries
+- **Cron Scheduler** - Automated task execution with natural language
+- **Context Files** - Project-specific instructions
+
+### 🌐 Platform Support
+- **Telegram Bot** - Full-featured with inline keyboards
+- **Discord Integration** - Server and DM support
+- **Slack Integration** - Workspace connectivity
+- **Rich CLI** - Beautiful terminal interface with markdown
+
+---
+
+## 🚀 Quick Install
 
 ```bash
 pip install git+https://github.com/buoawjbnfikwbuinb/agent.git
@@ -16,34 +80,14 @@ cd agent/bahram-agent
 pip install -e .
 ```
 
-## Features
-
-- **Self-Improving Learning Loop** - Creates skills from experience, improves them during use
-- **17+ LLM Providers** - Anthropic, OpenAI, OpenRouter, Nous, NVIDIA, Groq, and more
-- **8 Built-in Tools** - Bash, file operations, web search, code analysis
-- **3 Memory Systems** - Conversation, episodic, and semantic memory
-- **3 Platform Integrations** - Telegram, Discord, Slack
-- **Skills System** - Auto-triggering, reusable capabilities
-- **Task Scheduler** - Automated job execution
-- **Rich CLI** - Beautiful terminal interface
-
 ---
 
-## Quick Start
+## ⚡ Quick Start
 
-### 1. Install
-
-```bash
-pip install git+https://github.com/buoawjbnfikwbuinb/agent.git
-```
-
-### 2. Configure API Keys
+### 1. Configure API Keys
 
 ```bash
-# Copy example config
 cp .env.example .env
-
-# Edit with your API keys
 nano .env
 ```
 
@@ -67,7 +111,7 @@ GROQ_API_KEY=gsk_...
 # LM Studio: http://localhost:1234/v1
 ```
 
-### 3. Run
+### 2. Run
 
 ```bash
 # Start interactive chat
@@ -110,64 +154,60 @@ cd bahram-agent
 python bot.py
 ```
 
-Your bot is now live on Telegram! 🎉
+### Bot Commands (139+)
 
-### Bot Features
-
-- 💬 **Text Chat** - Chat with AI naturally
-- 🎤 **Voice Messages** - Send voice for transcription
-- 🖼️ **Images** - Send images for analysis
-- 📄 **Documents** - Send files for processing
-- 🌐 **URLs** - Send URLs to fetch and analyze
-- ⌨️ **Inline Buttons** - Quick actions with buttons
-- 🤖 **Model Selection** - Switch between AI models
-- 📊 **Status** - Check bot status anytime
-
-### Bot Commands
-
+#### Core Commands
 | Command | Description |
 |---------|-------------|
 | `/start` | Start the bot |
-| `/help` | Show help |
-| `/clear` | Clear conversation |
-| `/model` | Change AI model |
+| `/new [name]` | Start new session |
+| `/retry` | Retry last message |
+| `/undo [N]` | Back up N turns |
+| `/model [model]` | Switch model |
 | `/status` | Show status |
+| `/context` | Show context window |
+| `/goal [text]` | Set a goal |
+| `/background <prompt>` | Run in background |
+| `/compress` | Compress context |
+| `/pause [reason]` | Pause/resume |
+| `/yolo` | Toggle YOLO mode |
+| `/voice [on\|off]` | Toggle voice mode |
+| `/help` | Show help |
+| `/commands [page]` | List all commands |
+
+#### Skill Commands (80+)
+| Category | Commands |
+|----------|----------|
+| **Code** | claude_code, codex, opencode, github_* |
+| **Files** | docx, pdf, xlsx, powerpoint |
+| **Web** | arxiv, blogwatcher, gif_search, xurl |
+| **Media** | ascii_art, excalidraw, p5js |
+| **Dev** | python_debugging, tdd, systematic_debugging |
+| **Research** | grounded_citations, research_paper_writing |
 
 ---
 
 ## 💻 CLI Interface
-
-### Interactive Chat
 
 ```bash
 cd bahram-agent
 python cli.py
 ```
 
-### CLI Features
-
-- 🎨 **Rich UI** - Beautiful terminal interface
-- 📝 **Markdown Support** - Code highlighting
-- ⚡ **Streaming** - Real-time responses
-- 📊 **Status Display** - Model, session, timing
-- 💾 **Export** - Save conversations
-- 🔄 **Model Switching** - Change models on the fly
-
 ### CLI Commands
-
 | Command | Description |
 |---------|-------------|
 | `/help` | Show help |
 | `/model` | Change model |
 | `/clear` | Clear history |
 | `/status` | Show status |
-| `/history` | Show conversation history |
-| `/export` | Export to markdown |
+| `/history` | View history |
+| `/export` | Export to file |
 | `/quit` | Exit |
 
 ---
 
-## Supported Models
+## 📦 Supported Models
 
 ### Cloud Providers
 
@@ -197,54 +237,129 @@ python cli.py
 
 ---
 
-## Tools
+## 🏗️ Architecture
 
-Bahram has access to these tools:
-
-| Tool | Description |
-|------|-------------|
-| `bash` | Execute shell commands |
-| `read` | Read file contents |
-| `write` | Write to files |
-| `edit` | Edit files with string replacement |
-| `glob` | Find files by pattern |
-| `grep` | Search file contents |
-| `webfetch` | Fetch web pages |
-| `websearch` | Search the web |
-| `task` | Spawn subagents |
-
----
-
-## Commands
-
-```bash
-# Chat
-bahram chat                    # Interactive mode
-bahram chat "message"          # Single message
-bahram chat --model gpt-4o     # Use specific model
-
-# Models
-bahram model --list            # List available models
-bahram model --set gpt-4o      # Set default model
-
-# Skills
-bahram skills --list           # List available skills
-
-# Gateway (for Telegram, Discord, Slack)
-bahram gateway --platform telegram
-bahram gateway --platform discord
-bahram gateway --platform slack
-
-# API Server
-bahram serve --host 0.0.0.0 --port 8000
-
-# Version
-bahram version
+```
+bahram-agent/
+├── bahram/
+│   ├── core/               # Core engine
+│   │   ├── agent.py        # Main agent class
+│   │   ├── engine.py       # Agent loop engine
+│   │   ├── config.py       # Configuration
+│   │   ├── context.py      # Context management
+│   │   ├── compressor.py   # Context compression
+│   │   ├── batch.py        # Batch processing
+│   │   ├── context_files.py # Project context
+│   │   └── trajectory.py   # Trajectory generation
+│   ├── tools/              # 8+ built-in tools
+│   ├── memory/             # Memory systems
+│   │   ├── conversation.py # Chat history
+│   │   ├── episodic.py     # Experiences
+│   │   ├── semantic.py     # Facts/knowledge
+│   │   ├── nudge.py        # Memory nudges
+│   │   └── honcho.py       # User modeling
+│   ├── skills/             # Skill management
+│   ├── platforms/          # Telegram, Discord, Slack
+│   ├── providers/          # 17+ LLM providers
+│   │   ├── anthropic.py
+│   │   ├── openai.py
+│   │   ├── openrouter.py
+│   │   ├── nous.py
+│   │   ├── nvidia.py
+│   │   ├── groq.py
+│   │   ├── deepseek.py
+│   │   ├── mistral.py
+│   │   ├── google.py
+│   │   ├── huggingface.py
+│   │   ├── ollama.py
+│   │   ├── lmstudio.py
+│   │   ├── custom.py
+│   │   └── fallback.py    # Fallback providers
+│   ├── mcp/                # MCP integration
+│   │   ├── client.py       # MCP client
+│   │   └── server.py       # MCP server
+│   ├── plugins/            # Plugin system
+│   │   ├── base.py         # Base plugin
+│   │   └── manager.py      # Plugin manager
+│   ├── hub/                # Skills hub
+│   ├── voice/              # Voice transcription
+│   └── scheduler/          # Task scheduler
+│       └── cron.py         # Cron scheduler
+├── bot.py                  # Telegram bot
+├── cli.py                  # Interactive CLI
+├── config/                 # Configuration
+├── skills/                 # Example skills
+└── tests/                  # Test suite
 ```
 
 ---
 
-## Configuration
+## 📚 All Commands
+
+### Session Management
+| Command | Description |
+|---------|-------------|
+| `/new [name]` | Start new session (alias: /reset) |
+| `/retry` | Retry last message |
+| `/undo [N]` | Back up N user turns |
+| `/title [name]` | Set session title |
+| `/branch [name]` | Branch session (alias: /fork) |
+| `/resume [name]` | Resume named session |
+| `/sessions` | Browse previous sessions |
+
+### Context Control
+| Command | Description |
+|---------|-------------|
+| `/compress [here [N]]` | Compress context (alias: /compact) |
+| `/rollback [number]` | List/restore checkpoints |
+| `/context [all]` | Show context window (alias: /ctx) |
+| `/status` | Show session, model, token info |
+
+### Goal & Automation
+| Command | Description |
+|---------|-------------|
+| `/goal [text\|show\|clear]` | Set standing goal |
+| `/subgoal [text\|remove\|clear]` | Add extra criteria |
+| `/heartbeat [every\|status\|clear]` | Set recurring prompt (alias: /hb) |
+| `/background <prompt>` | Run in background (alias: /bg) |
+| `/agents` | Show active agents (alias: /tasks) |
+| `/queue <prompt>` | Queue prompt (alias: /q) |
+
+### Settings
+| Command | Description |
+|---------|-------------|
+| `/model [model]` | Switch model |
+| `/personality [name]` | Set personality |
+| `/yolo` | Toggle YOLO mode |
+| `/reasoning [level]` | Manage reasoning |
+| `/fast [normal\|fast]` | Toggle fast mode |
+| `/voice [on\|off\|tts]` | Toggle voice mode |
+| `/memory [on\|off]` | Toggle memory approval |
+| `/approvals [mode]` | Set approval mode |
+
+### Skills & Learning
+| Command | Description |
+|---------|-------------|
+| `/learn <what>` | Learn a skill |
+| `/refine [focus]` | Save lessons to memory |
+| `/bundles` | List skill bundles |
+| `/reload_skills` | Re-scan skills |
+| `/init [notes]` | Generate project instructions |
+
+### System
+| Command | Description |
+|---------|-------------|
+| `/help` | Show help |
+| `/commands [page]` | List all commands |
+| `/version` | Show version (alias: /v) |
+| `/update` | Update Bahram Agent |
+| `/debug` | Upload debug report |
+| `/restart` | Restart gateway |
+| `/usage [reset]` | Show token usage |
+
+---
+
+## 🔧 Configuration
 
 Edit `config/config.yaml`:
 
@@ -260,11 +375,17 @@ providers:
     base_url: "https://your-api.com/v1"
     models:
       - "custom-model"
+
+# Enable MCP servers
+mcp_servers:
+  filesystem:
+    type: stdio
+    command: ["npx", "-y", "@modelcontextprotocol/server-filesystem"]
 ```
 
 ---
 
-## Development
+## 🛠️ Development
 
 ```bash
 # Clone repo
@@ -286,38 +407,54 @@ mypy .
 
 ---
 
-## Project Structure
+## 📊 Comparison with Hermes
 
-```
-bahram-agent/
-├── bahram/
-│   ├── core/           # Core agent engine
-│   ├── tools/          # 8 built-in tools
-│   ├── memory/         # 3 memory systems
-│   ├── skills/         # Skill management
-│   ├── platforms/      # Telegram, Discord, Slack
-│   ├── providers/      # 17+ LLM providers
-│   ├── scheduler/      # Task scheduler
-│   └── cli.py          # CLI interface
-├── bot.py              # Telegram bot
-├── cli.py              # Interactive CLI
-├── config/             # Configuration
-├── skills/             # Example skills
-└── tests/              # Test suite
-```
+| Feature | Hermes | Bahram |
+|---------|--------|--------|
+| Core Engine | ✅ | ✅ |
+| 17+ LLM Providers | ✅ | ✅ |
+| 8+ Tools | ✅ | ✅ |
+| Memory Systems | ✅ | ✅ |
+| Skills System | ✅ | ✅ |
+| MCP Integration | ✅ | ✅ |
+| Plugin System | ✅ | ✅ |
+| Skill Hub | ✅ | ✅ |
+| Voice Transcription | ✅ | ✅ |
+| Telegram Bot | ✅ | ✅ |
+| Discord/Slack | ✅ | ✅ |
+| CLI Interface | ✅ | ✅ |
+| Cron Scheduler | ✅ | ✅ |
+| Honcho Modeling | ✅ | ✅ |
+| Memory Nudge | ✅ | ✅ |
+| Context Compression | ✅ | ✅ |
+| Batch Processing | ✅ | ✅ |
+| Fallback Providers | ✅ | ✅ |
+| Context Files | ✅ | ✅ |
+| Trajectory Generation | ✅ | ✅ |
 
 ---
 
-## Inspired By
+## 🙏 Inspired By
 
 - [Hermes Agent](https://github.com/NousResearch/hermes-agent) - Self-improving AI agent by Nous Research
 - [Nous Research](https://nousresearch.com) - Pioneering open-source AI
+- Ancient Persian Heritage - The spirit of Bahram lives on
 
-## License
+---
 
-MIT
+## 📄 License
 
-## Support
+MIT License
+
+---
+
+## 🌟 Support
 
 - GitHub: https://github.com/buoawjbnfikwbuinb/agent
 - Issues: https://github.com/buoawjbnfikwbuinb/agent/issues
+
+---
+
+<p align="center">
+  <b>بهرام زنده باد / Long Live Bahram</b>
+</p>
