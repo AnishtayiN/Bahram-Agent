@@ -169,14 +169,14 @@ Bahram Agent is an advanced self-improving AI agent inspired by [Hermes Agent](h
 ## 🚀 Quick Install
 
 ```bash
-pip install git+https://github.com/buoawjbnfikwbuinb/agent.git
+pip install git+https://github.com/AnishtayiN/Bahram-Agent.git
 ```
 
 Or clone and install:
 
 ```bash
-git clone https://github.com/buoawjbnfikwbuinb/agent.git
-cd agent/bahram-agent
+git clone https://github.com/AnishtayiN/Bahram-Agent.git
+cd Bahram-Agent
 pip install -e .
 ```
 
@@ -250,7 +250,7 @@ TELEGRAM_BOT_TOKEN=your-bot-token-here
 bahram gateway --platform telegram
 
 # Method 2: Using bot.py directly
-cd bahram-agent
+cd Bahram-Agent
 python bot.py
 ```
 
@@ -290,7 +290,7 @@ python bot.py
 ## 💻 CLI Interface
 
 ```bash
-cd bahram-agent
+cd Bahram-Agent
 python cli.py
 ```
 
@@ -532,8 +532,8 @@ mcp_servers:
 
 ```bash
 # Clone repo
-git clone https://github.com/buoawjbnfikwbuinb/agent.git
-cd agent/bahram-agent
+git clone https://github.com/AnishtayiN/Bahram-Agent.git
+cd Bahram-Agent
 
 # Install dev dependencies
 pip install -e ".[dev]"
@@ -637,8 +637,8 @@ MIT License
 
 ## 🌟 Support
 
-- GitHub: https://github.com/buoawjbnfikwbuinb/agent
-- Issues: https://github.com/buoawjbnfikwbuinb/agent/issues
+- GitHub: https://github.com/AnishtayiN/Bahram-Agent
+- Issues: https://github.com/AnishtayiN/Bahram-Agent/issues
 
 ---
 

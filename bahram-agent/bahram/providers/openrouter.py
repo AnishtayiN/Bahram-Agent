@@ -34,8 +34,8 @@ class OpenRouterProvider:
                     headers={
                         "Authorization": f"Bearer {self.api_key}",
                         "Content-Type": "application/json",
-                        "HTTP-Referer": "https://github.com/bahram-agent",
-                        "X-Title": "Bahram Agent",
+"HTTP-Referer": "https://github.com/AnishtayiN/Bahram-Agent",
+                    "X-Title": "Bahram Agent",
                     },
                     json={
                         "model": model or self.model,
@@ -77,8 +77,8 @@ class OpenRouterProvider:
                     headers={
                         "Authorization": f"Bearer {self.api_key}",
                         "Content-Type": "application/json",
-                        "HTTP-Referer": "https://github.com/bahram-agent",
-                        "X-Title": "Bahram Agent",
+"HTTP-Referer": "https://github.com/AnishtayiN/Bahram-Agent",
+                    "X-Title": "Bahram Agent",
                     },
                     json={
                         "model": model or self.model,

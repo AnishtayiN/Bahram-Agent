@@ -41,7 +41,7 @@ python3 -m venv ~/.bahram/venv
 source ~/.bahram/venv/bin/activate
 
 # Install Bahram
-pip install git+https://github.com/buoawjbnfikwbuinb/agent.git
+pip install git+https://github.com/AnishtayiN/Bahram-Agent.git
 
 # Create config directory
 mkdir -p ~/.bahram/config
@@ -77,7 +77,7 @@ python -m venv "$BahramDir\\venv"
 & "$BahramDir\\venv\\Scripts\\Activate.ps1"
 
 # Install Bahram
-pip install git+https://github.com/buoawjbnfikwbuinb/agent.git
+pip install git+https://github.com/AnishtayiN/Bahram-Agent.git
 
 Write-Host "Installation complete!" -ForegroundColor Green
 Write-Host "Run 'bahram chat' to start chatting." -ForegroundColor Cyan

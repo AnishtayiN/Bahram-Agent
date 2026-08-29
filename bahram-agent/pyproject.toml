@@ -60,9 +60,9 @@ dev = [
 bahram = "bahram.cli:app"
 
 [project.urls]
-Homepage = "https://github.com/bahram-agent/bahram-agent"
+Homepage = "https://github.com/AnishtayiN/Bahram-Agent"
 Documentation = "https://bahram-agent.readthedocs.io"
-Repository = "https://github.com/bahram-agent/bahram-agent"
+Repository = "https://github.com/AnishtayiN/Bahram-Agent"
 
 [tool.ruff]
 line-length = 100
