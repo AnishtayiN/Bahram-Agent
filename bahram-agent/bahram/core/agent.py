@@ -14,12 +14,14 @@ from bahram.core.persistence import SessionStore
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class Session:
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
     created_at: float = field(default_factory=time.time)
     updated_at: float = field(default_factory=time.time)
     metadata: dict[str, Any] = field(default_factory=dict)
+
 
 class Agent:
     def __init__(self, config: Config | None = None, config_path: str | None = None) -> None:
@@ -37,6 +39,19 @@ class Agent:
         self._memory = None
         self._skills = None
         self._setup_logging()
+
+        self._planner = None
+        self._verification_engine = None
+        self._replanner = None
+        self._plan_executor = None
+        self._subagent_engine = None
+        self._job_engine = None
+        self._recovery_manager = None
+        self._learning_engine = None
+        self._skill_lifecycle = None
+        self._budget_manager = None
+        self._event_tracker = None
+
         logger.info(f"Bahram Agent v{self.config.agent.version} initialized")
 
     def _setup_logging(self) -> None:
@@ -52,7 +67,64 @@ class Agent:
         await self._init_tools()
         await self._init_memory()
         await self._init_skills()
+        self._init_autonomy()
+        self._init_provider_failover()
         logger.info("Bahram Agent started successfully")
+
+    def _init_autonomy(self) -> None:
+        from bahram.autonomy.planner import Planner
+        from bahram.autonomy.verification import VerificationEngine
+        from bahram.autonomy.replanner import Replanner
+        from bahram.autonomy.executor import PlanExecutor
+        from bahram.autonomy.subagent import SubagentEngine
+        from bahram.autonomy.jobs import JobEngine
+        from bahram.autonomy.recovery import RecoveryManager
+        from bahram.autonomy.learning import LearningEngine
+        from bahram.autonomy.skill_lifecycle import SkillLifecycle
+        from bahram.autonomy.budget import BudgetManager
+        from bahram.autonomy.events import EventTracker
+
+        self._event_tracker = EventTracker()
+        self._budget_manager = BudgetManager()
+        self._verification_engine = VerificationEngine()
+        self._recovery_manager = RecoveryManager()
+        self._learning_engine = LearningEngine()
+        self._skill_lifecycle = SkillLifecycle(self._learning_engine)
+
+        self._planner = Planner()
+        self._replanner = Replanner(
+            self._planner, self._verification_engine, max_replan_attempts=3
+        )
+        self._plan_executor = PlanExecutor(
+            engine=self.engine,
+            planner=self._planner,
+            verification_engine=self._verification_engine,
+            replanner=self._replanner,
+            budget_manager=self._budget_manager,
+            event_tracker=self._event_tracker,
+        )
+        self._subagent_engine = SubagentEngine(self.engine)
+        self._job_engine = JobEngine()
+
+        self._planner.set_provider(self._get_first_provider())
+        logger.info("Autonomy layer initialized")
+
+    def _init_provider_failover(self) -> None:
+        providers = list(self.engine.providers.values())
+        if len(providers) >= 2:
+            from bahram.providers.fallback import FallbackProvider
+            primary = providers[0]
+            fallbacks = providers[1:]
+            fallback_provider = FallbackProvider(primary, fallbacks)
+            self.engine.providers["__fallback__"] = fallback_provider
+            logger.info(
+                f"Provider failover configured: primary={primary.__class__.__name__}, "
+                f"fallbacks={[f.__class__.__name__ for f in fallbacks]}"
+            )
+
+    def _get_first_provider(self) -> Any:
+        providers = list(self.engine.providers.values())
+        return providers[0] if providers else None
 
     async def stop(self) -> None:
         logger.info("Stopping Bahram Agent...")
@@ -102,7 +174,11 @@ class Agent:
         logger.info(f"Deleted session: {session_id}")
 
     async def run(
-        self, message: str, session_id: str | None = None, model: str | None = None,
+        self,
+        message: str,
+        session_id: str | None = None,
+        model: str | None = None,
+        use_planning: bool = False,
     ) -> AgentResponse:
         if session_id is None:
             session = self.create_session()
@@ -130,7 +206,28 @@ class Agent:
         self._store.add_message(session_id, user_msg)
 
         messages = ctx.get_messages()
-        response = await self.engine.run(messages, model=model, session_id=session_id)
+
+        if use_planning and self._planner:
+            run_id = f"run_{uuid.uuid4().hex[:8]}"
+            plan = await self._planner.create_plan(
+                goal=message,
+                run_id=run_id,
+                context=memories,
+                available_tools=list(self.engine.tools.keys()),
+            )
+
+            plan = await self._plan_executor.execute_plan(
+                plan, messages, model=model, session_id=session_id, run_id=run_id,
+            )
+
+            summary = self._summarize_plan_result(plan)
+            response = AgentResponse(
+                content=summary,
+                state=plan.status.value,
+                metadata={"plan_id": plan.id, "plan_status": plan.status.value},
+            )
+        else:
+            response = await self.engine.run(messages, model=model, session_id=session_id)
 
         assistant_msg = Message(
             role=MessageRole.ASSISTANT, content=response.content,
@@ -148,6 +245,107 @@ class Agent:
         self, message: str, session_id: str | None = None, model: str | None = None,
     ) -> AgentResponse:
         return await self.run(message, session_id, model)
+
+    async def run_with_plan(
+        self,
+        message: str,
+        session_id: str | None = None,
+        model: str | None = None,
+    ) -> AgentResponse:
+        return await self.run(message, session_id, model, use_planning=True)
+
+    async def delegate_to_subagent(
+        self,
+        objective: str,
+        parent_run_id: str = "",
+        allowed_tools: list[str] | None = None,
+        context: str = "",
+        model: str | None = None,
+    ) -> Any:
+        if not self._subagent_engine:
+            raise RuntimeError("Subagent engine not initialized")
+
+        return await self._subagent_engine.spawn(
+            parent_run_id=parent_run_id or f"run_{uuid.uuid4().hex[:8]}",
+            objective=objective,
+            allowed_tools=allowed_tools or [],
+            context=context,
+            model=model,
+        )
+
+    async def create_background_job(
+        self,
+        job_type: str,
+        session_id: str,
+        payload: dict[str, Any] | None = None,
+    ) -> Any:
+        if not self._job_engine:
+            raise RuntimeError("Job engine not initialized")
+
+        return await self._job_engine.enqueue(
+            job_type=job_type,
+            run_id=f"run_{uuid.uuid4().hex[:8]}",
+            session_id=session_id,
+            payload=payload,
+        )
+
+    async def analyze_and_learn(
+        self,
+        run_id: str,
+        goal: str,
+        trajectory_steps: list[dict[str, Any]],
+        tool_results: list[dict[str, Any]],
+        success: bool,
+    ) -> dict[str, Any]:
+        if not self._learning_engine:
+            return {"error": "Learning engine not initialized"}
+
+        analysis = await self._learning_engine.analyze_outcome(
+            run_id=run_id,
+            goal=goal,
+            trajectory_steps=trajectory_steps,
+            tool_results=tool_results,
+            success=success,
+        )
+
+        lessons = analysis.get("lessons_extracted", [])
+        if len(lessons) >= 2:
+            skill = await self._skill_lifecycle.generate_from_lessons(lessons, goal)
+            if skill:
+                analysis["generated_skill"] = skill.to_dict()
+
+        return analysis
+
+    def checkpoint_run(self, run_id: str, plan: Any, context_summary: str = "") -> Any:
+        if not self._recovery_manager:
+            raise RuntimeError("Recovery manager not initialized")
+
+        return self._recovery_manager.checkpoint(
+            run_id=run_id, plan=plan, context_summary=context_summary,
+        )
+
+    def _summarize_plan_result(self, plan: Any) -> str:
+        progress = plan.get_progress()
+        completed = progress["completed"]
+        total = progress["total"]
+
+        lines = [
+            f"Plan completed: {plan.goal}",
+            f"Status: {plan.status.value}",
+            f"Steps: {completed}/{total} completed",
+            f"Replans: {plan.replan_count}",
+        ]
+
+        if plan.strategy:
+            lines.append(f"Strategy: {plan.strategy}")
+
+        for step in plan.get_completed_steps():
+            lines.append(f"  ✓ {step.objective}")
+
+        for step in plan.get_failed_steps():
+            lines.append(f"  ✗ {step.objective}: {step.failure_reason}")
+
+        return "\n".join(lines)
 
     async def chat_streaming(
         self, message: str, session_id: str | None = None, model: str | None = None,

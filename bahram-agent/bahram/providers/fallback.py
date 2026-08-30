@@ -16,6 +16,9 @@ class FallbackProvider(BaseProvider):
         self.fallbacks = fallbacks or []
         self._current = primary
 
+    async def _call_api(self, messages, system_msg=None, tools=None, model=None, temperature=0.7, max_tokens=4096, **kwargs):
+        raise NotImplementedError("FallbackProvider delegates to child providers via complete()")
+
     async def complete(
         self,
         messages: list[Message],
