@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import asyncio
-import inspect
 import json
 import logging
+import os
 import time
 import uuid
 from dataclasses import dataclass, field
@@ -249,6 +249,19 @@ class AgentEngine:
     def set_event_tracker(self, event_tracker: Any) -> None:
         self._event_tracker = event_tracker
 
+    def set_trajectory_dir(self, trajectory_dir: str) -> None:
+        self._trajectory_dir = trajectory_dir
+
+    def _persist_trajectory(self, trajectory: Trajectory) -> None:
+        trajectory_dir = getattr(self, '_trajectory_dir', 'data/trajectories')
+        try:
+            os.makedirs(trajectory_dir, exist_ok=True)
+            path = os.path.join(trajectory_dir, f"{trajectory.run_id}.json")
+            with open(path, 'w') as f:
+                json.dump(trajectory.to_dict(), f, indent=2)
+        except Exception as e:
+            logger.warning(f"Failed to persist trajectory: {e}")
+
     def register_provider(self, name: str, provider: LLMProvider) -> None:
         self.providers[name] = provider
         logger.info(f"Registered provider: {name}")
@@ -347,12 +360,14 @@ class AgentEngine:
                 trajectory.status = "cancelled"
                 trajectory.finished_at = time.time()
                 trajectory.total_duration_ms = (trajectory.finished_at - trajectory.started_at) * 1000
+                self._persist_trajectory(trajectory)
                 return AgentResponse(content="Operation cancelled.", state=RunState.CANCELLED)
 
             if time.time() - start_time > run_cfg.max_runtime_seconds:
                 trajectory.status = "timeout"
                 trajectory.finished_at = time.time()
                 trajectory.total_duration_ms = (trajectory.finished_at - trajectory.started_at) * 1000
+                self._persist_trajectory(trajectory)
                 return AgentResponse(content="Operation timed out. Please try a more specific request.", state=RunState.TIMEOUT)
 
             if self._budget_manager is not None:
@@ -362,6 +377,10 @@ class AgentEngine:
                     logger.warning(f"Budget exceeded: {reason}")
                     if self._event_tracker is not None and hasattr(self._event_tracker, 'emit_budget_exceeded'):
                         self._event_tracker.emit_budget_exceeded(session_id, run_id, {"reason": reason})
+                    trajectory.status = "budget_exceeded"
+                    trajectory.finished_at = time.time()
+                    trajectory.total_duration_ms = (trajectory.finished_at - trajectory.started_at) * 1000
+                    self._persist_trajectory(trajectory)
                     return AgentResponse(
                         content=f"Budget limit reached: {reason}",
                         state=RunState.COMPLETED,
@@ -385,10 +404,12 @@ class AgentEngine:
                         logger.error(f"Fallback also failed: {e2}")
                         trajectory.status = "error"
                         trajectory.finished_at = time.time()
+                        self._persist_trajectory(trajectory)
                         return AgentResponse(content=f"I encountered an error communicating with the model: {e2}", state=RunState.FAILED)
                 else:
                     trajectory.status = "error"
                     trajectory.finished_at = time.time()
+                    self._persist_trajectory(trajectory)
                     return AgentResponse(content=f"I encountered an error communicating with the model: {e}", state=RunState.FAILED)
 
             if self._budget_manager is not None:
@@ -399,6 +420,7 @@ class AgentEngine:
                     run_id,
                     input_tokens=usage_tokens // 2,
                     output_tokens=usage_tokens // 2,
+                    model=model or "",
                 )
 
             if not response.tool_calls:
@@ -406,7 +428,11 @@ class AgentEngine:
                 trajectory.finished_at = time.time()
                 trajectory.total_duration_ms = (trajectory.finished_at - trajectory.started_at) * 1000
                 trajectory.final_content = response.content
-                return AgentResponse(content=response.content, state=RunState.COMPLETED, metadata=response.metadata)
+                self._persist_trajectory(trajectory)
+                return AgentResponse(
+                    content=response.content, state=RunState.COMPLETED,
+                    metadata={"trajectory": trajectory.to_dict()},
+                )
 
             tool_results_data = []
             for tool_call in response.tool_calls:
@@ -416,6 +442,7 @@ class AgentEngine:
                     trajectory.status = "max_tool_calls"
                     trajectory.finished_at = time.time()
                     trajectory.total_duration_ms = (trajectory.finished_at - trajectory.started_at) * 1000
+                    self._persist_trajectory(trajectory)
                     return AgentResponse(
                         content=f"Reached maximum tool calls ({run_cfg.max_tool_calls}). Here's what I've done so far.",
                         state=RunState.COMPLETED,
@@ -465,6 +492,7 @@ class AgentEngine:
         trajectory.status = "max_iterations"
         trajectory.finished_at = time.time()
         trajectory.total_duration_ms = (trajectory.finished_at - trajectory.started_at) * 1000
+        self._persist_trajectory(trajectory)
         return AgentResponse(
             content="I've reached the maximum number of iterations. Let me summarize what I've accomplished so far.",
             state=RunState.COMPLETED,

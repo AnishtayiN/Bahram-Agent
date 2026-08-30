@@ -554,9 +554,14 @@ class Agent:
 
     async def execute_command(self, command: str, **kwargs: Any) -> Any:
         logger.info(f"Executing command: {command}")
-        return await self.engine.execute_tool(ToolCall(
+        if self.engine._tool_executor is None:
+            from bahram.core.engine import ToolExecutor
+            self.engine._tool_executor = ToolExecutor(self.engine.tools, self.engine._approval_system)
+        tc = ToolCall(
             id=f"cmd_{int(time.time() * 1000)}", name=command, arguments=kwargs,
-        ))
+        )
+        result = await self.engine._tool_executor.execute(tc)
+        return {"content": result.content, "success": result.success, "error": result.error}
 
 
 class _MCPToolAdapter:
