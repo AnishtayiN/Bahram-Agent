@@ -92,7 +92,7 @@ JobHandler = Callable[..., Coroutine[Any, Any, str]]
 
 
 class JobEngine:
-    def __init__(self, data_dir: str = "data/jobs", max_concurrent: int = 3) -> None:
+    def __init__(self, data_dir: str = "data/jobs", max_concurrent: int = 3, event_tracker: Any = None) -> None:
         self._data_dir = Path(data_dir)
         self._data_dir.mkdir(parents=True, exist_ok=True)
         self._db_path = self._data_dir / "jobs.db"
@@ -101,6 +101,7 @@ class JobEngine:
         self._running_tasks: dict[str, asyncio.Task] = {}
         self._max_concurrent = max_concurrent
         self._active_count = 0
+        self._event_tracker = event_tracker
         self._init_db()
         self._load_pending_jobs()
 
@@ -223,6 +224,10 @@ class JobEngine:
         )
         self._save_job(job)
         logger.info(f"Enqueued job {job.id} (type={job_type}, priority={priority.value})")
+        if self._event_tracker is not None and hasattr(self._event_tracker, 'emit_job_started'):
+            self._event_tracker.emit_job_started(
+                job.session_id, job.run_id, job.id, {"type": job_type, "priority": priority.value}
+            )
         return job
 
     async def start_job(self, job: Job) -> None:
@@ -264,6 +269,10 @@ class JobEngine:
             job.finished_at = time.time()
             self._save_job(job)
             logger.info(f"Job {job.id} completed successfully")
+            if self._event_tracker is not None and hasattr(self._event_tracker, 'emit_job_checkpointed'):
+                self._event_tracker.emit_job_checkpointed(
+                    job.session_id, job.run_id, job.id, {"status": "completed"}
+                )
 
         except Exception as e:
             logger.error(f"Job {job.id} failed: {e}")

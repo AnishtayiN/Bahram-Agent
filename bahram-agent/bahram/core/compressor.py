@@ -71,8 +71,15 @@ class ContextCompressor:
         target_tokens: int,
     ) -> str:
         ""
-        full_context = json.dumps(messages)
-        prompt = f""
+        full_context = json.dumps(messages, default=str)
+        msg_count = len(messages)
+        prompt = (
+            f"Compress the following conversation ({msg_count} messages) into a concise summary. "
+            f"Preserve all key information, decisions, tool calls, and results. "
+            f"Target approximately {target_tokens} tokens. "
+            f"Return ONLY the compressed summary, no preamble.\n\n"
+            f"Conversation:\n{full_context[:12000]}"
+        )
 
         try:
             response = await model_fn([{"role": "user", "content": prompt}])

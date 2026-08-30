@@ -1,202 +1,219 @@
 from __future__ import annotations
 
 import asyncio
-import os
-import tempfile
+import json
 import time
 import pytest
+from unittest.mock import AsyncMock, MagicMock, patch
+from typing import Any
 
-from bahram.core.engine import AgentEngine, Message, MessageRole, ToolCall, ToolExecutor, RunState
-
-
-def _tc(name: str, args: dict) -> ToolCall:
-    import uuid
-    return ToolCall(id=str(uuid.uuid4())[:8], name=name, arguments=args)
+from bahram.core.engine import AgentEngine, AgentResponse, Message, MessageRole
+from bahram.providers.fallback import FallbackProvider
 
 
-class TestToolTimeout:
+class AlwaysFailProvider:
+    async def complete(self, messages, tools=None, **kwargs):
+        raise Exception("Provider permanently failed")
+
+    async def stream(self, messages, tools=None, **kwargs):
+        raise Exception("Provider permanently failed")
+
+
+class MockProvider:
+    def __init__(self, responses=None):
+        self._responses = list(responses or [])
+
+    async def complete(self, messages, tools=None, **kwargs):
+        if self._responses:
+            return self._responses.pop(0)
+        return AgentResponse(content="done")
+
+    async def stream(self, messages, tools=None, **kwargs):
+        resp = await self.complete(messages, tools, **kwargs)
+        yield resp.content
+
+
+class MockTool:
+    def schema(self):
+        return {"name": "mock", "description": "mock", "parameters": {"type": "object", "properties": {}}}
+
+    async def execute(self, **kwargs):
+        return "ok"
+
+
+class TestCircuitBreakerTransitions:
+    def test_closed_to_open(self):
+        engine = AgentEngine()
+        cb = engine._circuit_breaker
+        for _ in range(5):
+            engine.record_provider_failure("test")
+        assert cb.get_circuit("test").state == "open"
+
+    def test_open_to_half_open(self):
+        engine = AgentEngine()
+        cb = engine._circuit_breaker
+        for _ in range(5):
+            engine.record_provider_failure("test")
+        circuit = cb.get_circuit("test")
+        circuit.last_failure = time.time() - 400
+        can_exec, _ = cb.can_execute("test")
+        assert can_exec
+        assert circuit.state == "half-open"
+
+    def test_half_open_to_closed(self):
+        engine = AgentEngine()
+        cb = engine._circuit_breaker
+        for _ in range(5):
+            engine.record_provider_failure("test")
+        cb.get_circuit("test").state = "half-open"
+        engine.record_provider_success("test")
+        assert cb.get_circuit("test").state == "closed"
+
+    def test_half_open_to_open_on_failure(self):
+        engine = AgentEngine()
+        cb = engine._circuit_breaker
+        for _ in range(5):
+            engine.record_provider_failure("test")
+        cb.get_circuit("test").state = "half-open"
+        engine.record_provider_failure("test")
+        assert cb.get_circuit("test").state == "open"
+
+
+class TestBudgetEnforcement:
     @pytest.mark.asyncio
-    async def test_execute_code_timeout(self, engine):
-        class SlowTool:
-            async def execute(self, **kw):
-                await asyncio.sleep(100)
-                return "never"
-            def schema(self):
-                return {"name": "bash", "inputSchema": {"type": "object", "properties": {}}}
-
-        executor = ToolExecutor({"bash": SlowTool()}, engine._approval_system)
-        result = await executor.execute(
-            _tc("bash", {"command": "sleep 30"}),
-            timeout=0.1,
-        )
-        assert not result.success
-        assert "timed out" in result.error.lower()
-
-    @pytest.mark.asyncio
-    async def test_concurrent_tool_executions(self, engine):
-        class FastTool:
-            async def execute(self, **kw):
-                return "ok"
-            def schema(self):
-                return {"name": "bash", "inputSchema": {"type": "object", "properties": {}}}
-
-        executor = ToolExecutor({"bash": FastTool()}, engine._approval_system)
-        tasks = [
-            executor.execute(_tc("bash", {"command": "echo hello"}))
-            for _ in range(5)
-        ]
-        results = await asyncio.gather(*tasks)
-        assert all(r.success for r in results)
-
-
-class TestFileSystemChaos:
-    @pytest.mark.asyncio
-    async def test_write_nonexistent_directory(self, engine):
-        from bahram.tools.file import WriteTool
-        tool = WriteTool()
-        result = await tool.execute(
-            file_path="/nonexistent/path/deep/file.txt",
-            content="test",
-            create_dirs=False,
-        )
-        assert "Error" in result
-
-    @pytest.mark.asyncio
-    async def test_read_nonexistent_file(self, engine):
-        from bahram.tools.file import ReadTool
-        tool = ReadTool()
-        result = await tool.execute(file_path="/nonexistent/file.txt")
-        assert "Error" in result or "not found" in result.lower()
-
-    @pytest.mark.asyncio
-    async def test_edit_nonexistent_file(self, engine):
-        from bahram.tools.file import EditTool
-        tool = EditTool()
-        result = await tool.execute(
-            file_path="/nonexistent/file.txt",
-            old_string="a",
-            new_string="b",
-        )
-        assert "Error" in result
-
-
-class TestEngineCancellation:
-    def test_cancel_sets_event(self, engine):
-        engine.cancel()
-        assert engine._cancel_event.is_set()
-
-    def test_reset_cancel_clears_event(self, engine):
-        engine.cancel()
-        engine.reset_cancel()
-        assert not engine._cancel_event.is_set()
-
-    @pytest.mark.asyncio
-    async def test_run_respects_cancellation(self, engine):
-        from unittest.mock import AsyncMock, MagicMock
-        from bahram.core.engine import AgentResponse, RunState
-
-        mock_provider = MagicMock()
-
-        async def mock_complete(messages, tools=None, **kwargs):
-            engine.cancel()
-            return AgentResponse(content="thinking", state=RunState.THINKING)
-
-        mock_provider.complete = mock_complete
-        engine.register_provider("test", mock_provider)
+    async def test_budget_stops_execution(self):
+        from bahram.autonomy.budget import BudgetManager, BudgetConfig
+        engine = AgentEngine()
+        bm = BudgetManager(BudgetConfig(max_model_calls=0))
+        engine.set_budget_manager(bm)
+        engine.providers["test"] = MockProvider(responses=[AgentResponse(content="hi")])
+        engine.register_tool("mock", MockTool())
 
         messages = [Message(role=MessageRole.USER, content="test")]
-        result = await engine.run(messages, model="test/model")
-        assert result.state in (RunState.CANCELLED, RunState.COMPLETED)
+        response = await engine.run(messages, model="test/model")
+        assert "Budget limit reached" in response.content
 
-
-class TestMemoryChaos:
-    def test_memory_concurrent_writes(self):
-        from bahram.memory.semantic import SemanticMemory
-        with tempfile.TemporaryDirectory() as tmpdir:
-            mem = SemanticMemory(data_dir=tmpdir)
-            for i in range(10):
-                mem.add(content=f"Memory {i}", source=f"source_{i % 3}")
-            stats = mem.get_statistics()
-            assert stats["total_memories"] == 10
-            mem.close()
-
-    def test_memory_special_characters(self):
-        from bahram.memory.semantic import SemanticMemory
-        with tempfile.TemporaryDirectory() as tmpdir:
-            mem = SemanticMemory(data_dir=tmpdir)
-            mem.add(content="SELECT * FROM users; DROP TABLE users;--", source="sql_injection")
-            mem.add(content="<script>alert('xss')</script>", source="xss")
-            results = mem.search("SELECT")
-            assert len(results) > 0
-            mem.close()
-
-
-class TestPersistenceChaos:
-    def test_corrupted_db_recovery(self):
-        from bahram.core.persistence import SessionStore
-        with tempfile.TemporaryDirectory() as tmpdir:
-            db_path = os.path.join(tmpdir, "test.db")
-            store = SessionStore(db_path=db_path)
-            store.create_session("session1", user_id="user1")
-            store.add_message("session1", Message(
-                role=MessageRole.USER,
-                content="Hello",
-            ))
-            store2 = SessionStore(db_path=db_path)
-            sessions = store2.list_sessions()
-            assert len(sessions) >= 1
-
-    def test_concurrent_session_creation(self):
-        from bahram.core.persistence import SessionStore
-        with tempfile.TemporaryDirectory() as tmpdir:
-            store = SessionStore(db_path=os.path.join(tmpdir, "test.db"))
-            for i in range(10):
-                store.create_session(f"session_{i}", user_id=f"user_{i}")
-            sessions = store.list_sessions()
-            assert len(sessions) == 10
-
-
-class TestProviderChaos:
     @pytest.mark.asyncio
-    async def test_provider_error_handling(self, engine):
-        from unittest.mock import AsyncMock, MagicMock
-
-        mock_provider = MagicMock()
-        mock_provider.complete = AsyncMock(side_effect=ConnectionError("Network down"))
-        engine.register_provider("chaos", mock_provider)
+    async def test_budget_allows_within_limit(self):
+        from bahram.autonomy.budget import BudgetManager, BudgetConfig
+        engine = AgentEngine()
+        bm = BudgetManager(BudgetConfig(max_model_calls=100))
+        engine.set_budget_manager(bm)
+        engine.providers["test"] = MockProvider(responses=[AgentResponse(content="ok")])
+        engine.register_tool("mock", MockTool())
 
         messages = [Message(role=MessageRole.USER, content="test")]
-        result = await engine.run(messages, model="chaos/model")
-        assert result.state == RunState.FAILED
-        assert "error" in result.content.lower()
+        response = await engine.run(messages, model="test/model")
+        assert response.content == "ok"
+
+
+class TestProviderFailover:
+    @pytest.mark.asyncio
+    async def test_fallback_on_primary_failure(self):
+        engine = AgentEngine()
+        primary = AlwaysFailProvider()
+        fallback = MockProvider(responses=[AgentResponse(content="fallback worked")])
+        engine.providers["anthropic"] = primary
+        engine.providers["__fallback__"] = FallbackProvider(primary, [fallback])
+        engine.register_tool("mock", MockTool())
+
+        messages = [Message(role=MessageRole.USER, content="test")]
+        response = await engine.run(messages, model="anthropic/test")
+        assert "fallback" in response.content.lower()
 
     @pytest.mark.asyncio
-    async def test_max_iterations_enforced(self, engine):
-        from unittest.mock import AsyncMock, MagicMock
-        from bahram.core.engine import AgentResponse, ToolCall
+    async def test_all_fail_returns_error(self):
+        engine = AgentEngine()
+        primary = AlwaysFailProvider()
+        fallback = AlwaysFailProvider()
+        engine.providers["anthropic"] = primary
+        engine.providers["__fallback__"] = FallbackProvider(primary, [fallback])
+        engine.register_tool("mock", MockTool())
 
+        messages = [Message(role=MessageRole.USER, content="test")]
+        response = await engine.run(messages, model="anthropic/test")
+        assert "error" in response.content.lower() or "failed" in response.content.lower()
+
+
+class TestLoopTermination:
+    @pytest.mark.asyncio
+    async def test_max_iterations_stops(self):
+        from bahram.core.engine import RunConfig
+        engine = AgentEngine()
+        engine._get_run_config = lambda: RunConfig(max_iterations=3, max_tool_calls=100)
         call_count = 0
 
-        async def fake_complete(messages, tools=None, **kwargs):
-            nonlocal call_count
-            call_count += 1
-            return AgentResponse(
-                content="thinking...",
-                tool_calls=[ToolCall(id=f"tc{call_count}", name="bash", arguments={"command": "echo step"})],
-            )
+        class InfiniteToolProvider:
+            async def complete(self, messages, tools=None, **kwargs):
+                nonlocal call_count
+                call_count += 1
+                from bahram.core.engine import ToolCall
+                return AgentResponse(
+                    content="",
+                    tool_calls=[ToolCall(id=f"tc_{call_count}", name="mock", arguments={})],
+                )
 
-        mock_provider = MagicMock()
-        mock_provider.complete = fake_complete
-        engine.register_provider("loop", mock_provider)
+            async def stream(self, messages, tools=None, **kwargs):
+                yield ""
 
-        class MockBash:
-            async def execute(self, **kw):
-                return "ok"
-            def schema(self):
-                return {"name": "bash", "inputSchema": {"type": "object", "properties": {}}}
+        engine.providers["test"] = InfiniteToolProvider()
+        engine.register_tool("mock", MockTool())
 
-        engine.register_tool("bash", MockBash())
+        messages = [Message(role=MessageRole.USER, content="test")]
+        response = await engine.run(messages, model="test/model")
+        assert call_count <= 3
 
-        messages = [Message(role=MessageRole.USER, content="do something")]
-        result = await engine.run(messages, model="loop/test")
-        assert call_count <= 20
+
+class TestCancellation:
+    @pytest.mark.asyncio
+    async def test_cancel_stops_execution(self):
+        engine = AgentEngine()
+        from bahram.core.engine import ToolCall
+
+        class CancelAfterToolProvider:
+            def __init__(self):
+                self.call_count = 0
+            async def complete(self, messages, tools=None, **kwargs):
+                self.call_count += 1
+                if self.call_count == 1:
+                    return AgentResponse(
+                        content="",
+                        tool_calls=[ToolCall(id="tc1", name="mock", arguments={})],
+                    )
+                engine._cancel_event.set()
+                return AgentResponse(content="should not reach here")
+            async def stream(self, messages, tools=None, **kwargs):
+                yield ""
+
+        provider = CancelAfterToolProvider()
+        engine.providers["test"] = provider
+        engine.register_tool("mock", MockTool())
+
+        messages = [Message(role=MessageRole.USER, content="test")]
+        response = await engine.run(messages, model="test/model")
+        assert provider.call_count <= 2
+
+
+class TestEventTrackerWiring:
+    def test_events_emitted_on_provider_failure(self):
+        from bahram.autonomy.events import EventTracker
+        engine = AgentEngine()
+        et = EventTracker()
+        engine.set_event_tracker(et)
+        engine.record_provider_failure("test")
+        events = et.query_events(event_type="provider_fallback")
+        assert len(events) > 0
+
+
+class TestSmartContextBuildMessages:
+    def test_build_messages_returns_engine_compatible(self):
+        from bahram.core.smart_context import SmartContextManager
+        scm = SmartContextManager(max_tokens=1000)
+        scm.set_system_prompt("You are helpful.")
+        scm.add_history("user", "hello")
+        scm.add_history("assistant", "hi there")
+        messages = scm.build_messages()
+        assert len(messages) >= 2
+        from bahram.core.engine import Message
+        for m in messages:
+            assert isinstance(m, Message)

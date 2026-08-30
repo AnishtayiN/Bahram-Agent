@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import inspect
 import json
 import logging
 import time
@@ -10,6 +11,11 @@ from enum import Enum
 from typing import Any, AsyncIterator, Protocol
 
 logger = logging.getLogger(__name__)
+
+try:
+    from bahram.platforms.circuit_breaker import CircuitBreaker
+except ImportError:
+    CircuitBreaker = None  # type: ignore[assignment,misc]
 
 class MessageRole(str, Enum):
     SYSTEM = "system"
@@ -216,6 +222,11 @@ class AgentEngine:
         self._cancel_event = asyncio.Event()
         self._approval_system: Any = None
         self._tool_executor: ToolExecutor | None = None
+        self._circuit_breaker: Any = None
+        self._budget_manager: Any = None
+        self._event_tracker: Any = None
+        if CircuitBreaker is not None:
+            self._circuit_breaker = CircuitBreaker()
         self._init_approval_system()
 
     def _init_approval_system(self) -> None:
@@ -225,6 +236,12 @@ class AgentEngine:
         except Exception as e:
             logger.warning(f"Failed to init approval system: {e}")
             self._approval_system = None
+
+    def set_budget_manager(self, budget_manager: Any) -> None:
+        self._budget_manager = budget_manager
+
+    def set_event_tracker(self, event_tracker: Any) -> None:
+        self._event_tracker = event_tracker
 
     def register_provider(self, name: str, provider: LLMProvider) -> None:
         self.providers[name] = provider
@@ -237,9 +254,38 @@ class AgentEngine:
 
     def get_provider(self, model: str) -> LLMProvider:
         provider_name = model.split("/")[0] if "/" in model else "anthropic"
-        if provider_name not in self.providers:
-            raise ValueError(f"Provider '{provider_name}' not registered")
-        return self.providers[provider_name]
+
+        if provider_name in self.providers:
+            if self._circuit_breaker is not None:
+                can_exec, reason = self._circuit_breaker.can_execute(provider_name)
+                if not can_exec:
+                    logger.warning(f"Circuit open for {provider_name}: {reason}")
+                    return self._get_fallback_provider(provider_name)
+            return self.providers[provider_name]
+
+        return self._get_fallback_provider(provider_name)
+
+    def _get_fallback_provider(self, failed_provider: str) -> LLMProvider:
+        if "__fallback__" in self.providers:
+            logger.info(f"Using fallback provider (primary '{failed_provider}' unavailable)")
+            return self.providers["__fallback__"]
+        if self.providers:
+            first = next(iter(self.providers.values()))
+            logger.info(f"No fallback registered, using first available provider")
+            return first
+        raise ValueError(f"Provider '{failed_provider}' not registered and no fallback available")
+
+    def record_provider_success(self, provider_name: str) -> None:
+        if self._circuit_breaker is not None:
+            self._circuit_breaker.record_success(provider_name)
+
+    def record_provider_failure(self, provider_name: str) -> None:
+        if self._circuit_breaker is not None:
+            self._circuit_breaker.record_failure(provider_name)
+        if self._event_tracker is not None and hasattr(self._event_tracker, 'emit_provider_fallback'):
+            self._event_tracker.emit_provider_fallback(
+                "", "", {"provider": provider_name, "reason": "circuit_breaker", "message": f"Provider {provider_name} failed"}
+            )
 
     def get_tools_schema(self) -> list[dict[str, Any]]:
         schemas = []
@@ -270,6 +316,7 @@ class AgentEngine:
     ) -> AgentResponse:
         run_cfg = self._get_run_config()
         model = model or (self.config.agent.model if self.config else "anthropic/claude-sonnet-4-20250514")
+        provider_name = model.split("/")[0] if "/" in model else "anthropic"
         provider = self.get_provider(model)
         tools_schema = self.get_tools_schema()
         start_time = time.time()
@@ -278,7 +325,7 @@ class AgentEngine:
 
         trajectory = Trajectory(
             run_id=run_id, session_id=session_id, goal="",
-            model=model, provider=model.split("/")[0] if "/" in model else "unknown",
+            model=model, provider=provider_name,
         )
 
         if messages:
@@ -302,17 +349,51 @@ class AgentEngine:
                 trajectory.total_duration_ms = (trajectory.finished_at - trajectory.started_at) * 1000
                 return AgentResponse(content="Operation timed out. Please try a more specific request.", state=RunState.TIMEOUT)
 
+            if self._budget_manager is not None:
+                budget_result = self._budget_manager.check_budget(run_id)
+                if not budget_result.get("can_continue", True):
+                    reason = "Budget limit exceeded: " + ", ".join(budget_result.get("exceeded", []))
+                    logger.warning(f"Budget exceeded: {reason}")
+                    if self._event_tracker is not None and hasattr(self._event_tracker, 'emit_budget_exceeded'):
+                        self._event_tracker.emit_budget_exceeded(session_id, run_id, {"reason": reason})
+                    return AgentResponse(
+                        content=f"Budget limit reached: {reason}",
+                        state=RunState.COMPLETED,
+                    )
+
             logger.debug(f"Agent iteration {iteration + 1}/{run_cfg.max_iterations}")
             step_start = time.time()
             step_id = f"step_{iteration}"
 
             try:
                 response = await provider.complete(messages, tools_schema if tools_schema else None)
+                self.record_provider_success(provider_name)
             except Exception as e:
                 logger.error(f"Provider error: {e}")
-                trajectory.status = "error"
-                trajectory.finished_at = time.time()
-                return AgentResponse(content=f"I encountered an error communicating with the model: {e}", state=RunState.FAILED)
+                self.record_provider_failure(provider_name)
+                fallback_provider = self._get_fallback_provider(provider_name)
+                if fallback_provider is not provider:
+                    try:
+                        response = await fallback_provider.complete(messages, tools_schema if tools_schema else None)
+                    except Exception as e2:
+                        logger.error(f"Fallback also failed: {e2}")
+                        trajectory.status = "error"
+                        trajectory.finished_at = time.time()
+                        return AgentResponse(content=f"I encountered an error communicating with the model: {e2}", state=RunState.FAILED)
+                else:
+                    trajectory.status = "error"
+                    trajectory.finished_at = time.time()
+                    return AgentResponse(content=f"I encountered an error communicating with the model: {e}", state=RunState.FAILED)
+
+            if self._budget_manager is not None:
+                usage_tokens = len(response.content or "") // 4
+                if response.tool_calls:
+                    usage_tokens += sum(len(json.dumps(tc.arguments)) // 4 for tc in response.tool_calls)
+                self._budget_manager.record_model_call(
+                    run_id,
+                    input_tokens=usage_tokens // 2,
+                    output_tokens=usage_tokens // 2,
+                )
 
             if not response.tool_calls:
                 trajectory.status = "completed"
@@ -338,6 +419,9 @@ class AgentEngine:
                     self._tool_executor = ToolExecutor(self.tools, self._approval_system)
                 result = await self._tool_executor.execute(tool_call, timeout=run_cfg.tool_timeout_seconds)
                 total_tool_calls += 1
+
+                if self._budget_manager is not None:
+                    self._budget_manager.record_tool_call(run_id, tool_name=tool_call.name)
 
                 tool_results_data.append({
                     "tool": tool_call.name,
@@ -385,6 +469,7 @@ class AgentEngine:
     ) -> AsyncIterator[str]:
         run_cfg = self._get_run_config()
         model = model or (self.config.agent.model if self.config else "anthropic/claude-sonnet-4-20250514")
+        provider_name = model.split("/")[0] if "/" in model else "anthropic"
         provider = self.get_provider(model)
         tools_schema = self.get_tools_schema()
         start_time = time.time()
@@ -402,9 +487,17 @@ class AgentEngine:
                 async for chunk in provider.stream(messages, tools_schema if tools_schema else None):
                     full_content += chunk
                     yield chunk
+                self.record_provider_success(provider_name)
             except Exception as e:
-                yield f"\nError: {e}"
-                return
+                self.record_provider_failure(provider_name)
+                try:
+                    provider = self.get_provider(model)
+                    async for chunk in provider.stream(messages, tools_schema if tools_schema else None):
+                        full_content += chunk
+                        yield chunk
+                except Exception as e2:
+                    yield f"\nError: {e2}"
+                    return
 
             if not full_content:
                 return

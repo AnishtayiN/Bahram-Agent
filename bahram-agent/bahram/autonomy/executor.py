@@ -27,6 +27,7 @@ class PlanExecutor:
         replanner: Replanner,
         budget_manager: BudgetManager | None = None,
         event_tracker: EventTracker | None = None,
+        recovery_manager: Any = None,
     ) -> None:
         self._engine = engine
         self._planner = planner
@@ -34,6 +35,7 @@ class PlanExecutor:
         self._replanner = replanner
         self._budget_manager = budget_manager
         self._event_tracker = event_tracker
+        self._recovery_manager = recovery_manager
 
     async def execute_plan(
         self,
@@ -124,6 +126,15 @@ class PlanExecutor:
                         plan_id=plan.id, step_id=step.id,
                         data={"status": step.status.value, "error": step.failure_reason},
                     )
+
+                if step.status == StepStatus.COMPLETED and self._recovery_manager is not None:
+                    try:
+                        self._recovery_manager.checkpoint(
+                            run_id=run_id, plan=plan,
+                            context_summary=f"Step {step.id} completed: {step.objective[:100]}",
+                        )
+                    except Exception as e:
+                        logger.warning(f"Auto-checkpoint failed: {e}")
 
                 if step.status == StepStatus.FAILED:
                     plan = await self._replanner.handle_step_failure(

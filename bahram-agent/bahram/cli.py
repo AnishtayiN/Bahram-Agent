@@ -122,6 +122,7 @@ if HAS_CLI:
     ) -> None:
         ""
         from bahram.core.config import Config
+        from bahram.core.agent import Agent
         from bahram.platforms import TelegramPlatform, DiscordPlatform, SlackPlatform
 
         config = Config.from_file("config/config.yaml")
@@ -148,8 +149,16 @@ if HAS_CLI:
             console.print(f"[error]Unknown platform: {platform}[/error]")
             return
 
+        agent = Agent(config=config)
+        if hasattr(p, 'set_agent'):
+            p.set_agent(agent)
+
+        async def _run_gateway():
+            await agent.start()
+            await p.start()
+
         console.print(f"[info]Starting {platform} gateway...[/info]")
-        asyncio.run(p.start())
+        asyncio.run(_run_gateway())
 
     @app.command()
     def version() -> None:

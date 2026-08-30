@@ -61,8 +61,9 @@ class SubagentTask:
 
 
 class SubagentEngine:
-    def __init__(self, engine: AgentEngine) -> None:
+    def __init__(self, engine: AgentEngine, event_tracker: Any = None) -> None:
         self._engine = engine
+        self._event_tracker = event_tracker
         self._tasks: dict[str, SubagentTask] = {}
         self._cancel_events: dict[str, asyncio.Event] = {}
 
@@ -98,6 +99,11 @@ class SubagentEngine:
             status="running",
         )
         self._tasks[task_id] = task
+
+        if self._event_tracker is not None and hasattr(self._event_tracker, 'emit_subagent_spawned'):
+            self._event_tracker.emit_subagent_spawned(
+                "", parent_run_id, task_id, {"objective": objective}
+            )
 
         cancel_event = asyncio.Event()
         self._cancel_events[task_id] = cancel_event
@@ -141,6 +147,11 @@ class SubagentEngine:
         finally:
             task.completed_at = time.time()
             self._cancel_events.pop(task_id, None)
+            if self._event_tracker is not None and hasattr(self._event_tracker, 'emit_subagent_completed'):
+                self._event_tracker.emit_subagent_completed(
+                    "", task.parent_run_id, task_id,
+                    {"status": result.status, "summary": result.summary}
+                )
 
         return result
 

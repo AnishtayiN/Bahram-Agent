@@ -121,3 +121,29 @@ class SmartContextManager:
             f"History messages: {len(self._history)}",
         ]
         return "\n".join(lines)
+
+    def build_messages(self) -> list[Any]:
+        ""
+        from bahram.core.engine import Message, MessageRole
+
+        messages = []
+        used_tokens = 0
+
+        if self._system_prompt:
+            messages.append(Message(role=MessageRole.SYSTEM, content=self._system_prompt))
+            used_tokens += self._estimate_tokens(self._system_prompt)
+
+        sorted_windows = sorted(self._windows, key=lambda w: w.priority, reverse=True)
+        for window in sorted_windows:
+            if used_tokens + window.tokens <= self.max_tokens * 0.7:
+                messages.append(Message(role=MessageRole.SYSTEM, content=window.content))
+                used_tokens += window.tokens
+
+        for msg in reversed(self._history):
+            msg_tokens = self._estimate_tokens(msg["content"])
+            if used_tokens + msg_tokens <= self.max_tokens * 0.9:
+                role = MessageRole.USER if msg["role"] == "user" else MessageRole.ASSISTANT
+                messages.append(Message(role=role, content=msg["content"]))
+                used_tokens += msg_tokens
+
+        return messages

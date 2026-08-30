@@ -15,7 +15,12 @@ class TelegramPlatform(BasePlatform):
         super().__init__(config)
         self.app = None
         self.bot = None
+        self._agent = None
         self._allowed_users = set(config.allowed_users if hasattr(config, "allowed_users") else [])
+        self._chat_sessions: dict[str, str] = {}
+
+    def set_agent(self, agent: Any) -> None:
+        self._agent = agent
 
     @property
     def name(self) -> str:
@@ -293,7 +298,52 @@ class TelegramPlatform(BasePlatform):
                 else None,
             )
 
-        await self._handle_message(msg)
+        await self._dispatch_to_agent(msg)
+
+    async def _dispatch_to_agent(self, msg: PlatformMessage) -> None:
+        if not self._agent:
+            logger.warning("No agent wired to Telegram platform")
+            await self.send_message(msg.chat_id, "Agent not configured.")
+            return
+
+        session_id = self._chat_sessions.get(msg.chat_id)
+        chat_id = msg.chat_id
+
+        if msg.content == "/clear":
+            if session_id:
+                self._agent.clear_history(session_id)
+                self._chat_sessions.pop(msg.chat_id, None)
+            await self.send_message(chat_id, "Conversation cleared.")
+            return
+
+        if msg.content.startswith("/model "):
+            model = msg.content.split(" ", 1)[1].strip()
+            await self.send_message(chat_id, f"Model set to: {model}")
+            return
+
+        if msg.content == "/status":
+            status = "Online"
+            if self._agent._budget_manager:
+                usage = self._agent._budget_manager.get_all_usage()
+                total_tokens = sum(
+                    r.get("total_tokens", 0)
+                    for r in usage.get("runs", {}).values()
+                )
+                status += f"\nBudget: {total_tokens} tokens used"
+            await self.send_message(chat_id, f"Bahram Agent Status\n\nVersion: 1.0.0\nStatus: {status}")
+            return
+
+        await self.send_typing(chat_id)
+
+        try:
+            response = await self._agent.run(
+                message=msg.content,
+                session_id=session_id,
+            )
+            await self.send_message(chat_id, response.content)
+        except Exception as e:
+            logger.error(f"Agent error: {e}")
+            await self.send_message(chat_id, f"Error: {str(e)[:200]}")
 
     async def _handle_voice(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         ""
