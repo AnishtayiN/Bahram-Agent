@@ -47,6 +47,7 @@ class EventTracker:
         self._data_dir.mkdir(parents=True, exist_ok=True)
         self._events_file = self._data_dir / "events.jsonl"
         self._events: list[Event] = []
+        self._load_events()
 
     def _append_event(self, event: Event) -> None:
         self._events.append(event)
@@ -55,6 +56,33 @@ class EventTracker:
                 f.write(json.dumps(event.to_dict(), default=str) + "\n")
         except Exception as e:
             logger.warning(f"Failed to persist event: {e}")
+
+    def _load_events(self) -> None:
+        """Load events from JSONL file on startup."""
+        if not self._events_file.exists():
+            return
+        try:
+            with open(self._events_file) as f:
+                for line in f:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    data = json.loads(line)
+                    self._events.append(Event(
+                        id=data["id"],
+                        event_type=data["event_type"],
+                        session_id=data.get("session_id", ""),
+                        run_id=data.get("run_id", ""),
+                        plan_id=data.get("plan_id", ""),
+                        step_id=data.get("step_id", ""),
+                        job_id=data.get("job_id", ""),
+                        tool_call_id=data.get("tool_call_id", ""),
+                        subagent_id=data.get("subagent_id", ""),
+                        data=data.get("data", {}),
+                        timestamp=data.get("timestamp", 0.0),
+                    ))
+        except Exception as e:
+            logger.warning(f"Failed to load events: {e}")
 
     def emit(
         self,

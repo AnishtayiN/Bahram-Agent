@@ -53,3 +53,5 @@ Thumbs.db
 data/
 :memory:
 *.db
+bahram-agent/:memory:/
+:memory:/
