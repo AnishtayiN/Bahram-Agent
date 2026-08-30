@@ -61,11 +61,15 @@ class SubagentTask:
 
 
 class SubagentEngine:
-    def __init__(self, engine: AgentEngine, event_tracker: Any = None) -> None:
+    def __init__(self, engine: AgentEngine, event_tracker: Any = None, max_concurrent: int = 5) -> None:
         self._engine = engine
         self._event_tracker = event_tracker
         self._tasks: dict[str, SubagentTask] = {}
         self._cancel_events: dict[str, asyncio.Event] = {}
+        self._max_concurrent = max_concurrent
+        self._semaphore = asyncio.Semaphore(max_concurrent)
+        self._active_count = 0
+        self._queue_depth = 0
 
     def _is_tool_allowed(self, tool_name: str, allowed: list[str]) -> bool:
         if not allowed:
@@ -96,7 +100,7 @@ class SubagentEngine:
             token_budget=token_budget,
             tool_budget=tool_budget,
             timeout_seconds=timeout_seconds,
-            status="running",
+            status="queued",
         )
         self._tasks[task_id] = task
 
@@ -108,16 +112,55 @@ class SubagentEngine:
         cancel_event = asyncio.Event()
         self._cancel_events[task_id] = cancel_event
 
-        task.started_at = time.time()
+        self._queue_depth += 1
+
+        async def _run_with_semaphore() -> SubagentResult:
+            async with self._semaphore:
+                self._queue_depth -= 1
+                self._active_count += 1
+                task.status = "running"
+                task.started_at = time.time()
+
+                try:
+                    result = await self._execute_task(task, model, cancel_event)
+                    task.status = "completed"
+                    task.result = result
+                except asyncio.CancelledError:
+                    result = SubagentResult(
+                        task_id=task_id,
+                        status="cancelled",
+                        summary="Subagent was cancelled",
+                        warnings=["Subagent execution was cancelled"],
+                    )
+                    task.status = "cancelled"
+                    task.result = result
+                except Exception as e:
+                    result = SubagentResult(
+                        task_id=task_id,
+                        status="failed",
+                        summary=f"Subagent failed: {e}",
+                        warnings=[str(e)],
+                    )
+                    task.status = "failed"
+                    task.result = result
+                finally:
+                    self._active_count -= 1
+                    task.completed_at = time.time()
+                    self._cancel_events.pop(task_id, None)
+                    if self._event_tracker is not None and hasattr(self._event_tracker, 'emit_subagent_completed'):
+                        self._event_tracker.emit_subagent_completed(
+                            "", task.parent_run_id, task_id,
+                            {"status": result.status, "summary": result.summary}
+                        )
+                return result
 
         try:
             result = await asyncio.wait_for(
-                self._execute_task(task, model, cancel_event),
+                _run_with_semaphore(),
                 timeout=timeout_seconds,
             )
-            task.status = "completed"
-            task.result = result
         except asyncio.TimeoutError:
+            self._queue_depth = max(0, self._queue_depth - 1)
             result = SubagentResult(
                 task_id=task_id,
                 status="timeout",
@@ -126,32 +169,20 @@ class SubagentEngine:
             )
             task.status = "timeout"
             task.result = result
-        except asyncio.CancelledError:
-            result = SubagentResult(
-                task_id=task_id,
-                status="cancelled",
-                summary="Subagent was cancelled",
-                warnings=["Subagent execution was cancelled"],
-            )
-            task.status = "cancelled"
-            task.result = result
-        except Exception as e:
+            task.completed_at = time.time()
+            self._cancel_events.pop(task_id, None)
+        except Exception as outer_e:
+            self._queue_depth = max(0, self._queue_depth - 1)
             result = SubagentResult(
                 task_id=task_id,
                 status="failed",
-                summary=f"Subagent failed: {e}",
-                warnings=[str(e)],
+                summary=f"Subagent failed to acquire slot: {outer_e}",
+                warnings=[str(outer_e)],
             )
             task.status = "failed"
             task.result = result
-        finally:
             task.completed_at = time.time()
             self._cancel_events.pop(task_id, None)
-            if self._event_tracker is not None and hasattr(self._event_tracker, 'emit_subagent_completed'):
-                self._event_tracker.emit_subagent_completed(
-                    "", task.parent_run_id, task_id,
-                    {"status": result.status, "summary": result.summary}
-                )
 
         return result
 
@@ -272,6 +303,12 @@ class SubagentEngine:
             confidence=0.6,
             metrics={"iterations": run_cfg.max_iterations, "tool_calls": total_tool_calls},
         )
+
+    def get_active_count(self) -> int:
+        return self._active_count
+
+    def get_queue_depth(self) -> int:
+        return self._queue_depth
 
     def cancel(self, task_id: str) -> bool:
         event = self._cancel_events.get(task_id)

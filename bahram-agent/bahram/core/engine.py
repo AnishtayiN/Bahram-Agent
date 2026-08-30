@@ -153,9 +153,13 @@ class ToolExecutor:
         self.tools = tools
         self.approval_system = approval_system
         self._log: list[dict[str, Any]] = []
+        self._result_cache: dict[str, ToolResult] = {}
 
     async def execute(self, tool_call: ToolCall, timeout: float = 120.0) -> ToolResult:
         tool_name = tool_call.name
+
+        if tool_call.id in self._result_cache:
+            return self._result_cache[tool_call.id]
 
         if tool_name not in self.tools:
             return ToolResult(
@@ -182,7 +186,9 @@ class ToolExecutor:
                     tool.execute(**tool_call.arguments), timeout=timeout,
                 )
                 self._log_event(tool_name, tool_call.arguments, "success")
-                return ToolResult(tool_call_id=tool_call.id, content=str(result), success=True)
+                tc_result = ToolResult(tool_call_id=tool_call.id, content=str(result), success=True)
+                self._result_cache[tool_call.id] = tc_result
+                return tc_result
             return ToolResult(
                 tool_call_id=tool_call.id, content="", success=False,
                 error=f"Tool '{tool_name}' has no execute method",

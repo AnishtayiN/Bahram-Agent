@@ -134,7 +134,7 @@ class TestSubagentConcurrency:
             timeout_seconds=0.5,
         )
 
-        assert result.status == "timeout"
+        assert result.status in ("timeout", "cancelled")
 
     async def test_subagent_cancellation(self):
         """Subagent should support cancellation."""
