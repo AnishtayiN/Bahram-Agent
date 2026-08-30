@@ -254,7 +254,7 @@ class BahramTelegramBot:
         elif "here" in args:
             n = 5
             try:
-                n = int[args[args.index("here") + 1]]
+                n = int(args[args.index("here") + 1])
             except (IndexError, ValueError):
                 pass
             await update.message.reply_text(f"✅ Context compressed. Kept last {n} turns.")

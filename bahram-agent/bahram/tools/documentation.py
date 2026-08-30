@@ -87,10 +87,10 @@ class DocumentationGenerator:
         try:
             content = file_path.read_text(errors="replace")
             import re
-            match = re.search(r'""', content, re.DOTALL)
+            match = re.search(r'"""(.*?)"""', content, re.DOTALL)
             if match:
                 return match.group(1).strip()
-            match = re.search(r"''", content, re.DOTALL)
+            match = re.search(r"'''(.*?)'''", content, re.DOTALL)
             if match:
                 return match.group(1).strip()
         except Exception:
