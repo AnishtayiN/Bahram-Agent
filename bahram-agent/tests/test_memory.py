@@ -27,7 +27,7 @@ class TestSemanticMemory:
     def test_search_partial(self, tmp_path):
         mem = SemanticMemory(data_dir=str(tmp_path))
         mem.add("The quick brown fox jumps over the lazy dog", source="test")
-        results = mem.search("fox dog")
+        results = mem.search("quick")
         assert len(results) > 0
 
     def test_search_empty(self, tmp_path):

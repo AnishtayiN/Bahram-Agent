@@ -3,16 +3,36 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
-import subprocess
 from typing import Any
 
 from bahram.tools.base import BaseTool
 
 logger = logging.getLogger(__name__)
 
-class BashTool(BaseTool):
-    ""
+_tirith_scanner = None
+_supply_chain = None
 
+def _get_tirith():
+    global _tirith_scanner
+    if _tirith_scanner is None:
+        try:
+            from bahram.security.tirith import TirithScanner
+            _tirith_scanner = TirithScanner()
+        except Exception:
+            pass
+    return _tirith_scanner
+
+def _get_supply_chain():
+    global _supply_chain
+    if _supply_chain is None:
+        try:
+            from bahram.security.supply_chain import SupplyChainGuard
+            _supply_chain = SupplyChainGuard()
+        except Exception:
+            pass
+    return _supply_chain
+
+class BashTool(BaseTool):
     def __init__(self, config: Any = None) -> None:
         self.config = config
         self.timeout = getattr(config, "bash_timeout", 120) if config else 120
@@ -47,7 +67,6 @@ class BashTool(BaseTool):
         }
 
     async def execute(self, **kwargs: Any) -> str:
-        ""
         command = kwargs.get("command", "")
         workdir = kwargs.get("workdir", os.getcwd())
         timeout = kwargs.get("timeout", self.timeout)
@@ -55,10 +74,21 @@ class BashTool(BaseTool):
         if not command:
             return "Error: No command provided"
 
+        tirith = _get_tirith()
+        if tirith:
+            violations = tirith.scan_command(command)
+            if violations:
+                return f"Error: Security violations: {'; '.join(violations)}"
+
+        supply = _get_supply_chain()
+        if supply:
+            safe, msg = supply.validate_command(command)
+            if not safe:
+                return f"Error: Supply chain: {msg}"
+
         logger.info(f"Executing bash command: {command}")
 
         try:
-
             process = await asyncio.create_subprocess_shell(
                 command,
                 stdout=asyncio.subprocess.PIPE,

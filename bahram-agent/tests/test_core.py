@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 from bahram.core.engine import (
     AgentEngine, AgentResponse, Message, MessageRole, ToolCall, ToolResult,
-    Trajectory, TrajectoryStep,
+    ToolExecutor, Trajectory, TrajectoryStep,
 )
 from bahram.core.config import Config, ProviderConfig
 
@@ -61,10 +61,9 @@ class TestSecurityPolicy:
     @pytest.mark.asyncio
     async def test_engine_blocks_dangerous(self):
         engine = AgentEngine()
-        tool = MagicMock()
-        engine.register_tool("bash", tool)
+        executor = ToolExecutor({}, engine._approval_system)
         tc = ToolCall(id="1", name="bash", arguments={"command": "rm -rf /"})
-        result = await engine.execute_tool(tc)
+        result = await executor.execute(tc)
         assert result.success is False
 
     @pytest.mark.asyncio
@@ -72,9 +71,9 @@ class TestSecurityPolicy:
         engine = AgentEngine()
         tool = AsyncMock()
         tool.execute = AsyncMock(return_value="output")
-        engine.register_tool("bash", tool)
+        executor = ToolExecutor({"bash": tool}, engine._approval_system)
         tc = ToolCall(id="1", name="bash", arguments={"command": "ls"})
-        result = await engine.execute_tool(tc)
+        result = await executor.execute(tc)
         assert result.success is True
 
 
@@ -97,17 +96,17 @@ class TestAgentEngine:
     @pytest.mark.asyncio
     async def test_security_blocks_dangerous(self):
         engine = AgentEngine()
-        tool = MagicMock()
-        engine.register_tool("bash", tool)
+        executor = ToolExecutor({}, engine._approval_system)
         tc = ToolCall(id="1", name="bash", arguments={"command": "rm -rf /"})
-        result = await engine.execute_tool(tc)
+        result = await executor.execute(tc)
         assert result.success is False
 
     @pytest.mark.asyncio
     async def test_unknown_tool(self):
         engine = AgentEngine()
+        executor = ToolExecutor({}, engine._approval_system)
         tc = ToolCall(id="1", name="nonexistent", arguments={})
-        result = await engine.execute_tool(tc)
+        result = await executor.execute(tc)
         assert result.success is False
         assert "Unknown tool" in result.error
 
@@ -116,9 +115,9 @@ class TestAgentEngine:
         engine = AgentEngine()
         tool = AsyncMock()
         tool.execute = AsyncMock(return_value="success output")
-        engine.register_tool("echo", tool)
+        executor = ToolExecutor({"echo": tool}, engine._approval_system)
         tc = ToolCall(id="1", name="echo", arguments={"text": "hello"})
-        result = await engine.execute_tool(tc)
+        result = await executor.execute(tc)
         assert result.success is True
         assert "success output" in result.content
 
@@ -127,9 +126,9 @@ class TestAgentEngine:
         engine = AgentEngine()
         tool = AsyncMock()
         tool.execute = AsyncMock(side_effect=ValueError("bad args"))
-        engine.register_tool("fail", tool)
+        executor = ToolExecutor({"fail": tool}, engine._approval_system)
         tc = ToolCall(id="1", name="fail", arguments={})
-        result = await engine.execute_tool(tc)
+        result = await executor.execute(tc)
         assert result.success is False
         assert "bad args" in result.error
 

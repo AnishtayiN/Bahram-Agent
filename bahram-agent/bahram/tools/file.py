@@ -9,6 +9,18 @@ from bahram.tools.base import BaseTool
 
 logger = logging.getLogger(__name__)
 
+_file_safety = None
+
+def _get_file_safety():
+    global _file_safety
+    if _file_safety is None:
+        try:
+            from bahram.security.file_safety import FileWriteSafety
+            _file_safety = FileWriteSafety()
+        except Exception:
+            pass
+    return _file_safety
+
 class ReadTool(BaseTool):
     @property
     def name(self) -> str:
@@ -102,7 +114,6 @@ class WriteTool(BaseTool):
         }
 
     async def execute(self, **kwargs: Any) -> str:
-        ""
         file_path = kwargs.get("file_path", "")
         content = kwargs.get("content", "")
         create_dirs = kwargs.get("create_dirs", True)
@@ -110,19 +121,21 @@ class WriteTool(BaseTool):
         if not file_path:
             return "Error: No file path provided"
 
+        safety = _get_file_safety()
+        if safety:
+            safe, msg = safety.check_write(file_path)
+            if not safe:
+                return f"Error: {msg}"
+
         path = Path(file_path)
 
         try:
-
             if create_dirs:
                 path.parent.mkdir(parents=True, exist_ok=True)
-
             with open(path, "w", encoding="utf-8") as f:
                 f.write(content)
-
             logger.info(f"Written to file: {file_path}")
             return f"Successfully wrote to {file_path}"
-
         except Exception as e:
             return f"Error writing file: {e}"
 
@@ -161,7 +174,6 @@ class EditTool(BaseTool):
         }
 
     async def execute(self, **kwargs: Any) -> str:
-        ""
         file_path = kwargs.get("file_path", "")
         old_string = kwargs.get("old_string", "")
         new_string = kwargs.get("new_string", "")
@@ -172,6 +184,12 @@ class EditTool(BaseTool):
 
         if not old_string:
             return "Error: No old_string provided"
+
+        safety = _get_file_safety()
+        if safety:
+            safe, msg = safety.check_write(file_path)
+            if not safe:
+                return f"Error: {msg}"
 
         path = Path(file_path)
 

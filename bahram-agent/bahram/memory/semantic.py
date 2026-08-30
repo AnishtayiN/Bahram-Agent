@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-import json
 import logging
+import sqlite3
 import time
+import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Optional
@@ -11,8 +12,6 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class MemoryResult:
-    ""
-
     id: str
     content: str
     score: float
@@ -20,124 +19,121 @@ class MemoryResult:
     timestamp: float
     metadata: dict = field(default_factory=dict)
 
-class SemanticMemory:
-    ""
 
+class SemanticMemory:
     def __init__(self, data_dir: str = "data/memory") -> None:
         self.data_dir = Path(data_dir)
         self.data_dir.mkdir(parents=True, exist_ok=True)
-        self._memories: list[dict] = []
-        self._load()
+        self._db_path = self.data_dir / "memory.db"
+        self._conn: sqlite3.Connection | None = None
+        self._init_db()
 
-    def _load(self) -> None:
-        ""
-        memories_file = self.data_dir / "semantic_memory.json"
-        if memories_file.exists():
-            try:
-                with open(memories_file) as f:
-                    self._memories = json.load(f)
-            except Exception as e:
-                logger.warning(f"Failed to load memories: {e}")
+    def _init_db(self) -> None:
+        self._conn = sqlite3.connect(str(self._db_path), check_same_thread=False)
+        self._conn.execute("PRAGMA journal_mode=WAL")
+        self._conn.execute("PRAGMA foreign_keys=ON")
+        self._conn.executescript("""
+            CREATE TABLE IF NOT EXISTS memories (
+                id TEXT PRIMARY KEY,
+                content TEXT NOT NULL,
+                source TEXT DEFAULT '',
+                timestamp REAL DEFAULT 0,
+                metadata TEXT DEFAULT '{}'
+            );
+            CREATE INDEX IF NOT EXISTS idx_memories_source ON memories(source);
+            CREATE INDEX IF NOT EXISTS idx_memories_timestamp ON memories(timestamp);
+        """)
+        try:
+            self._conn.executescript("""
+                CREATE VIRTUAL TABLE IF NOT EXISTS memories_fts USING fts5(
+                    content, source,
+                    content='memories',
+                    content_rowid='rowid'
+                );
+                CREATE TRIGGER IF NOT EXISTS memories_ai AFTER INSERT ON memories BEGIN
+                    INSERT INTO memories_fts(rowid, content, source)
+                    VALUES (new.rowid, new.content, new.source);
+                END;
+                CREATE TRIGGER IF NOT EXISTS memories_ad AFTER DELETE ON memories BEGIN
+                    INSERT INTO memories_fts(memories_fts, rowid, content, source)
+                    VALUES ('delete', old.rowid, old.content, old.source);
+                END;
+                CREATE TRIGGER IF NOT EXISTS memories_au AFTER UPDATE ON memories BEGIN
+                    INSERT INTO memories_fts(memories_fts, rowid, content, source)
+                    VALUES ('delete', old.rowid, old.content, old.source);
+                    INSERT INTO memories_fts(rowid, content, source)
+                    VALUES (new.rowid, new.content, new.source);
+                END;
+            """)
+        except Exception as e:
+            logger.warning(f"FTS5 not available, using LIKE fallback: {e}")
+        self._conn.commit()
 
-    def _save(self) -> None:
-        ""
-        memories_file = self.data_dir / "semantic_memory.json"
-        with open(memories_file, "w") as f:
-            json.dump(self._memories, f, indent=2)
-
-    def add(
-        self,
-        content: str,
-        source: str = "",
-        metadata: dict = None,
-    ) -> str:
-        ""
-        import uuid
-
+    def add(self, content: str, source: str = "", metadata: dict = None) -> str:
         memory_id = str(uuid.uuid4())[:12]
-        self._memories.append({
-            "id": memory_id,
-            "content": content,
-            "source": source,
-            "timestamp": time.time(),
-            "metadata": metadata or {},
-        })
-        self._save()
+        self._conn.execute(
+            "INSERT INTO memories (id, content, source, timestamp, metadata) VALUES (?, ?, ?, ?, ?)",
+            (memory_id, content, source, time.time(), "{}" if not metadata else str(metadata)),
+        )
+        self._conn.commit()
         return memory_id
 
-    def search(
-        self,
-        query: str,
-        limit: int = 10,
-        min_score: float = 0.0,
-    ) -> list[MemoryResult]:
-        ""
+    def search(self, query: str, limit: int = 10, min_score: float = 0.0) -> list[MemoryResult]:
         results = []
-        query_lower = query.lower()
-        query_words = set(query_lower.split())
-
-        for memory in self._memories:
-            content = memory.get("content", "")
-            content_lower = content.lower()
-            content_words = set(content_lower.split())
-
-            score = 0.0
-
-            if query_lower in content_lower:
-                score += 1.0
-
-            if query_words:
-                overlap = len(query_words & content_words) / len(query_words)
-                score += overlap * 0.5
-
-            position = content_lower.find(query_lower)
-            if position >= 0:
-                score += 0.3 * (1 - position / max(len(content_lower), 1))
-
-            if score >= min_score:
+        try:
+            rows = self._conn.execute(
+                "SELECT id, content, source, timestamp, metadata, "
+                "rank FROM memories_fts WHERE memories_fts MATCH ? "
+                "ORDER BY rank LIMIT ?",
+                (query, limit),
+            ).fetchall()
+            for row in rows:
+                score = abs(row[5]) if row[5] else 0.0
+                if score >= min_score:
+                    results.append(MemoryResult(
+                        id=row[0], content=row[1], score=score,
+                        source=row[2], timestamp=row[3],
+                    ))
+        except Exception:
+            query_lower = f"%{query}%"
+            rows = self._conn.execute(
+                "SELECT id, content, source, timestamp, metadata FROM memories "
+                "WHERE content LIKE ? OR source LIKE ? "
+                "ORDER BY timestamp DESC LIMIT ?",
+                (query_lower, query_lower, limit),
+            ).fetchall()
+            for row in rows:
                 results.append(MemoryResult(
-                    id=memory["id"],
-                    content=content,
-                    score=score,
-                    source=memory.get("source", ""),
-                    timestamp=memory.get("timestamp", 0),
-                    metadata=memory.get("metadata", {}),
+                    id=row[0], content=row[1], score=0.5,
+                    source=row[2], timestamp=row[3],
                 ))
-
-        results.sort(key=lambda r: r.score, reverse=True)
-        return results[:limit]
+        return results
 
     def get(self, memory_id: str) -> Optional[dict]:
-        ""
-        for memory in self._memories:
-            if memory["id"] == memory_id:
-                return memory
+        row = self._conn.execute(
+            "SELECT id, content, source, timestamp, metadata FROM memories WHERE id = ?",
+            (memory_id,),
+        ).fetchone()
+        if row:
+            return {"id": row[0], "content": row[1], "source": row[2], "timestamp": row[3], "metadata": row[4]}
         return None
 
     def delete(self, memory_id: str) -> bool:
-        ""
-        for i, memory in enumerate(self._memories):
-            if memory["id"] == memory_id:
-                del self._memories[i]
-                self._save()
-                return True
-        return False
+        cur = self._conn.execute("DELETE FROM memories WHERE id = ?", (memory_id,))
+        self._conn.commit()
+        return cur.rowcount > 0
 
     def get_context(self, query: str, max_memories: int = 5) -> str:
-        ""
         results = self.search(query, limit=max_memories)
         if not results:
             return ""
-
-        context_parts = []
-        for r in results:
-            context_parts.append(f"[{r.source}] {r.content[:200]}")
-
-        return "\n".join(context_parts)
+        return "\n".join(f"[{r.source}] {r.content[:200]}" for r in results)
 
     def get_statistics(self) -> dict[str, Any]:
-        ""
-        return {
-            "total_memories": len(self._memories),
-            "sources": list(set(m.get("source", "") for m in self._memories)),
-        }
+        count = self._conn.execute("SELECT COUNT(*) FROM memories").fetchone()[0]
+        sources = [r[0] for r in self._conn.execute("SELECT DISTINCT source FROM memories").fetchall()]
+        return {"total_memories": count, "sources": sources}
+
+    def close(self) -> None:
+        if self._conn:
+            self._conn.close()

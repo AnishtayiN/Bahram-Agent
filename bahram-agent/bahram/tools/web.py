@@ -7,6 +7,29 @@ from bahram.tools.base import BaseTool
 
 logger = logging.getLogger(__name__)
 
+_website_policy = None
+_ssrf_checker = None
+
+def _get_website_policy():
+    global _website_policy
+    if _website_policy is None:
+        try:
+            from bahram.security.website_policy import WebsitePolicy
+            _website_policy = WebsitePolicy()
+        except Exception:
+            pass
+    return _website_policy
+
+def _get_ssrf_checker():
+    global _ssrf_checker
+    if _ssrf_checker is None:
+        try:
+            from bahram.security.protection import SSRFProtector
+            _ssrf_checker = SSRFProtector()
+        except Exception:
+            pass
+    return _ssrf_checker
+
 class WebFetchTool(BaseTool):
     def __init__(self, config: Any = None) -> None:
         self.config = config
@@ -40,7 +63,6 @@ class WebFetchTool(BaseTool):
         }
 
     async def execute(self, **kwargs: Any) -> str:
-        ""
         import httpx
 
         url = kwargs.get("url", "")
@@ -48,6 +70,18 @@ class WebFetchTool(BaseTool):
 
         if not url:
             return "Error: No URL provided"
+
+        policy = _get_website_policy()
+        if policy:
+            action, reason = policy.check_url(url)
+            if action == "deny":
+                return f"Error: {reason}"
+
+        checker = _get_ssrf_checker()
+        if checker:
+            safe, reason = checker.check_url(url)
+            if not safe:
+                return f"Error: SSRF blocked: {reason}"
 
         try:
             async with httpx.AsyncClient(
@@ -64,26 +98,18 @@ class WebFetchTool(BaseTool):
                 if format_type == "html":
                     return response.text
                 elif format_type == "markdown":
-
                     import re
-
                     text = response.text
-
                     text = re.sub(r"<[^>]+>", " ", text)
-
                     text = re.sub(r"\s+", " ", text).strip()
                     return text
                 else:
-
                     try:
                         from readability import Document
-
                         doc = Document(response.text)
                         return doc.summary()
                     except ImportError:
-
                         import re
-
                         text = response.text
                         text = re.sub(r"<[^>]+>", " ", text)
                         text = re.sub(r"\s+", " ", text).strip()
@@ -126,7 +152,6 @@ class WebSearchTool(BaseTool):
         }
 
     async def execute(self, **kwargs: Any) -> str:
-        ""
         import httpx
 
         query = kwargs.get("query", "")
@@ -136,9 +161,7 @@ class WebSearchTool(BaseTool):
             return "Error: No query provided"
 
         try:
-
             async with httpx.AsyncClient(timeout=30) as client:
-
                 response = await client.get(
                     "https://html.duckduckgo.com/html/",
                     params={"q": query},
@@ -163,7 +186,6 @@ class WebSearchTool(BaseTool):
                     if len(results) >= num_results:
                         break
                     url, title, snippet = match.groups()
-
                     title = re.sub(r"<[^>]+>", "", title).strip()
                     snippet = re.sub(r"<[^>]+>", "", snippet).strip()
                     results.append(f"**{title}**\n{url}\n{snippet}\n")

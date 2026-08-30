@@ -18,6 +18,7 @@ class FileWriteSafety:
             "/boot",
             "/sys",
             "/proc",
+            "/root/.ssh",
         ]
         self._safe_root: str = ""
         self._max_file_size: int = 100 * 1024 * 1024

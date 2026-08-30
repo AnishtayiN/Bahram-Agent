@@ -38,6 +38,15 @@ async def init_tools(engine: Any, config: Any) -> None:
     except Exception as e:
         logger.warning(f"Failed to load execute_code tool: {e}")
 
+    try:
+        from bahram.tools.extended import GitTool, ProcessListTool, ContainerTool, DocumentReadTool
+        tool_list.append(("git", GitTool()))
+        tool_list.append(("process_list", ProcessListTool()))
+        tool_list.append(("container", ContainerTool()))
+        tool_list.append(("document_read", DocumentReadTool()))
+    except Exception as e:
+        logger.warning(f"Failed to load extended tools: {e}")
+
     for name, tool in tool_list:
         if name in disabled:
             continue

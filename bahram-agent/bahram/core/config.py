@@ -95,14 +95,16 @@ class ServerConfig:
 
 @dataclass
 class AgentConfig:
-    ""
-
     name: str = "Bahram"
     version: str = "1.0.0"
     description: str = "Advanced self-improving AI agent"
-    model: str = "anthropic/claude-sonnet-4-6"
+    model: str = "anthropic/claude-sonnet-4-20250514"
     small_model: str = "anthropic/claude-haiku-3.5"
     system_prompt: str = ""
+    max_iterations: int = 15
+    max_runtime_seconds: float = 300.0
+    max_tool_calls: int = 50
+    max_retries: int = 3
 
 @dataclass
 class Config:

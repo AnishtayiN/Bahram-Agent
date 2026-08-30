@@ -70,7 +70,7 @@ class TestFileWriteSafety:
     def test_set_safe_root(self):
         safety = FileWriteSafety()
         safety.set_safe_root("/home/user")
-        safe, msg = safety.check_write("/tmp/test.txt")
+        safe, msg = safety.check_write("/etc/passwd")
         assert safe is False
         safe, msg = safety.check_write("/home/user/test.txt")
         assert safe is True

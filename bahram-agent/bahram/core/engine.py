@@ -17,6 +17,21 @@ class MessageRole(str, Enum):
     ASSISTANT = "assistant"
     TOOL = "tool"
 
+class RunState(str, Enum):
+    CREATED = "created"
+    LOADING = "loading"
+    PLANNING = "planning"
+    THINKING = "thinking"
+    TOOL_PENDING = "tool_pending"
+    SECURITY_CHECK = "security_check"
+    TOOL_EXECUTING = "tool_executing"
+    OBSERVING = "observing"
+    REPLANNING = "replanning"
+    COMPLETED = "completed"
+    FAILED = "failed"
+    CANCELLED = "cancelled"
+    TIMEOUT = "timeout"
+
 @dataclass
 class Message:
     role: MessageRole
@@ -38,6 +53,7 @@ class ToolResult:
     content: str
     success: bool
     error: str | None = None
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 @dataclass
 class AgentResponse:
@@ -45,6 +61,7 @@ class AgentResponse:
     tool_calls: list[ToolCall] = field(default_factory=list)
     thinking: str | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
+    state: RunState = RunState.COMPLETED
 
 class LLMProvider(Protocol):
     async def complete(
@@ -68,6 +85,7 @@ class TrajectoryStep:
     content_length: int
     duration_ms: float
     timestamp: float
+    state: str = ""
     error: str | None = None
 
 @dataclass
@@ -82,6 +100,8 @@ class Trajectory:
     final_content: str = ""
     total_tool_calls: int = 0
     total_duration_ms: float = 0.0
+    model: str = ""
+    provider: str = ""
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -99,6 +119,7 @@ class Trajectory:
                     "content_length": s.content_length,
                     "duration_ms": s.duration_ms,
                     "timestamp": s.timestamp,
+                    "state": s.state,
                     "error": s.error,
                 }
                 for s in self.steps
@@ -106,19 +127,95 @@ class Trajectory:
             "started_at": self.started_at,
             "finished_at": self.finished_at,
             "status": self.status,
-            "final_content": self.final_content[:500],
+            "final_content": self.final_content[:1000],
             "total_tool_calls": self.total_tool_calls,
             "total_duration_ms": self.total_duration_ms,
+            "model": self.model,
+            "provider": self.provider,
         }
+
+@dataclass
+class RunConfig:
+    max_iterations: int = 15
+    max_runtime_seconds: float = 300.0
+    max_tool_calls: int = 50
+    max_retries: int = 3
+    tool_timeout_seconds: float = 120.0
+
+class ToolExecutor:
+    def __init__(self, tools: dict[str, Any], approval_system: Any = None) -> None:
+        self.tools = tools
+        self.approval_system = approval_system
+        self._log: list[dict[str, Any]] = []
+
+    async def execute(self, tool_call: ToolCall, timeout: float = 120.0) -> ToolResult:
+        tool_name = tool_call.name
+
+        if tool_name not in self.tools:
+            return ToolResult(
+                tool_call_id=tool_call.id, content="", success=False,
+                error=f"Unknown tool: {tool_name}",
+            )
+
+        if self.approval_system:
+            cmd = self._get_command_string(tool_name, tool_call.arguments)
+            is_dangerous, reason = self.approval_system.check_command(cmd)
+            if is_dangerous:
+                risk = self.approval_system.assess_risk(cmd)
+                if risk in ("critical", "high"):
+                    self._log_event(tool_name, tool_call.arguments, "blocked", reason)
+                    return ToolResult(
+                        tool_call_id=tool_call.id, content="", success=False,
+                        error=f"Security block ({risk}): {reason}",
+                    )
+
+        tool = self.tools[tool_name]
+        try:
+            if hasattr(tool, "execute"):
+                result = await asyncio.wait_for(
+                    tool.execute(**tool_call.arguments), timeout=timeout,
+                )
+                self._log_event(tool_name, tool_call.arguments, "success")
+                return ToolResult(tool_call_id=tool_call.id, content=str(result), success=True)
+            return ToolResult(
+                tool_call_id=tool_call.id, content="", success=False,
+                error=f"Tool '{tool_name}' has no execute method",
+            )
+        except asyncio.TimeoutError:
+            self._log_event(tool_name, tool_call.arguments, "timeout")
+            return ToolResult(
+                tool_call_id=tool_call.id, content="", success=False,
+                error=f"Tool '{tool_name}' timed out after {timeout}s",
+            )
+        except Exception as e:
+            logger.error(f"Tool execution error: {e}")
+            self._log_event(tool_name, tool_call.arguments, "error", str(e))
+            return ToolResult(
+                tool_call_id=tool_call.id, content="", success=False,
+                error=str(e),
+            )
+
+    def _get_command_string(self, tool_name: str, arguments: dict[str, Any]) -> str:
+        if tool_name == "bash":
+            return arguments.get("command", "")
+        if tool_name == "execute_code":
+            return arguments.get("code", "")
+        return f"{tool_name}({json.dumps(arguments, default=str)[:200]})"
+
+    def _log_event(self, tool: str, args: dict, status: str, error: str | None = None) -> None:
+        self._log.append({
+            "tool": tool, "args": args, "status": status, "error": error,
+            "timestamp": time.time(),
+        })
 
 class AgentEngine:
     def __init__(self, config: Any = None) -> None:
         self.config = config
         self.providers: dict[str, LLMProvider] = {}
         self.tools: dict[str, Any] = {}
-        self._running = False
-        self._execution_log: list[dict[str, Any]] = []
+        self._cancel_event = asyncio.Event()
         self._approval_system: Any = None
+        self._tool_executor: ToolExecutor | None = None
         self._init_approval_system()
 
     def _init_approval_system(self) -> None:
@@ -135,6 +232,7 @@ class AgentEngine:
 
     def register_tool(self, name: str, tool: Any) -> None:
         self.tools[name] = tool
+        self._tool_executor = ToolExecutor(self.tools, self._approval_system)
         logger.info(f"Registered tool: {name}")
 
     def get_provider(self, model: str) -> LLMProvider:
@@ -150,17 +248,38 @@ class AgentEngine:
                 schemas.append(tool.schema())
         return schemas
 
+    def cancel(self) -> None:
+        self._cancel_event.set()
+
+    def reset_cancel(self) -> None:
+        self._cancel_event.clear()
+
+    def _get_run_config(self) -> RunConfig:
+        if self.config and hasattr(self.config, 'agent'):
+            return RunConfig(
+                max_iterations=getattr(self.config.agent, 'max_iterations', 15),
+                max_runtime_seconds=getattr(self.config.agent, 'max_runtime_seconds', 300.0),
+                max_tool_calls=getattr(self.config.agent, 'max_tool_calls', 50),
+                tool_timeout_seconds=getattr(self.config.tools, 'bash_timeout', 120.0),
+            )
+        return RunConfig()
+
     async def run(
         self, messages: list[Message], model: str | None = None,
-        max_iterations: int = 15, timeout: float = 300.0,
         session_id: str = "",
     ) -> AgentResponse:
+        run_cfg = self._get_run_config()
         model = model or (self.config.agent.model if self.config else "anthropic/claude-sonnet-4-20250514")
         provider = self.get_provider(model)
         tools_schema = self.get_tools_schema()
         start_time = time.time()
         run_id = str(uuid.uuid4())[:12]
-        trajectory = Trajectory(run_id=run_id, session_id=session_id, goal="")
+        self.reset_cancel()
+
+        trajectory = Trajectory(
+            run_id=run_id, session_id=session_id, goal="",
+            model=model, provider=model.split("/")[0] if "/" in model else "unknown",
+        )
 
         if messages:
             for m in messages:
@@ -168,16 +287,22 @@ class AgentEngine:
                     trajectory.goal = m.content[:200]
                     break
 
-        for iteration in range(max_iterations):
-            if time.time() - start_time > timeout:
-                logger.warning("Agent run timed out")
+        total_tool_calls = 0
+
+        for iteration in range(run_cfg.max_iterations):
+            if self._cancel_event.is_set():
+                trajectory.status = "cancelled"
+                trajectory.finished_at = time.time()
+                trajectory.total_duration_ms = (trajectory.finished_at - trajectory.started_at) * 1000
+                return AgentResponse(content="Operation cancelled.", state=RunState.CANCELLED)
+
+            if time.time() - start_time > run_cfg.max_runtime_seconds:
                 trajectory.status = "timeout"
                 trajectory.finished_at = time.time()
                 trajectory.total_duration_ms = (trajectory.finished_at - trajectory.started_at) * 1000
-                return AgentResponse(content="Operation timed out. Please try a more specific request.")
+                return AgentResponse(content="Operation timed out. Please try a more specific request.", state=RunState.TIMEOUT)
 
-            logger.debug(f"Agent iteration {iteration + 1}/{max_iterations}")
-
+            logger.debug(f"Agent iteration {iteration + 1}/{run_cfg.max_iterations}")
             step_start = time.time()
             step_id = f"step_{iteration}"
 
@@ -187,18 +312,33 @@ class AgentEngine:
                 logger.error(f"Provider error: {e}")
                 trajectory.status = "error"
                 trajectory.finished_at = time.time()
-                return AgentResponse(content=f"I encountered an error communicating with the model: {e}")
+                return AgentResponse(content=f"I encountered an error communicating with the model: {e}", state=RunState.FAILED)
 
             if not response.tool_calls:
                 trajectory.status = "completed"
                 trajectory.finished_at = time.time()
                 trajectory.total_duration_ms = (trajectory.finished_at - trajectory.started_at) * 1000
                 trajectory.final_content = response.content
-                return response
+                return AgentResponse(content=response.content, state=RunState.COMPLETED, metadata=response.metadata)
 
             tool_results_data = []
             for tool_call in response.tool_calls:
-                result = await self.execute_tool(tool_call)
+                if self._cancel_event.is_set():
+                    break
+                if total_tool_calls >= run_cfg.max_tool_calls:
+                    trajectory.status = "max_tool_calls"
+                    trajectory.finished_at = time.time()
+                    trajectory.total_duration_ms = (trajectory.finished_at - trajectory.started_at) * 1000
+                    return AgentResponse(
+                        content=f"Reached maximum tool calls ({run_cfg.max_tool_calls}). Here's what I've done so far.",
+                        state=RunState.COMPLETED,
+                    )
+
+                if self._tool_executor is None:
+                    self._tool_executor = ToolExecutor(self.tools, self._approval_system)
+                result = await self._tool_executor.execute(tool_call, timeout=run_cfg.tool_timeout_seconds)
+                total_tool_calls += 1
+
                 tool_results_data.append({
                     "tool": tool_call.name,
                     "success": result.success,
@@ -220,33 +360,40 @@ class AgentEngine:
             trajectory.steps.append(TrajectoryStep(
                 step_id=step_id,
                 iteration=iteration,
-                provider=model.split("/")[0] if "/" in model else "unknown",
+                provider=trajectory.provider,
                 model=model or "",
                 tool_calls=[{"name": tc.name, "id": tc.id} for tc in response.tool_calls],
                 tool_results=tool_results_data,
                 content_length=len(response.content or ""),
                 duration_ms=step_duration,
                 timestamp=time.time(),
+                state=RunState.TOOL_EXECUTING.value,
             ))
             trajectory.total_tool_calls += len(response.tool_calls)
 
-        logger.warning(f"Agent reached max iterations ({max_iterations})")
+        logger.warning(f"Agent reached max iterations ({run_cfg.max_iterations})")
         trajectory.status = "max_iterations"
         trajectory.finished_at = time.time()
         trajectory.total_duration_ms = (trajectory.finished_at - trajectory.started_at) * 1000
-        return AgentResponse(content="I've reached the maximum number of iterations. Let me summarize what I've accomplished so far.")
+        return AgentResponse(
+            content="I've reached the maximum number of iterations. Let me summarize what I've accomplished so far.",
+            state=RunState.COMPLETED,
+        )
 
     async def run_streaming(
         self, messages: list[Message], model: str | None = None,
-        max_iterations: int = 15, timeout: float = 300.0,
     ) -> AsyncIterator[str]:
+        run_cfg = self._get_run_config()
         model = model or (self.config.agent.model if self.config else "anthropic/claude-sonnet-4-20250514")
         provider = self.get_provider(model)
         tools_schema = self.get_tools_schema()
         start_time = time.time()
 
-        for iteration in range(max_iterations):
-            if time.time() - start_time > timeout:
+        for iteration in range(run_cfg.max_iterations):
+            if self._cancel_event.is_set():
+                yield "Operation cancelled."
+                return
+            if time.time() - start_time > run_cfg.max_runtime_seconds:
                 yield "Operation timed out."
                 return
 
@@ -266,66 +413,3 @@ class AgentEngine:
                 return
 
             messages.append(Message(role=MessageRole.ASSISTANT, content=full_content))
-
-    async def execute_tool(self, tool_call: ToolCall) -> ToolResult:
-        tool_name = tool_call.name
-
-        if tool_name not in self.tools:
-            return ToolResult(
-                tool_call_id=tool_call.id, content="", success=False,
-                error=f"Unknown tool: {tool_name}",
-            )
-
-        if self._approval_system:
-            is_dangerous, reason = self._approval_system.check_command(
-                self._get_command_string(tool_name, tool_call.arguments)
-            )
-            if is_dangerous:
-                risk = self._approval_system.assess_risk(
-                    self._get_command_string(tool_name, tool_call.arguments)
-                )
-                if risk in ("critical", "high"):
-                    self._log_execution(tool_name, tool_call.arguments, "blocked", reason)
-                    return ToolResult(
-                        tool_call_id=tool_call.id, content="", success=False,
-                        error=f"Security block ({risk}): {reason}",
-                    )
-
-        tool = self.tools[tool_name]
-        try:
-            if hasattr(tool, "execute"):
-                result = await asyncio.wait_for(
-                    tool.execute(**tool_call.arguments), timeout=120.0,
-                )
-                self._log_execution(tool_name, tool_call.arguments, "success")
-                return ToolResult(tool_call_id=tool_call.id, content=str(result), success=True)
-            return ToolResult(
-                tool_call_id=tool_call.id, content="", success=False,
-                error=f"Tool '{tool_name}' has no execute method",
-            )
-        except asyncio.TimeoutError:
-            self._log_execution(tool_name, tool_call.arguments, "timeout")
-            return ToolResult(
-                tool_call_id=tool_call.id, content="", success=False,
-                error=f"Tool '{tool_name}' timed out after 120s",
-            )
-        except Exception as e:
-            logger.error(f"Tool execution error: {e}")
-            self._log_execution(tool_name, tool_call.arguments, "error", str(e))
-            return ToolResult(
-                tool_call_id=tool_call.id, content="", success=False,
-                error=str(e),
-            )
-
-    def _get_command_string(self, tool_name: str, arguments: dict[str, Any]) -> str:
-        if tool_name == "bash":
-            return arguments.get("command", "")
-        if tool_name == "execute_code":
-            return arguments.get("code", "")
-        return f"{tool_name}({json.dumps(arguments, default=str)[:200]})"
-
-    def _log_execution(self, tool: str, args: dict, status: str, error: str | None = None) -> None:
-        self._execution_log.append({
-            "tool": tool, "args": args, "status": status, "error": error,
-            "timestamp": time.time(),
-        })
