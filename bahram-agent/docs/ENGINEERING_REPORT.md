@@ -112,7 +112,8 @@ import asyncio, os
 from bahram.core.agent import Agent
 from bahram.core.config import Config
 
-c = Config(); c.memory.database = ":memory:"
+c = Config()
+c.memory.database = ":memory:"
 a = Agent(config=c)
 asyncio.run(a.start())
 print(len(a.engine.tools), sorted(a.engine.tools))
