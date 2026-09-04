@@ -9,7 +9,6 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class TranslationRule:
-    ""
 
     name: str
     source_lang: str
@@ -19,7 +18,6 @@ class TranslationRule:
     description: str = ""
 
 class CodeTranslator:
-    ""
 
     def __init__(self) -> None:
         self._rules: dict[str, list[TranslationRule]] = {
@@ -58,7 +56,6 @@ class CodeTranslator:
         source_lang: str,
         target_lang: str,
     ) -> str:
-        ""
         rules_key = f"{source_lang}_to_{target_lang}"
         rules = self._rules.get(rules_key, [])
 
@@ -73,7 +70,6 @@ class CodeTranslator:
         return translated
 
     def get_supported_translations(self) -> list[dict]:
-        ""
         translations = []
         for key in self._rules.keys():
             source, target = key.split("_to_")
@@ -85,7 +81,6 @@ class CodeTranslator:
         return translations
 
     def get_rules(self, source_lang: str, target_lang: str) -> list[dict]:
-        ""
         rules_key = f"{source_lang}_to_{target_lang}"
         rules = self._rules.get(rules_key, [])
         return [

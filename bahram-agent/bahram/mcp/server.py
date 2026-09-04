@@ -9,7 +9,6 @@ from typing import Any, Callable, Optional
 logger = logging.getLogger(__name__)
 
 class MCPServer:
-    ""
 
     def __init__(self, name: str = "bahram-agent") -> None:
         self.name = name
@@ -23,7 +22,6 @@ class MCPServer:
         input_schema: dict[str, Any],
         handler: Callable,
     ) -> None:
-        ""
         self.tools[name] = {
             "name": name,
             "description": description,
@@ -32,7 +30,6 @@ class MCPServer:
         self._tool_handlers[name] = handler
 
     async def handle_request(self, request: dict) -> dict:
-        ""
         method = request.get("method")
         params = request.get("params", {})
         request_id = request.get("id")
@@ -51,7 +48,6 @@ class MCPServer:
             }
 
     def _handle_initialize(self, request_id: int, params: dict) -> dict:
-        ""
         return {
             "jsonrpc": "2.0",
             "id": request_id,
@@ -68,7 +64,6 @@ class MCPServer:
         }
 
     def _handle_list_tools(self, request_id: int) -> dict:
-        ""
         return {
             "jsonrpc": "2.0",
             "id": request_id,
@@ -78,7 +73,6 @@ class MCPServer:
         }
 
     async def _handle_call_tool(self, request_id: int, params: dict) -> dict:
-        ""
         tool_name = params.get("name")
         arguments = params.get("arguments", {})
 
@@ -108,7 +102,6 @@ class MCPServer:
             }
 
     async def run_stdio(self) -> None:
-        ""
         logger.info("MCP server started on stdio")
 
         try:
@@ -130,7 +123,6 @@ class MCPServer:
             logger.info("MCP server stopped")
 
     async def run_http(self, host: str = "0.0.0.0", port: int = 8080) -> None:
-        ""
         try:
             from aiohttp import web
 

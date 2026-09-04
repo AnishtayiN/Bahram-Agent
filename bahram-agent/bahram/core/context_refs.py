@@ -10,7 +10,6 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class ContextRef:
-    ""
 
     id: str
     content: str
@@ -18,7 +17,6 @@ class ContextRef:
     metadata: dict = field(default_factory=dict)
 
 class ContextRefs:
-    ""
 
     def __init__(self, data_dir: str = "data/context") -> None:
         self.data_dir = Path(data_dir)
@@ -27,7 +25,6 @@ class ContextRefs:
         self._load()
 
     def _load(self) -> None:
-        ""
         refs_file = self.data_dir / "context_refs.json"
         if refs_file.exists():
             try:
@@ -40,7 +37,6 @@ class ContextRefs:
                 logger.warning(f"Failed to load context refs: {e}")
 
     def _save(self) -> None:
-        ""
         refs_file = self.data_dir / "context_refs.json"
         data = [
             {
@@ -55,7 +51,6 @@ class ContextRefs:
             json.dump(data, f, indent=2)
 
     def add_ref(self, content: str, source: str = "", metadata: dict = None) -> ContextRef:
-        ""
         import hashlib
         import time
 
@@ -71,11 +66,9 @@ class ContextRefs:
         return ref
 
     def get_ref(self, ref_id: str) -> Optional[ContextRef]:
-        ""
         return self._refs.get(ref_id)
 
     def search_refs(self, query: str) -> list[ContextRef]:
-        ""
         query_lower = query.lower()
         results = []
         for ref in self._refs.values():
@@ -84,7 +77,6 @@ class ContextRefs:
         return results
 
     def delete_ref(self, ref_id: str) -> bool:
-        ""
         if ref_id in self._refs:
             del self._refs[ref_id]
             self._save()
@@ -92,7 +84,6 @@ class ContextRefs:
         return False
 
     def get_context_for_message(self, message: str, max_refs: int = 5) -> str:
-        ""
         refs = self.search_refs(message)[:max_refs]
         if not refs:
             return ""
@@ -104,7 +95,6 @@ class ContextRefs:
         return "\n".join(context_parts)
 
     def list_refs(self) -> list[dict]:
-        ""
         return [
             {
                 "id": r.id,

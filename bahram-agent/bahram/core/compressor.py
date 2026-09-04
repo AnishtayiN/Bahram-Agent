@@ -9,7 +9,6 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class CompressionResult:
-    ""
 
     compressed: str
     original_tokens: int
@@ -17,7 +16,6 @@ class CompressionResult:
     ratio: float
 
 class ContextCompressor:
-    ""
 
     def __init__(self) -> None:
         self._compression_level = 0.5
@@ -29,7 +27,6 @@ class ContextCompressor:
         model_fn: Callable = None,
         target_tokens: int = 4000,
     ) -> CompressionResult:
-        ""
         if not self._enabled or not messages:
             return CompressionResult(
                 compressed=json.dumps(messages),
@@ -70,7 +67,6 @@ class ContextCompressor:
         model_fn: Callable,
         target_tokens: int,
     ) -> str:
-        ""
         full_context = json.dumps(messages, default=str)
         msg_count = len(messages)
         prompt = (
@@ -89,7 +85,6 @@ class ContextCompressor:
             return self._heuristic_compress(messages, target_tokens)
 
     def _heuristic_compress(self, messages: list[dict], target_tokens: int) -> str:
-        ""
         if not messages:
             return "[]"
 
@@ -114,9 +109,7 @@ class ContextCompressor:
         return json.dumps(result)
 
     def set_level(self, level: float) -> None:
-        ""
         self._compression_level = max(0, min(1, level))
 
     def set_enabled(self, enabled: bool) -> None:
-        ""
         self._enabled = enabled

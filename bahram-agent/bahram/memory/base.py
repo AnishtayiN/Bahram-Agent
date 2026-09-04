@@ -7,7 +7,6 @@ from typing import Any, Optional
 
 @dataclass
 class MemoryEntry:
-    ""
 
     id: str
     content: str
@@ -18,45 +17,36 @@ class MemoryEntry:
     last_accessed: Optional[datetime] = None
 
 class BaseMemory(ABC):
-    ""
 
     @abstractmethod
     async def add(self, content: str, metadata: Optional[dict[str, Any]] = None) -> str:
-        ""
         ...
 
     @abstractmethod
     async def get(self, memory_id: str) -> Optional[MemoryEntry]:
-        ""
         ...
 
     @abstractmethod
     async def search(self, query: str, limit: int = 10) -> list[MemoryEntry]:
-        ""
         ...
 
     @abstractmethod
     async def update(self, memory_id: str, content: str) -> bool:
-        ""
         ...
 
     @abstractmethod
     async def delete(self, memory_id: str) -> bool:
-        ""
         ...
 
     @abstractmethod
     async def list_all(self, limit: int = 100) -> list[MemoryEntry]:
-        ""
         ...
 
     @abstractmethod
     async def clear(self) -> None:
-        ""
         ...
 
     def calculate_importance(self, content: str, metadata: dict[str, Any]) -> float:
-        ""
 
         score = 0.5
 

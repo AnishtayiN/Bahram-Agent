@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import re
 import sqlite3
 import time
 import uuid
@@ -23,16 +24,44 @@ class MemoryResult:
 
 class SemanticMemory:
     def __init__(self, data_dir: str = "data/memory") -> None:
-        self.data_dir = Path(data_dir)
-        self.data_dir.mkdir(parents=True, exist_ok=True)
+        # The literal ":memory:" is the documented opt-in for in-memory storage;
+        # never treat it as a filesystem directory.
+        self._memory_only = str(data_dir) == ":memory:"
+        self.data_dir = Path(data_dir) if not self._memory_only else Path("data/memory")
+        if not self._memory_only:
+            try:
+                self.data_dir.mkdir(parents=True, exist_ok=True)
+            except OSError as e:
+                logger.warning(f"Cannot create memory dir {data_dir}: {e}")
         self._db_path = self.data_dir / "memory.db"
         self._conn: sqlite3.Connection | None = None
         self._init_db()
 
+    def _connect(self) -> sqlite3.Connection:
+        if self._memory_only:
+            return sqlite3.connect(":memory:", check_same_thread=False)
+        return sqlite3.connect(str(self._db_path), check_same_thread=False)
+
     def _init_db(self) -> None:
-        self._conn = sqlite3.connect(str(self._db_path), check_same_thread=False)
-        self._conn.execute("PRAGMA journal_mode=WAL")
-        self._conn.execute("PRAGMA foreign_keys=ON")
+        try:
+            self._conn = self._connect()
+        except sqlite3.Error as e:
+            # Read-only dir / unwritable db path: degrade to in-memory storage
+            # so the memory subsystem stays usable instead of crashing.
+            logger.warning(
+                f"Unable to open memory database at {self._db_path} "
+                f"({e}); degrading to in-memory storage"
+            )
+            self._memory_only = True
+            self._conn = self._connect()
+        try:
+            self._conn.execute("PRAGMA journal_mode=WAL")
+        except sqlite3.Error:
+            pass
+        try:
+            self._conn.execute("PRAGMA foreign_keys=ON")
+        except sqlite3.Error:
+            pass
         self._migrate()
         self._conn.executescript("""
             CREATE TABLE IF NOT EXISTS memories (
@@ -117,10 +146,12 @@ class SemanticMemory:
         scope: str | None = None,
     ) -> list[MemoryResult]:
         results = []
+        if not query:
+            return results
         scope_clause = ""
         scope_params: list[Any] = []
         if scope:
-            scope_clause = " AND scope = ?"
+            scope_clause = " AND m.scope = ?"
             scope_params = [scope]
         try:
             rows = self._conn.execute(
@@ -130,19 +161,25 @@ class SemanticMemory:
                 (query, *scope_params, limit),
             ).fetchall()
             for row in rows:
-                score = abs(row[5]) if row[5] else 0.0
+                # Column order: id(0) content(1) source(2) timestamp(3)
+                # metadata(4) scope(5) rank(6)
+                score = abs(row[6]) if row[6] is not None else 0.0
                 if score >= min_score:
                     results.append(MemoryResult(
                         id=row[0], content=row[1], score=score,
-                        source=row[2], timestamp=row[3], scope=row[5] if len(row) > 5 else "global",
+                        source=row[2], timestamp=row[3], scope=row[5],
                     ))
         except Exception:
-            query_lower = f"%{query}%"
-            sql = ("SELECT id, content, source, timestamp, metadata, scope FROM memories "
-                   "WHERE (content LIKE ? OR source LIKE ?)" + scope_clause +
-                   " ORDER BY timestamp DESC LIMIT ?")
-            params: list[Any] = [query_lower, query_lower, *scope_params, limit]
-            rows = self._conn.execute(sql, params).fetchall()
+            # FTS unavailable or query unsupported: tokenized LIKE fallback
+            # that ANDs every search term across content/source.
+            tokens = [t for t in re.split(r"[\W_]+", query.lower()) if t]
+            sql = "SELECT id, content, source, timestamp, metadata, scope FROM memories WHERE 1=1"
+            params: list[Any] = []
+            for token in tokens:
+                sql += " AND (instr(lower(content), ?) > 0 OR instr(lower(source), ?) > 0)"
+                params += [token, token]
+            sql += scope_clause + " ORDER BY timestamp DESC LIMIT ?"
+            rows = self._conn.execute(sql, (*params, *scope_params, limit)).fetchall()
             for row in rows:
                 results.append(MemoryResult(
                     id=row[0], content=row[1], score=0.5,

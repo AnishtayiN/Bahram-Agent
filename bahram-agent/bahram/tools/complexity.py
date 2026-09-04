@@ -9,7 +9,6 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class ComplexityMetric:
-    ""
 
     name: str
     value: float
@@ -18,7 +17,6 @@ class ComplexityMetric:
     description: str = ""
 
 class ComplexityAnalyzer:
-    ""
 
     def __init__(self) -> None:
         self._thresholds = {
@@ -30,7 +28,6 @@ class ComplexityAnalyzer:
         }
 
     async def analyze(self, file_path: str) -> dict[str, Any]:
-        ""
         try:
             with open(file_path, "r", encoding="utf-8", errors="replace") as f:
                 content = f.read()
@@ -67,7 +64,6 @@ class ComplexityAnalyzer:
             return {"error": str(e)}
 
     def _cyclomatic_complexity(self, code: str) -> int:
-        ""
 
         patterns = [
             r"\bif\b", r"\belif\b", r"\belse\b",
@@ -81,7 +77,6 @@ class ComplexityAnalyzer:
         return complexity
 
     def _cognitive_complexity(self, code: str) -> int:
-        ""
         complexity = 0
         nesting = 0
         for line in code.split("\n"):
@@ -96,7 +91,6 @@ class ComplexityAnalyzer:
         return complexity
 
     def _avg_lines_per_function(self, code: str) -> float:
-        ""
         functions = re.findall(r"def\s+\w+\s*\([^)]*\):", code)
         if not functions:
             return 0
@@ -105,7 +99,6 @@ class ComplexityAnalyzer:
         return total_lines / len(functions)
 
     def _avg_params_per_function(self, code: str) -> float:
-        ""
         params = re.findall(r"def\s+\w+\s*\(([^)]*)\)", code)
         if not params:
             return 0
@@ -114,7 +107,6 @@ class ComplexityAnalyzer:
         return total_params / len(params)
 
     def _max_nesting_depth(self, code: str) -> int:
-        ""
         max_depth = 0
         current_depth = 0
         for line in code.split("\n"):
@@ -127,7 +119,6 @@ class ComplexityAnalyzer:
         return max_depth
 
     def get_report(self, analysis: dict) -> str:
-        ""
         if "error" in analysis:
             return f"Error: {analysis['error']}"
 

@@ -6,14 +6,12 @@ from typing import Any
 
 @dataclass
 class ToolSchema:
-    ""
 
     name: str
     description: str
     parameters: dict[str, Any]
 
     def to_dict(self) -> dict[str, Any]:
-        ""
         return {
             "name": self.name,
             "description": self.description,
@@ -21,28 +19,23 @@ class ToolSchema:
         }
 
 class BaseTool(ABC):
-    ""
 
     @property
     @abstractmethod
     def name(self) -> str:
-        ""
         ...
 
     @property
     @abstractmethod
     def description(self) -> str:
-        ""
         ...
 
     @property
     @abstractmethod
     def parameters(self) -> dict[str, Any]:
-        ""
         ...
 
     def schema(self) -> dict[str, Any]:
-        ""
         return {
             "type": "function",
             "function": {
@@ -54,11 +47,9 @@ class BaseTool(ABC):
 
     @abstractmethod
     async def execute(self, **kwargs: Any) -> str:
-        ""
         ...
 
     def validate_args(self, **kwargs: Any) -> bool:
-        ""
 
         required = self.parameters.get("required", [])
         for param in required:

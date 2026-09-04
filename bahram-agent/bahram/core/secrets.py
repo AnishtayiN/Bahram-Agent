@@ -13,7 +13,6 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class SecretEntry:
-    ""
 
     name: str
     value: str
@@ -22,7 +21,6 @@ class SecretEntry:
     created_at: float = 0.0
 
 class SecretsManager:
-    ""
 
     def __init__(self, data_dir: str = "data/secrets") -> None:
         self.data_dir = Path(data_dir)
@@ -32,7 +30,6 @@ class SecretsManager:
         self._load()
 
     def _get_or_create_key(self) -> bytes:
-        ""
         key_file = self.data_dir / ".key"
         if key_file.exists():
             return base64.b64decode(key_file.read_text())
@@ -43,7 +40,6 @@ class SecretsManager:
             return key
 
     def _load(self) -> None:
-        ""
         secrets_file = self.data_dir / "secrets.enc"
         if secrets_file.exists():
             try:
@@ -60,7 +56,6 @@ class SecretsManager:
                 logger.warning(f"Failed to load secrets: {e}")
 
     def _save(self) -> None:
-        ""
         secrets_file = self.data_dir / "secrets.enc"
         data = json.dumps({
             k: {
@@ -85,7 +80,6 @@ class SecretsManager:
         description: str = "",
         category: str = "general",
     ) -> None:
-        ""
         import time
         self._secrets[name] = SecretEntry(
             name=name,
@@ -97,12 +91,10 @@ class SecretsManager:
         self._save()
 
     def get_secret(self, name: str) -> Optional[str]:
-        ""
         entry = self._secrets.get(name)
         return entry.value if entry else None
 
     def get_secret_info(self, name: str) -> Optional[dict]:
-        ""
         entry = self._secrets.get(name)
         if entry:
             return {
@@ -114,7 +106,6 @@ class SecretsManager:
         return None
 
     def delete_secret(self, name: str) -> bool:
-        ""
         if name in self._secrets:
             del self._secrets[name]
             self._save()
@@ -122,7 +113,6 @@ class SecretsManager:
         return False
 
     def list_secrets(self, category: str = None) -> list[dict]:
-        ""
         secrets = list(self._secrets.values())
         if category:
             secrets = [s for s in secrets if s.category == category]
@@ -136,7 +126,6 @@ class SecretsManager:
         ]
 
     def import_from_env(self, prefix: str = "") -> int:
-        ""
         count = 0
         for key, value in os.environ.items():
             if prefix and not key.startswith(prefix):

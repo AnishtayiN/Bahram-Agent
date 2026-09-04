@@ -10,14 +10,12 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class DocSection:
-    ""
 
     name: str
     content: str
     level: int = 1
 
 class SmartDocGenerator:
-    ""
 
     def __init__(self) -> None:
         self._templates: dict[str, str] = {
@@ -33,7 +31,6 @@ class SmartDocGenerator:
         format: str = "markdown",
         include_examples: bool = True,
     ) -> bool:
-        ""
         try:
             source = Path(source_path)
             if not source.exists():
@@ -59,7 +56,6 @@ class SmartDocGenerator:
         filename: str,
         include_examples: bool,
     ) -> list[DocSection]:
-        ""
         sections = []
 
         docstring = self._extract_module_docstring(content)
@@ -101,7 +97,6 @@ class SmartDocGenerator:
         return sections
 
     def _extract_module_docstring(self, content: str) -> str:
-        ""
         match = re.search(r'""', content, re.DOTALL)
         if match:
             return match.group(1).strip()
@@ -111,7 +106,6 @@ class SmartDocGenerator:
         return ""
 
     def _extract_classes(self, content: str) -> list[dict]:
-        ""
         classes = []
         pattern = r'class\s+(\w+)\s*(?:\(([^)]*)\))?:\s*\n(?:\s+"")?'
         for match in re.finditer(pattern, content, re.DOTALL):
@@ -123,7 +117,6 @@ class SmartDocGenerator:
         return classes
 
     def _extract_functions(self, content: str) -> list[dict]:
-        ""
         functions = []
         pattern = r'def\s+(\w+)\s*\(([^)]*)\)(?:\s*->\s*(\w+))?:\s*\n(?:\s+"")?'
         for match in re.finditer(pattern, content, re.DOTALL):
@@ -137,7 +130,6 @@ class SmartDocGenerator:
         return functions
 
     def _document_class(self, cls: dict) -> str:
-        ""
         lines = [f"### {cls['name']}"]
         if cls["parent"]:
             lines.append(f" Inherits from: `{cls['parent']}`")
@@ -146,7 +138,6 @@ class SmartDocGenerator:
         return "\n".join(lines)
 
     def _document_function(self, func: dict) -> str:
-        ""
         lines = [f"#### `{func['name']}({func['args']})`"]
         if func["return_type"]:
             lines.append(f" Returns: `{func['return_type']}`")
@@ -155,7 +146,6 @@ class SmartDocGenerator:
         return "\n".join(lines)
 
     def _generate_examples(self, classes: list, functions: list) -> str:
-        ""
         examples = ["```python", "# Usage Examples", ""]
 
         for cls in classes[:3]:
@@ -172,7 +162,6 @@ class SmartDocGenerator:
         return "\n".join(examples)
 
     def _render_sections(self, sections: list[DocSection], format: str) -> str:
-        ""
         lines = []
         for section in sections:
             lines.append(f"{'#' * section.level} {section.name}")

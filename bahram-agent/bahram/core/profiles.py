@@ -10,7 +10,6 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class AgentProfile:
-    ""
 
     name: str
     display_name: str
@@ -25,7 +24,6 @@ class AgentProfile:
     metadata: dict = field(default_factory=dict)
 
 class ProfileManager:
-    ""
 
     def __init__(self, data_dir: str = "data/profiles") -> None:
         self.data_dir = Path(data_dir)
@@ -35,7 +33,6 @@ class ProfileManager:
         self._load()
 
     def _load(self) -> None:
-        ""
         profiles_file = self.data_dir / "profiles.json"
         if profiles_file.exists():
             try:
@@ -48,7 +45,6 @@ class ProfileManager:
                 logger.warning(f"Failed to load profiles: {e}")
 
     def _save(self) -> None:
-        ""
         profiles_file = self.data_dir / "profiles.json"
         data = [
             {
@@ -81,7 +77,6 @@ class ProfileManager:
         temperature: float = 0.7,
         max_tokens: int = 4096,
     ) -> AgentProfile:
-        ""
         profile = AgentProfile(
             name=name,
             display_name=display_name,
@@ -98,22 +93,18 @@ class ProfileManager:
         return profile
 
     def get_profile(self, name: str) -> Optional[AgentProfile]:
-        ""
         return self._profiles.get(name)
 
     def set_current(self, name: str) -> bool:
-        ""
         if name in self._profiles:
             self._current_profile = name
             return True
         return False
 
     def get_current(self) -> AgentProfile:
-        ""
         return self._profiles.get(self._current_profile, self._profiles.get("default"))
 
     def list_profiles(self) -> list[dict]:
-        ""
         return [
             {
                 "name": p.name,
@@ -126,7 +117,6 @@ class ProfileManager:
         ]
 
     def delete_profile(self, name: str) -> bool:
-        ""
         if name in self._profiles and name != "default":
             del self._profiles[name]
             if self._current_profile == name:
@@ -136,7 +126,6 @@ class ProfileManager:
         return False
 
     def update_profile(self, name: str, **kwargs) -> bool:
-        ""
         profile = self._profiles.get(name)
         if profile:
             for key, value in kwargs.items():

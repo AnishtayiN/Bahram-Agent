@@ -11,7 +11,6 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class TrajectoryStep:
-    ""
 
     step_id: int
     action: str
@@ -22,7 +21,6 @@ class TrajectoryStep:
 
 @dataclass
 class Trajectory:
-    ""
 
     id: str
     name: str
@@ -32,7 +30,6 @@ class Trajectory:
     status: str = "running"
 
 class TrajectoryGenerator:
-    ""
 
     def __init__(self, data_dir: str = "data/trajectories") -> None:
         self.data_dir = Path(data_dir)
@@ -41,7 +38,6 @@ class TrajectoryGenerator:
         self._current: Optional[Trajectory] = None
 
     def start(self, name: str) -> Trajectory:
-        ""
         import hashlib
         traj_id = hashlib.md5(f"{name}{time.time()}".encode()).hexdigest()[:12]
 
@@ -55,7 +51,6 @@ class TrajectoryGenerator:
         return trajectory
 
     def add_step(self, action: str, input_text: str, output: str) -> None:
-        ""
         if not self._current:
             return
 
@@ -69,7 +64,6 @@ class TrajectoryGenerator:
         self._current.steps.append(step)
 
     def finish(self, status: str = "completed") -> Optional[Trajectory]:
-        ""
         if not self._current:
             return None
 
@@ -81,7 +75,6 @@ class TrajectoryGenerator:
         return result
 
     def _save(self, trajectory: Trajectory) -> None:
-        ""
         traj_file = self.data_dir / f"{trajectory.id}.json"
         data = {
             "id": trajectory.id,
@@ -105,11 +98,9 @@ class TrajectoryGenerator:
             json.dump(data, f, indent=2)
 
     def get_trajectory(self, traj_id: str) -> Optional[Trajectory]:
-        ""
         return self._trajectories.get(traj_id)
 
     def list_trajectories(self) -> list[dict]:
-        ""
         return [
             {
                 "id": t.id,
@@ -122,7 +113,6 @@ class TrajectoryGenerator:
         ]
 
     def format_trajectory(self, traj_id: str) -> str:
-        ""
         traj = self.get_trajectory(traj_id)
         if not traj:
             return "Trajectory not found"

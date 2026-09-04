@@ -8,14 +8,12 @@ from typing import Optional
 logger = logging.getLogger(__name__)
 
 class SessionSearch:
-    ""
 
     def __init__(self, data_dir: str = "data/sessions") -> None:
         self.data_dir = Path(data_dir)
         self.data_dir.mkdir(parents=True, exist_ok=True)
 
     def index_session(self, session_id: str, messages: list[dict]) -> None:
-        ""
         index_file = self.data_dir / f"{session_id}.json"
 
         content_parts = []
@@ -39,7 +37,6 @@ class SessionSearch:
         query: str,
         limit: int = 10,
     ) -> list[dict]:
-        ""
         results = []
         query_lower = query.lower()
 
@@ -70,7 +67,6 @@ class SessionSearch:
         return results[:limit]
 
     def get_session(self, session_id: str) -> Optional[dict]:
-        ""
         index_file = self.data_dir / f"{session_id}.json"
         if index_file.exists():
             with open(index_file) as f:
@@ -78,5 +74,4 @@ class SessionSearch:
         return None
 
     def list_sessions(self) -> list[str]:
-        ""
         return [f.stem for f in self.data_dir.glob("*.json")]

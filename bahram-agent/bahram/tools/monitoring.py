@@ -10,7 +10,6 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class Metric:
-    ""
 
     name: str
     value: float
@@ -19,7 +18,6 @@ class Metric:
 
 @dataclass
 class Alert:
-    ""
 
     name: str
     condition: str
@@ -28,7 +26,6 @@ class Alert:
     triggered: bool = False
 
 class PerformanceMonitor:
-    ""
 
     def __init__(self) -> None:
         self._metrics: dict[str, list[Metric]] = {}
@@ -37,7 +34,6 @@ class PerformanceMonitor:
         self._timers: dict[str, float] = {}
 
     def record(self, name: str, value: float, tags: dict[str, str] = None) -> None:
-        ""
         if name not in self._metrics:
             self._metrics[name] = []
 
@@ -51,16 +47,13 @@ class PerformanceMonitor:
         self._check_alerts(name, value)
 
     def increment(self, name: str, value: int = 1) -> None:
-        ""
         self._counters[name] = self._counters.get(name, 0) + value
         self.record(name, self._counters[name])
 
     def start_timer(self, name: str) -> None:
-        ""
         self._timers[name] = time.time()
 
     def stop_timer(self, name: str) -> float:
-        ""
         if name in self._timers:
             duration = time.time() - self._timers[name]
             del self._timers[name]
@@ -69,7 +62,6 @@ class PerformanceMonitor:
         return 0.0
 
     def add_alert(self, name: str, condition: str, threshold: float) -> None:
-        ""
         self._alerts.append(Alert(
             name=name,
             condition=condition,
@@ -77,7 +69,6 @@ class PerformanceMonitor:
         ))
 
     def _check_alerts(self, name: str, value: float) -> None:
-        ""
         for alert in self._alerts:
             if alert.name == name:
                 alert.current_value = value
@@ -91,7 +82,6 @@ class PerformanceMonitor:
                         logger.warning(f"Alert triggered: {name} = {value} < {alert.threshold}")
 
     def get_metric(self, name: str, limit: int = 100) -> list[dict]:
-        ""
         metrics = self._metrics.get(name, [])[-limit:]
         return [
             {"value": m.value, "timestamp": m.timestamp, "tags": m.tags}
@@ -99,11 +89,9 @@ class PerformanceMonitor:
         ]
 
     def get_counter(self, name: str) -> int:
-        ""
         return self._counters.get(name, 0)
 
     def get_summary(self) -> dict[str, Any]:
-        ""
         summary = {}
         for name, metrics in self._metrics.items():
             if metrics:
@@ -117,7 +105,6 @@ class PerformanceMonitor:
         return summary
 
     def get_alerts(self) -> list[dict]:
-        ""
         return [
             {"name": a.name, "condition": a.condition, "threshold": a.threshold, "current": a.current_value}
             for a in self._alerts

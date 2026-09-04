@@ -3,7 +3,11 @@ from __future__ import annotations
 import asyncio
 import sys
 from pathlib import Path
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
+
+if TYPE_CHECKING:
+    from bahram.core.agent import Agent
+    from bahram.core.engine import AgentResponse
 
 try:
     import typer
@@ -49,7 +53,6 @@ if HAS_CLI:
         config: str = typer.Option("config/config.yaml", help="Config file path"),
         session: Optional[str] = typer.Option(None, help="Session ID"),
     ) -> None:
-        ""
         from bahram.core.agent import Agent
         from bahram.core.config import Config
 
@@ -63,7 +66,6 @@ if HAS_CLI:
         list_models: bool = typer.Option(False, "--list", "-l", help="List available models"),
         set_model: Optional[str] = typer.Option(None, "--set", "-s", help="Set default model"),
     ) -> None:
-        ""
         from bahram.core.config import Config
 
         config = Config.from_file("config/config.yaml")
@@ -87,12 +89,9 @@ if HAS_CLI:
         list_skills: bool = typer.Option(False, "--list", "-l", help="List available skills"),
         skill_name: Optional[str] = typer.Argument(None, help="Skill name"),
     ) -> None:
-        ""
         from bahram.skills.manager import SkillManager
         from bahram.core.config import Config
 
-        config = Config.from_file("config/config.yaml")
-        manager = SkillManager(config.skills)
 
         if list_skills:
             console.print("[bold]Available skills:[/bold]")
@@ -112,7 +111,6 @@ if HAS_CLI:
         host: str = typer.Option("0.0.0.0", help="Host to bind"),
         port: int = typer.Option(8000, help="Port to bind"),
     ) -> None:
-        ""
         console.print(f"[info]Starting API server on {host}:{port}...[/info]")
         console.print("[success]Server started[/success]")
 
@@ -120,10 +118,9 @@ if HAS_CLI:
     def gateway(
         platform: str = typer.Option("telegram", help="Platform to connect"),
     ) -> None:
-        ""
         from bahram.core.config import Config
         from bahram.core.agent import Agent
-        from bahram.platforms import TelegramPlatform, DiscordPlatform, SlackPlatform
+        from bahram.platforms import TelegramPlatform, DiscordPlatform
 
         config = Config.from_file("config/config.yaml")
 
@@ -140,11 +137,18 @@ if HAS_CLI:
                 return
             p = DiscordPlatform(platform_config)
         elif platform == "slack":
+            from bahram.platforms.slack import SlackAdapter
             platform_config = config.platforms.get("slack")
             if not platform_config or not platform_config.enabled:
                 console.print("[error]Slack not configured[/error]")
                 return
-            p = SlackPlatform(platform_config)
+            p = SlackAdapter(
+                token=getattr(platform_config, "token", ""),
+                signing_secret=(
+                    getattr(platform_config, "signing_secret", "")
+                    or getattr(platform_config, "app_token", "")
+                ),
+            )
         else:
             console.print(f"[error]Unknown platform: {platform}[/error]")
             return
@@ -162,7 +166,6 @@ if HAS_CLI:
 
     @app.command()
     def version() -> None:
-        ""
         from bahram import __version__
 
         console.print(f"[bold]Bahram Agent[/bold] v{__version__}")
@@ -173,7 +176,6 @@ async def _chat_async(
     model: str,
     session: Optional[str],
 ) -> None:
-    ""
     from bahram.core.engine import AgentResponse
 
     await agent.start()
@@ -231,7 +233,6 @@ async def _chat_async(
     await agent.stop()
 
 def _print_response(response: "AgentResponse") -> None:
-    ""
     console.print(
         Panel(
             Markdown(response.content) if response.content else "",
@@ -246,7 +247,6 @@ def _print_response(response: "AgentResponse") -> None:
             console.print(f"  - {tc.name}({tc.arguments})")
 
 def main() -> None:
-    ""
     if app:
         app()
     else:

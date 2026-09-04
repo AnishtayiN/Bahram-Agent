@@ -9,7 +9,6 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class ContainerConfig:
-    ""
 
     image: str = "python:3.11-slim"
     name: str = ""
@@ -21,13 +20,11 @@ class ContainerConfig:
     working_dir: str = "/workspace"
 
 class ContainerResources:
-    ""
 
     def __init__(self) -> None:
         self._active_containers: dict[str, dict] = {}
 
     async def create_container(self, config: ContainerConfig) -> str:
-        ""
         import uuid
 
         name = config.name or f"bahram-agent-{uuid.uuid4().hex[:8]}"
@@ -67,7 +64,6 @@ class ContainerResources:
             raise RuntimeError(f"Failed to create container: {stderr.decode()}")
 
     async def start_container(self, name: str) -> bool:
-        ""
         proc = await asyncio.create_subprocess_exec(
             "docker", "start", name,
             stdout=asyncio.subprocess.PIPE,
@@ -77,7 +73,6 @@ class ContainerResources:
         return proc.returncode == 0
 
     async def stop_container(self, name: str, timeout: int = 10) -> bool:
-        ""
         proc = await asyncio.create_subprocess_exec(
             "docker", "stop", "-t", str(timeout), name,
             stdout=asyncio.subprocess.PIPE,
@@ -87,7 +82,6 @@ class ContainerResources:
         return proc.returncode == 0
 
     async def remove_container(self, name: str, force: bool = False) -> bool:
-        ""
         cmd = ["docker", "rm"]
         if force:
             cmd.append("-f")
@@ -111,7 +105,6 @@ class ContainerResources:
         command: str,
         timeout: float = 60.0,
     ) -> dict[str, Any]:
-        ""
         proc = await asyncio.create_subprocess_exec(
             "docker", "exec", name, "sh", "-c", command,
             stdout=asyncio.subprocess.PIPE,
@@ -137,7 +130,6 @@ class ContainerResources:
             }
 
     async def get_container_stats(self, name: str) -> dict[str, Any]:
-        ""
         proc = await asyncio.create_subprocess_exec(
             "docker", "stats", name, "--no-stream", "--format",
             "{{.CPUPerc}}|{{.MemUsage}}|{{.NetIO}}|{{.BlockIO}}",
@@ -158,7 +150,6 @@ class ContainerResources:
         return {"error": "Failed to get stats"}
 
     async def list_containers(self, all: bool = False) -> list[dict]:
-        ""
         cmd = ["docker", "ps", "--format", "{{.Names}}|{{.Image}}|{{.Status}}"]
         if all:
             cmd.append("-a")
@@ -184,7 +175,6 @@ class ContainerResources:
         return containers
 
 class ContainerSecurity:
-    ""
 
     def __init__(self) -> None:
         self._blocked_images: list[str] = []
@@ -193,7 +183,6 @@ class ContainerSecurity:
         self._allowed_registries: list[str] = ["docker.io", "gcr.io"]
 
     def check_image(self, image: str) -> tuple[bool, str]:
-        ""
 
         for blocked in self._blocked_images:
             if blocked in image:
@@ -206,7 +195,6 @@ class ContainerSecurity:
         return True, "OK"
 
     def apply_security(self, config: ContainerConfig) -> ContainerConfig:
-        ""
 
         config.network = "none"
         return config

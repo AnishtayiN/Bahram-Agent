@@ -9,7 +9,6 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class CodeExplanation:
-    ""
 
     line: int
     code: str
@@ -18,7 +17,6 @@ class CodeExplanation:
     concepts: list[str] = field(default_factory=list)
 
 class CodeExplainer:
-    ""
 
     def __init__(self) -> None:
         self._patterns: dict[str, str] = {
@@ -40,7 +38,6 @@ class CodeExplainer:
         }
 
     async def explain(self, code: str) -> list[CodeExplanation]:
-        ""
         explanations = []
         lines = code.split("\n")
 
@@ -52,7 +49,6 @@ class CodeExplainer:
         return explanations
 
     async def _explain_line(self, line: str) -> Optional[CodeExplanation]:
-        ""
         if not line or line.startswith("#"):
             return None
 
@@ -80,7 +76,6 @@ class CodeExplainer:
         )
 
     def _extract_concepts(self, line: str) -> list[str]:
-        ""
         concepts = []
         if "def " in line:
             concepts.append("function")
@@ -107,7 +102,6 @@ class CodeExplainer:
         return concepts
 
     def _assess_complexity(self, line: str) -> str:
-        ""
         complex_patterns = [r"lambda", r"async", r"await", r"with", r"yield"]
         moderate_patterns = [r"for", r"while", r"if.*else", r"try"]
 
@@ -122,7 +116,6 @@ class CodeExplainer:
         return "simple"
 
     def format_explanations(self, explanations: list[CodeExplanation]) -> str:
-        ""
         if not explanations:
             return "No code to explain!"
 

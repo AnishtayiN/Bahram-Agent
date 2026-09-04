@@ -10,7 +10,6 @@ from typing import Optional
 logger = logging.getLogger(__name__)
 
 class ApprovalMode(str, Enum):
-    ""
 
     SMART = "smart"
     MANUAL = "manual"
@@ -18,7 +17,6 @@ class ApprovalMode(str, Enum):
 
 @dataclass
 class ApprovalConfig:
-    ""
 
     mode: ApprovalMode = ApprovalMode.SMART
     timeout: int = 300
@@ -82,29 +80,44 @@ DANGEROUS_PATTERNS = [
     (r"docker\s+(stop|kill|restart)", "Container lifecycle"),
     (r"docker\s+compose\s+(down|stop|kill|restart)", "Container lifecycle"),
     (r"(DOCKER_HOST|DOCKER_CONTEXT)=", "Docker daemon redirect"),
+
+    # Path traversal inside shell commands (e.g. `cat ../../../etc/passwd`)
+    (r"(^|[;&|`()\s])(cd|cat|ls|head|tail|more|less|cp|mv|rm|echo|grep|sed|awk|vim|nano)\s+[^\n]*\.\./", "Path traversal"),
+
+    # Reading sensitive system files
+    (r"cat\s+(/etc/shadow|/etc/passwd|/etc/sudoers|/etc/sudo\.conf|~/.ssh/)", "Read sensitive file"),
+
+    # Data exfiltration attempts (pipe or argument to network tools)
+    (r"\|[^\n]*(curl|wget|nc|netcat)\b", "Exfiltrate data via pipe"),
+    (r"(curl|wget)\s+.*-d\s+@", "Exfiltrate file via curl"),
+    (r"(curl|wget|nc|netcat)\s+[^\n]*(shadow|passwd|sudoers|\.env|credential)", "Data exfiltration attempt"),
 ]
 
 class ApprovalSystem:
-    ""
 
     def __init__(self, config: ApprovalConfig = None) -> None:
         self.config = config or ApprovalConfig()
         self._session_allowlist: list[str] = []
 
     def check_command(self, command: str) -> tuple[bool, str]:
-        ""
 
-        for pattern in HARDLINE_BLOCKLIST:
-            if re.search(pattern, command, re.IGNORECASE):
-                return True, f"HARDLINE BLOCKED: {pattern}"
-
+        # 1. Administrator deny policy always wins.
         for deny_pattern in self.config.deny:
             if fnmatch.fnmatch(command.lower(), deny_pattern.lower()):
                 return True, f"DENIED by policy: {deny_pattern}"
 
+        # 2. Explicit user approval (approve_once / approve_always) for this
+        #    exact command overrides heuristic blocklists.
         if self._is_in_allowlist(command):
             return False, ""
 
+        # 3. Hardline blocklist — commands that are never approvable unless
+        #    explicitly approved above.
+        for pattern in HARDLINE_BLOCKLIST:
+            if re.search(pattern, command, re.IGNORECASE):
+                return True, f"HARDLINE BLOCKED: {pattern}"
+
+        # 4. Heuristic dangerous patterns.
         for pattern, description in DANGEROUS_PATTERNS:
             if re.search(pattern, command, re.IGNORECASE):
                 return True, description
@@ -112,26 +125,21 @@ class ApprovalSystem:
         return False, ""
 
     def _is_in_allowlist(self, command: str) -> bool:
-        ""
         for pattern in self.config.allowlist + self._session_allowlist:
             if fnmatch.fnmatch(command.lower(), pattern.lower()):
                 return True
         return False
 
     def approve_once(self, command: str) -> None:
-        ""
         self._session_allowlist.append(command)
 
     def approve_always(self, command: str) -> None:
-        ""
         self.config.allowlist.append(command)
 
     def get_approval_mode(self) -> ApprovalMode:
-        ""
         return self.config.mode
 
     def should_prompt(self, command: str) -> bool:
-        ""
         if self.config.mode == ApprovalMode.OFF:
             return False
 
@@ -145,7 +153,6 @@ class ApprovalSystem:
         return True
 
     def assess_risk(self, command: str) -> str:
-        ""
         is_dangerous, reason = self.check_command(command)
 
         if not is_dangerous:

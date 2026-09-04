@@ -9,7 +9,6 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class AgentConfig:
-    ""
 
     name: str
     model: str = ""
@@ -20,7 +19,6 @@ class AgentConfig:
 
 @dataclass
 class MoAResult:
-    ""
 
     final_response: str
     agent_responses: list[dict[str, str]] = field(default_factory=list)
@@ -28,7 +26,6 @@ class MoAResult:
     consensus_reached: bool = False
 
 class MixtureOfAgents:
-    ""
 
     def __init__(self) -> None:
         self._agents: list[AgentConfig] = []
@@ -37,7 +34,6 @@ class MixtureOfAgents:
         self._aggregator_count: int = 1
 
     def add_agent(self, config: AgentConfig) -> None:
-        ""
         self._agents.append(config)
 
     def set_topology(
@@ -46,7 +42,6 @@ class MixtureOfAgents:
         verifiers: int = 2,
         aggregators: int = 1,
     ) -> None:
-        ""
         self._proposer_count = proposers
         self._verifier_count = verifiers
         self._aggregator_count = aggregators
@@ -57,7 +52,6 @@ class MixtureOfAgents:
         llm_fn: Callable,
         rounds: int = 2,
     ) -> MoAResult:
-        ""
         result = MoAResult(final_response="")
 
         proposer_responses = []
@@ -119,7 +113,6 @@ class MixtureOfAgents:
         return result
 
     def _get_agent(self, role: str, index: int) -> Optional[AgentConfig]:
-        ""
         role_agents = [a for a in self._agents if a.role == role]
         if index < len(role_agents):
             return role_agents[index]
@@ -129,7 +122,6 @@ class MixtureOfAgents:
         return None
 
     def list_agents(self) -> list[dict]:
-        ""
         return [
             {"name": a.name, "model": a.model, "role": a.role}
             for a in self._agents

@@ -16,12 +16,20 @@ logger = logging.getLogger(__name__)
 
 class SessionStore:
     def __init__(self, db_path: str = "data/sessions.db") -> None:
-        self._db_path = Path(db_path)
-        self._db_path.parent.mkdir(parents=True, exist_ok=True)
+        self._memory_only = str(db_path) == ":memory:"
+        self._db_path = Path(db_path) if not self._memory_only else None
+        self._memory_conn: sqlite3.Connection | None = None
+        if self._db_path is not None:
+            self._db_path.parent.mkdir(parents=True, exist_ok=True)
         self._local = threading.local()
         self._init_db()
 
     def _get_conn(self) -> sqlite3.Connection:
+        if self._memory_only:
+            if self._memory_conn is None:
+                self._memory_conn = sqlite3.connect(":memory:")
+                self._memory_conn.row_factory = sqlite3.Row
+            return self._memory_conn
         if not hasattr(self._local, "conn") or self._local.conn is None:
             self._local.conn = sqlite3.connect(str(self._db_path))
             self._local.conn.row_factory = sqlite3.Row

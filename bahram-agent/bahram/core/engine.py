@@ -154,12 +154,34 @@ class ToolExecutor:
         self.approval_system = approval_system
         self._log: list[dict[str, Any]] = []
         self._result_cache: dict[str, ToolResult] = {}
+        self._inflight: dict[str, asyncio.Event] = {}
 
     async def execute(self, tool_call: ToolCall, timeout: float = 120.0) -> ToolResult:
-        tool_name = tool_call.name
+        tool_call_id = tool_call.id
 
-        if tool_call.id in self._result_cache:
-            return self._result_cache[tool_call.id]
+        # Return cached results for already-executed tool calls (idempotency).
+        if tool_call_id in self._result_cache:
+            return self._result_cache[tool_call_id]
+
+        # If another coroutine is already executing this exact tool call id,
+        # wait for it and reuse its result so concurrent duplicates never
+        # re-execute the tool (concurrent idempotency).
+        inflight = self._inflight.get(tool_call_id)
+        if inflight is not None:
+            await inflight.wait()
+            if tool_call_id in self._result_cache:
+                return self._result_cache[tool_call_id]
+
+        event = asyncio.Event()
+        self._inflight[tool_call_id] = event
+        try:
+            return await self._execute_once(tool_call, timeout)
+        finally:
+            self._inflight.pop(tool_call_id, None)
+            event.set()
+
+    async def _execute_once(self, tool_call: ToolCall, timeout: float = 120.0) -> ToolResult:
+        tool_name = tool_call.name
 
         if tool_name not in self.tools:
             return ToolResult(
@@ -172,7 +194,7 @@ class ToolExecutor:
             is_dangerous, reason = self.approval_system.check_command(cmd)
             if is_dangerous:
                 risk = self.approval_system.assess_risk(cmd)
-                if risk in ("critical", "high"):
+                if risk != "low":
                     self._log_event(tool_name, tool_call.arguments, "blocked", reason)
                     return ToolResult(
                         tool_call_id=tool_call.id, content="", success=False,
@@ -522,7 +544,7 @@ class AgentEngine:
                     full_content += chunk
                     yield chunk
                 self.record_provider_success(provider_name)
-            except Exception as e:
+            except Exception:
                 self.record_provider_failure(provider_name)
                 try:
                     provider = self.get_provider(model)

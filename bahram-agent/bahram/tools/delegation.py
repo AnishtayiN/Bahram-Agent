@@ -9,7 +9,6 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class DelegatedTask:
-    ""
 
     task_id: str
     agent: str
@@ -19,14 +18,12 @@ class DelegatedTask:
     error: str = ""
 
 class DelegationTool:
-    ""
 
     def __init__(self) -> None:
         self._agents: dict[str, Callable] = {}
         self._tasks: dict[str, DelegatedTask] = {}
 
     def register_agent(self, name: str, handler: Callable) -> None:
-        ""
         self._agents[name] = handler
 
     async def delegate(
@@ -36,7 +33,6 @@ class DelegationTool:
         description: str,
         **kwargs,
     ) -> dict[str, Any]:
-        ""
         if agent not in self._agents:
             return {"error": f"Agent '{agent}' not registered"}
 
@@ -65,7 +61,6 @@ class DelegationTool:
             return {"status": "failed", "error": str(e)}
 
     def get_task(self, task_id: str) -> Optional[dict]:
-        ""
         task = self._tasks.get(task_id)
         if task:
             return {
@@ -79,11 +74,9 @@ class DelegationTool:
         return None
 
     def list_agents(self) -> list[str]:
-        ""
         return list(self._agents.keys())
 
     def list_tasks(self) -> list[dict]:
-        ""
         return [
             {
                 "task_id": t.task_id,

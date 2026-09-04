@@ -9,7 +9,6 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class FormatRule:
-    ""
 
     name: str
     language: str
@@ -18,7 +17,6 @@ class FormatRule:
     description: str = ""
 
 class SmartFormatter:
-    ""
 
     def __init__(self) -> None:
         self._rules: dict[str, list[FormatRule]] = {
@@ -46,7 +44,6 @@ class SmartFormatter:
         language: str,
         rules: list[str] = None,
     ) -> tuple[str, list[dict]]:
-        ""
         rules_list = self._rules.get(language, [])
         if rules:
             rules_list = [r for r in rules_list if r.name in rules]
@@ -67,7 +64,6 @@ class SmartFormatter:
         return formatted, changes
 
     async def check_style(self, code: str, language: str) -> list[dict]:
-        ""
         rules_list = self._rules.get(language, [])
         issues = []
 
@@ -83,7 +79,6 @@ class SmartFormatter:
         return issues
 
     def get_rules(self, language: str) -> list[dict]:
-        ""
         rules = self._rules.get(language, [])
         return [
             {
@@ -95,7 +90,6 @@ class SmartFormatter:
         ]
 
     def add_rule(self, rule: FormatRule) -> None:
-        ""
         if rule.language not in self._rules:
             self._rules[rule.language] = []
         self._rules[rule.language].append(rule)

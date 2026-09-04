@@ -11,7 +11,6 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class DeliveryEntry:
-    ""
 
     message_id: str
     platform: str
@@ -24,7 +23,6 @@ class DeliveryEntry:
     error: str = ""
 
 class DeliveryLedger:
-    ""
 
     def __init__(self, data_dir: str = "data/gateway") -> None:
         self.data_dir = Path(data_dir)
@@ -33,7 +31,6 @@ class DeliveryLedger:
         self._load()
 
     def _load(self) -> None:
-        ""
         ledger_file = self.data_dir / "delivery_ledger.json"
         if ledger_file.exists():
             try:
@@ -46,7 +43,6 @@ class DeliveryLedger:
                 logger.warning(f"Failed to load delivery ledger: {e}")
 
     def _save(self) -> None:
-        ""
         ledger_file = self.data_dir / "delivery_ledger.json"
         data = [
             {
@@ -72,7 +68,6 @@ class DeliveryLedger:
         chat_id: str,
         content: str,
     ) -> DeliveryEntry:
-        ""
         entry = DeliveryEntry(
             message_id=message_id,
             platform=platform,
@@ -86,7 +81,6 @@ class DeliveryLedger:
         return entry
 
     def mark_sent(self, message_id: str) -> bool:
-        ""
         if message_id in self._entries:
             self._entries[message_id].status = "sent"
             self._save()
@@ -94,7 +88,6 @@ class DeliveryLedger:
         return False
 
     def mark_failed(self, message_id: str, error: str) -> bool:
-        ""
         if message_id in self._entries:
             entry = self._entries[message_id]
             entry.attempts += 1
@@ -106,7 +99,6 @@ class DeliveryLedger:
         return False
 
     def get_pending(self) -> list[dict]:
-        ""
         return [
             {
                 "message_id": e.message_id,
@@ -120,7 +112,6 @@ class DeliveryLedger:
         ]
 
     def get_retryable(self) -> list[dict]:
-        ""
         return [
             {
                 "message_id": e.message_id,
@@ -133,7 +124,6 @@ class DeliveryLedger:
         ]
 
     def cleanup(self, max_age_seconds: int = 86400) -> int:
-        ""
         now = time.time()
         to_remove = [
             msg_id

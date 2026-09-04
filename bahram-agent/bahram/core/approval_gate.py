@@ -9,7 +9,6 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class ApprovalGate:
-    ""
 
     name: str
     pattern: str
@@ -19,7 +18,6 @@ class ApprovalGate:
     approver: str = ""
 
 class ApprovalGateManager:
-    ""
 
     def __init__(self, data_dir: str = "data/security") -> None:
         self.data_dir = Path(data_dir)
@@ -29,7 +27,6 @@ class ApprovalGateManager:
         self._load()
 
     def _load(self) -> None:
-        ""
 
         self._gates = [
             ApprovalGate(
@@ -59,7 +56,6 @@ class ApprovalGateManager:
         ]
 
     def check_write(self, file_path: str) -> tuple[bool, str]:
-        ""
         path = Path(file_path)
 
         for gate in self._gates:
@@ -75,7 +71,6 @@ class ApprovalGateManager:
         return False, "No approval required"
 
     def _matches_pattern(self, path: Path, pattern: str) -> bool:
-        ""
         path_str = str(path)
         patterns = [p.strip() for p in pattern.split(",")]
 
@@ -97,7 +92,6 @@ class ApprovalGateManager:
         return False
 
     def request_approval(self, write_id: str, file_path: str, reason: str) -> dict:
-        ""
         self._pending[write_id] = {
             "file_path": file_path,
             "reason": reason,
@@ -106,21 +100,18 @@ class ApprovalGateManager:
         return self._pending[write_id]
 
     def approve(self, write_id: str) -> bool:
-        ""
         if write_id in self._pending:
             self._pending[write_id]["status"] = "approved"
             return True
         return False
 
     def deny(self, write_id: str) -> bool:
-        ""
         if write_id in self._pending:
             self._pending[write_id]["status"] = "denied"
             return True
         return False
 
     def get_pending(self) -> list[dict]:
-        ""
         return [
             {"id": k, **v}
             for k, v in self._pending.items()
@@ -128,5 +119,4 @@ class ApprovalGateManager:
         ]
 
     def add_gate(self, gate: ApprovalGate) -> None:
-        ""
         self._gates.append(gate)

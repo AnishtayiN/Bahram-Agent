@@ -9,7 +9,6 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class OptimizationSuggestion:
-    ""
 
     file: str
     line: int
@@ -21,7 +20,6 @@ class OptimizationSuggestion:
     impact: str
 
 class PerformanceOptimizer:
-    ""
 
     def __init__(self) -> None:
         self._rules: list[tuple[str, str, str, str, str]] = [
@@ -37,7 +35,6 @@ class PerformanceOptimizer:
         ]
 
     async def analyze(self, file_path: str) -> list[OptimizationSuggestion]:
-        ""
         try:
             with open(file_path, "r", encoding="utf-8", errors="replace") as f:
                 content = f.read()
@@ -66,7 +63,6 @@ class PerformanceOptimizer:
             return []
 
     def format_suggestions(self, suggestions: list[OptimizationSuggestion]) -> str:
-        ""
         if not suggestions:
             return "No optimization suggestions!"
 
@@ -92,7 +88,6 @@ class PerformanceOptimizer:
         return "\n".join(lines)
 
     def get_summary(self, suggestions: list[OptimizationSuggestion]) -> dict[str, int]:
-        ""
         summary = {"high": 0, "medium": 0, "low": 0}
         for s in suggestions:
             summary[s.impact] = summary.get(s.impact, 0) + 1

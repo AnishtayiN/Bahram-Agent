@@ -9,7 +9,6 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class DBConfig:
-    ""
 
     db_type: str
     host: str = "localhost"
@@ -19,14 +18,12 @@ class DBConfig:
     password: str = ""
 
 class DatabaseTool:
-    ""
 
     def __init__(self, config: DBConfig = None) -> None:
         self.config = config
         self._connection = None
 
     async def connect(self) -> bool:
-        ""
         if not self.config:
             return False
 
@@ -43,7 +40,6 @@ class DatabaseTool:
             return False
 
     async def _connect_sqlite(self) -> bool:
-        ""
         try:
             import aiosqlite
             self._connection = await aiosqlite.connect(self.config.database)
@@ -53,7 +49,6 @@ class DatabaseTool:
             return False
 
     async def _connect_postgresql(self) -> bool:
-        ""
         try:
             import asyncpg
             self._connection = await asyncpg.connect(
@@ -69,7 +64,6 @@ class DatabaseTool:
             return False
 
     async def _connect_mysql(self) -> bool:
-        ""
         try:
             import aiomysql
             self._connection = await aiomysql.connect(
@@ -85,7 +79,6 @@ class DatabaseTool:
             return False
 
     async def execute(self, query: str, params: tuple = None) -> list[dict]:
-        ""
         if not self._connection:
             return []
 
@@ -110,14 +103,12 @@ class DatabaseTool:
             return []
 
     async def insert(self, table: str, data: dict) -> bool:
-        ""
         columns = ", ".join(data.keys())
         placeholders = ", ".join(["?" if self.config.db_type == "sqlite" else "%s"] * len(data))
         query = f"INSERT INTO {table} ({columns}) VALUES ({placeholders})"
         return await self.execute(query, tuple(data.values())) is not None
 
     async def close(self) -> None:
-        ""
         if self._connection:
             await self._connection.close()
             self._connection = None

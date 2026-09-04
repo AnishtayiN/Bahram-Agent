@@ -6,7 +6,6 @@ from typing import Any, Optional
 logger = logging.getLogger(__name__)
 
 class WebSearchTool:
-    ""
 
     def __init__(self) -> None:
         self._search_engine: str = "google"
@@ -18,7 +17,6 @@ class WebSearchTool:
         num_results: int = None,
         engine: str = None,
     ) -> list[dict]:
-        ""
         try:
             import httpx
 
@@ -63,7 +61,6 @@ class WebSearchTool:
             return [{"error": str(e)}]
 
     async def search_and_summarize(self, query: str) -> str:
-        ""
         results = await self.search(query, num_results=5)
 
         if not results:
@@ -82,9 +79,7 @@ class WebSearchTool:
         return "\n".join(lines)
 
     def set_search_engine(self, engine: str) -> None:
-        ""
         self._search_engine = engine
 
     def set_max_results(self, max_results: int) -> None:
-        ""
         self._max_results = max_results

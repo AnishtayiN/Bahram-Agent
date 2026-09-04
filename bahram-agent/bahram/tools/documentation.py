@@ -7,7 +7,6 @@ from typing import Any, Optional
 logger = logging.getLogger(__name__)
 
 class DocumentationGenerator:
-    ""
 
     def __init__(self) -> None:
         self._templates: dict[str, str] = {
@@ -17,7 +16,6 @@ class DocumentationGenerator:
         }
 
     async def generate(self, source_path: str, output_path: str, doc_type: str = "readme") -> bool:
-        ""
         try:
             source = Path(source_path)
             if not source.exists():
@@ -42,7 +40,6 @@ class DocumentationGenerator:
             return False
 
     async def _generate_readme(self, source: Path) -> str:
-        ""
         lines = [f"# {source.name}", ""]
 
         for py_file in sorted(source.glob("**/*.py")):
@@ -56,7 +53,6 @@ class DocumentationGenerator:
         return "\n".join(lines)
 
     async def _generate_api_docs(self, source: Path) -> str:
-        ""
         lines = ["# API Documentation", ""]
 
         for py_file in sorted(source.glob("**/*.py")):
@@ -79,11 +75,9 @@ class DocumentationGenerator:
         return "\n".join(lines)
 
     async def _generate_changelog(self, source: Path) -> str:
-        ""
         return ""
 
     def _extract_docstring(self, file_path: Path) -> str:
-        ""
         try:
             content = file_path.read_text(errors="replace")
             import re

@@ -9,7 +9,6 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class BrowserState:
-    ""
 
     url: str = ""
     title: str = ""
@@ -17,7 +16,6 @@ class BrowserState:
     screenshot: bytes = b""
 
 class BrowserTool:
-    ""
 
     def __init__(self) -> None:
         self._browser = None
@@ -25,7 +23,6 @@ class BrowserTool:
         self._headless: bool = True
 
     async def start(self, headless: bool = True) -> bool:
-        ""
         try:
             from playwright.async_api import async_playwright
 
@@ -43,14 +40,12 @@ class BrowserTool:
             return False
 
     async def stop(self) -> None:
-        ""
         if self._browser:
             await self._browser.close()
         if self._playwright:
             await self._playwright.stop()
 
     async def navigate(self, url: str) -> dict[str, Any]:
-        ""
         if not self._page:
             return {"error": "Browser not started"}
 
@@ -68,7 +63,6 @@ class BrowserTool:
             return {"error": str(e)}
 
     async def click(self, selector: str) -> bool:
-        ""
         if not self._page:
             return False
 
@@ -80,7 +74,6 @@ class BrowserTool:
             return False
 
     async def type_text(self, selector: str, text: str) -> bool:
-        ""
         if not self._page:
             return False
 
@@ -92,7 +85,6 @@ class BrowserTool:
             return False
 
     async def get_content(self) -> str:
-        ""
         if not self._page:
             return ""
 
@@ -102,7 +94,6 @@ class BrowserTool:
             return ""
 
     async def screenshot(self) -> Optional[bytes]:
-        ""
         if not self._page:
             return None
 
@@ -112,7 +103,6 @@ class BrowserTool:
             return None
 
     async def evaluate(self, expression: str) -> Any:
-        ""
         if not self._page:
             return None
 
@@ -122,5 +112,4 @@ class BrowserTool:
             return {"error": str(e)}
 
     def is_running(self) -> bool:
-        ""
         return self._browser is not None

@@ -8,14 +8,12 @@ from bahram.platforms.base import BasePlatform, PlatformMessage
 logger = logging.getLogger(__name__)
 
 class DiscordPlatform(BasePlatform):
-    ""
 
     @property
     def name(self) -> str:
         return "discord"
 
     async def start(self) -> None:
-        ""
         try:
             import discord
             from discord.ext import commands
@@ -62,20 +60,17 @@ class DiscordPlatform(BasePlatform):
             logger.error(f"Failed to start Discord bot: {e}")
 
     async def stop(self) -> None:
-        ""
         if hasattr(self, "bot"):
             await self.bot.close()
             logger.info("Discord bot stopped")
 
     async def send_message(self, chat_id: str, content: str) -> None:
-        ""
         if hasattr(self, "bot"):
             channel = self.bot.get_channel(int(chat_id))
             if channel:
                 await channel.send(content)
 
     async def reply(self, message: PlatformMessage, content: str) -> None:
-        ""
         if hasattr(self, "bot"):
             channel = self.bot.get_channel(int(message.chat_id))
             if channel:

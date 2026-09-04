@@ -10,7 +10,6 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class CurationAction:
-    ""
 
     action: str
     skill_name: str
@@ -19,7 +18,6 @@ class CurationAction:
     timestamp: str = field(default_factory=lambda: datetime.now().isoformat())
 
 class Curator:
-    ""
 
     def __init__(self, skills_dir: str = "skills") -> None:
         self.skills_dir = Path(skills_dir)
@@ -33,7 +31,6 @@ class Curator:
         }
 
     def analyze_skills(self) -> list[CurationAction]:
-        ""
         actions = []
 
         skills = self._load_all_skills()
@@ -65,7 +62,6 @@ class Curator:
         return actions
 
     def _load_all_skills(self) -> list[dict]:
-        ""
         skills = []
         if self.skills_dir.exists():
             for skill_file in self.skills_dir.rglob("SKILL.md"):
@@ -82,7 +78,6 @@ class Curator:
         return skills
 
     def _find_overlapping(self, skills: list[dict]) -> list[dict]:
-        ""
         overlaps = []
         for i, s1 in enumerate(skills):
             for s2 in skills[i+1:]:
@@ -95,7 +90,6 @@ class Curator:
         return overlaps
 
     def _calculate_similarity(self, text1: str, text2: str) -> float:
-        ""
         words1 = set(text1.lower().split())
         words2 = set(text2.lower().split())
         if not words1 or not words2:
@@ -105,18 +99,14 @@ class Curator:
         return len(intersection) / len(union)
 
     def _find_unused_skills(self, skills: list[dict]) -> list[str]:
-        ""
 
         return []
 
     def _find_large_skills(self, skills: list[dict]) -> list[dict]:
-        ""
         return [s for s in skills if s["size"] > 10000]
 
     def get_stats(self) -> dict:
-        ""
         return self._stats.copy()
 
     def get_pending_actions(self) -> list[CurationAction]:
-        ""
         return self._actions.copy()

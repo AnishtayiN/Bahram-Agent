@@ -9,7 +9,6 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class DeploymentConfig:
-    ""
 
     name: str
     target: str
@@ -20,18 +19,15 @@ class DeploymentConfig:
     env_vars: dict[str, str] = field(default_factory=dict)
 
 class DeploymentTool:
-    ""
 
     def __init__(self) -> None:
         self._configs: dict[str, DeploymentConfig] = {}
         self._history: list[dict] = []
 
     def add_config(self, config: DeploymentConfig) -> None:
-        ""
         self._configs[config.name] = config
 
     async def deploy(self, config_name: str) -> dict[str, Any]:
-        ""
         config = self._configs.get(config_name)
         if not config:
             return {"error": f"Config '{config_name}' not found"}
@@ -49,7 +45,6 @@ class DeploymentTool:
             return {"error": str(e)}
 
     async def _deploy_docker(self, config: DeploymentConfig) -> dict[str, Any]:
-        ""
         proc = await asyncio.create_subprocess_shell(
             f"docker build -t {config.name} . && docker run -d --name {config.name} {config.name}",
             stdout=asyncio.subprocess.PIPE,
@@ -67,7 +62,6 @@ class DeploymentTool:
         return result
 
     async def _deploy_kubernetes(self, config: DeploymentConfig) -> dict[str, Any]:
-        ""
 
         yaml_content = f""
 
@@ -88,7 +82,6 @@ class DeploymentTool:
         return result
 
     async def _deploy_cloud(self, config: DeploymentConfig, provider: str) -> dict[str, Any]:
-        ""
         result = {
             "target": provider,
             "status": "success",
@@ -103,11 +96,9 @@ class DeploymentTool:
         return result
 
     def get_history(self) -> list[dict]:
-        ""
         return self._history.copy()
 
     async def rollback(self, config_name: str) -> dict[str, Any]:
-        ""
         return {
             "status": "success",
             "message": f"Rollback for {config_name} initiated",

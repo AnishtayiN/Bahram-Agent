@@ -76,12 +76,13 @@ class BashTool(BaseTool):
 
         tirith = _get_tirith()
         if tirith:
-            violations = tirith.scan_command(command)
-            if violations:
+            result = tirith.scan_command(command)
+            if result is not None and hasattr(result, "safe") and not result.safe:
+                violations = list(result.blocked or []) + list(result.issues or [])
                 return f"Error: Security violations: {'; '.join(violations)}"
 
         supply = _get_supply_chain()
-        if supply:
+        if supply and hasattr(supply, "validate_command"):
             safe, msg = supply.validate_command(command)
             if not safe:
                 return f"Error: Supply chain: {msg}"

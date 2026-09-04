@@ -7,7 +7,6 @@ from typing import Any, Optional
 logger = logging.getLogger(__name__)
 
 class DocumentTool:
-    ""
 
     def __init__(self) -> None:
         self._max_size: int = 10 * 1024 * 1024
@@ -17,7 +16,6 @@ class DocumentTool:
         file_path: str,
         format: str = "text",
     ) -> dict[str, Any]:
-        ""
         path = Path(file_path)
 
         if not path.exists():
@@ -53,7 +51,6 @@ class DocumentTool:
             return {"error": str(e)}
 
     async def _extract_pdf(self, path: Path) -> dict[str, Any]:
-        ""
         try:
             import PyPDF2
 
@@ -72,7 +69,6 @@ class DocumentTool:
             return {"error": "PyPDF2 not installed. Run: pip install PyPDF2"}
 
     async def _extract_docx(self, path: Path) -> dict[str, Any]:
-        ""
         try:
             from docx import Document
 
@@ -88,5 +84,4 @@ class DocumentTool:
             return {"error": "python-docx not installed. Run: pip install python-docx"}
 
     def set_max_size(self, max_size: int) -> None:
-        ""
         self._max_size = max_size

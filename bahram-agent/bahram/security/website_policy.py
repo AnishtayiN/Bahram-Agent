@@ -8,14 +8,12 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class WebsiteRule:
-    ""
 
     pattern: str
     action: str
     reason: str = ""
 
 class WebsitePolicy:
-    ""
 
     def __init__(self) -> None:
         self._rules: list[WebsiteRule] = []
@@ -23,7 +21,6 @@ class WebsitePolicy:
         self._load_defaults()
 
     def _load_defaults(self) -> None:
-        ""
         self._rules = [
 
             WebsiteRule(pattern="*.malware.com", action="deny", reason="Malware site"),
@@ -37,7 +34,6 @@ class WebsitePolicy:
         ]
 
     def check_url(self, url: str) -> tuple[str, str]:
-        ""
         url_lower = url.lower()
 
         for rule in self._rules:
@@ -53,11 +49,9 @@ class WebsitePolicy:
         return self._default_action, "Default policy"
 
     def add_rule(self, rule: WebsiteRule) -> None:
-        ""
         self._rules.insert(0, rule)
 
     def remove_rule(self, pattern: str) -> bool:
-        ""
         for i, rule in enumerate(self._rules):
             if rule.pattern == pattern:
                 del self._rules[i]
@@ -65,11 +59,9 @@ class WebsitePolicy:
         return False
 
     def set_default_action(self, action: str) -> None:
-        ""
         self._default_action = action
 
     def list_rules(self) -> list[dict]:
-        ""
         return [
             {"pattern": r.pattern, "action": r.action, "reason": r.reason}
             for r in self._rules

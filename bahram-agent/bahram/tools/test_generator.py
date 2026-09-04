@@ -10,7 +10,6 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class GeneratedTest:
-    ""
 
     name: str
     code: str
@@ -18,7 +17,6 @@ class GeneratedTest:
     test_type: str
 
 class TestGenerator:
-    ""
 
     def __init__(self) -> None:
         self._test_templates: dict[str, str] = {
@@ -32,7 +30,6 @@ class TestGenerator:
         output_dir: str,
         test_type: str = "unit",
     ) -> list[GeneratedTest]:
-        ""
         try:
             source = Path(source_path)
             if not source.exists():
@@ -77,7 +74,6 @@ class TestGenerator:
             return []
 
     def _extract_classes(self, content: str) -> list[dict]:
-        ""
         classes = []
         pattern = r"class\s+(\w+)\s*(?:\(([^)]*)\))?:"
         for match in re.finditer(pattern, content):
@@ -88,7 +84,6 @@ class TestGenerator:
         return classes
 
     def _extract_functions(self, content: str) -> list[dict]:
-        ""
         functions = []
         pattern = r"def\s+(\w+)\s*\(([^)]*)\)"
         for match in re.finditer(pattern, content):
@@ -100,7 +95,6 @@ class TestGenerator:
         return functions
 
     async def _generate_class_tests(self, cls: dict, test_type: str) -> str:
-        ""
         test_methods = f""
         return self._test_templates.get(test_type, "").format(
             module="module",
@@ -110,11 +104,9 @@ class TestGenerator:
         )
 
     async def _generate_function_tests(self, func: dict, test_type: str) -> str:
-        ""
         return f''
 
     def _combine_tests(self, tests: list[GeneratedTest]) -> str:
-        ""
         lines = ['""', "", "import pytest", ""]
         for test in tests:
 

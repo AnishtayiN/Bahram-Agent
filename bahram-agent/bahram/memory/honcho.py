@@ -9,7 +9,6 @@ from typing import Any, Optional
 logger = logging.getLogger(__name__)
 
 class HonchoModel:
-    ""
 
     def __init__(self, data_dir: str = "data/honcho") -> None:
         self.data_dir = Path(data_dir)
@@ -18,7 +17,6 @@ class HonchoModel:
         self._load_profiles()
 
     def _load_profiles(self) -> None:
-        ""
         profiles_file = self.data_dir / "profiles.json"
         if profiles_file.exists():
             try:
@@ -28,7 +26,6 @@ class HonchoModel:
                 logger.error(f"Failed to load profiles: {e}")
 
     def _save_profiles(self) -> None:
-        ""
         profiles_file = self.data_dir / "profiles.json"
         try:
             with open(profiles_file, "w") as f:
@@ -37,7 +34,6 @@ class HonchoModel:
             logger.error(f"Failed to save profiles: {e}")
 
     def get_profile(self, user_id: str) -> dict:
-        ""
         if user_id not in self._profiles:
             self._profiles[user_id] = {
                 "id": user_id,
@@ -52,14 +48,12 @@ class HonchoModel:
         return self._profiles[user_id]
 
     def update_profile(self, user_id: str, updates: dict) -> None:
-        ""
         profile = self.get_profile(user_id)
         profile.update(updates)
         profile["updated"] = datetime.now().isoformat()
         self._save_profiles()
 
     def record_interaction(self, user_id: str, message: str, response: str) -> None:
-        ""
         profile = self.get_profile(user_id)
         profile["interactions"] = profile.get("interactions", 0) + 1
 
@@ -70,7 +64,6 @@ class HonchoModel:
         self._save_profiles()
 
     def _extract_preferences(self, user_id: str, message: str) -> None:
-        ""
         profile = self.get_profile(user_id)
         preferences = profile.get("preferences", {})
 
@@ -91,9 +84,8 @@ class HonchoModel:
         profile["preferences"] = preferences
 
     def _update_communication_style(self, user_id: str, message: str, response: str) -> None:
-        ""
         profile = self.get_profile(user_id)
-        style = profile.get("communication_style", {})
+        style = profile.setdefault("communication_style", {})
 
         avg_length = style.get("avg_message_length", 0)
         interactions = profile.get("interactions", 1)
@@ -105,7 +97,6 @@ class HonchoModel:
         profile["communication_style"] = style
 
     def add_topic(self, user_id: str, topic: str, sentiment: float = 0.0) -> None:
-        ""
         profile = self.get_profile(user_id)
         topics = profile.get("topics", {})
 
@@ -126,7 +117,6 @@ class HonchoModel:
         self._save_profiles()
 
     def get_recommendations(self, user_id: str) -> list[str]:
-        ""
         profile = self.get_profile(user_id)
         topics = profile.get("topics", {})
 
@@ -139,13 +129,12 @@ class HonchoModel:
         return [topic for topic, _ in sorted_topics[:5]]
 
     def get_user_summary(self, user_id: str) -> str:
-        ""
         profile = self.get_profile(user_id)
         preferences = profile.get("preferences", {})
         topics = profile.get("topics", {})
         style = profile.get("communication_style", {})
-
         summary = f"User Profile: {user_id}\n"
+        summary += f"Style: {style.get('formality', 'unknown')}\n" if style else ""
         summary += f"Interactions: {profile.get('interactions', 0)}\n"
         summary += f"Language: {preferences.get('language', 'unknown')}\n"
         summary += f"Formality: {preferences.get('formality', 'unknown')}\n"
@@ -157,10 +146,8 @@ class HonchoModel:
         return summary
 
     def list_profiles(self) -> list[str]:
-        ""
         return list(self._profiles.keys())
 
     def delete_profile(self, user_id: str) -> None:
-        ""
         self._profiles.pop(user_id, None)
         self._save_profiles()

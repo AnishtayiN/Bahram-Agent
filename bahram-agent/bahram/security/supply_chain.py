@@ -11,7 +11,6 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class SupplyChainIssue:
-    ""
 
     package: str
     severity: str
@@ -19,7 +18,6 @@ class SupplyChainIssue:
     recommendation: str
 
 class SupplyChainChecker:
-    ""
 
     def __init__(self, data_dir: str = "data/security") -> None:
         self.data_dir = Path(data_dir)
@@ -27,7 +25,6 @@ class SupplyChainChecker:
         self._issues: list[SupplyChainIssue] = []
 
     def check_python_packages(self) -> list[SupplyChainIssue]:
-        ""
         issues = []
 
         try:
@@ -59,7 +56,6 @@ class SupplyChainChecker:
         return issues
 
     def _get_vulnerable_packages(self) -> dict[str, str]:
-        ""
         return {
             "requests": "CVE-2023-32681",
             "flask": "CVE-2023-30861",
@@ -69,7 +65,6 @@ class SupplyChainChecker:
         }
 
     def check_file_permissions(self, path: str) -> list[SupplyChainIssue]:
-        ""
         issues = []
         file_path = Path(path)
 
@@ -88,7 +83,6 @@ class SupplyChainChecker:
         return issues
 
     def scan_dependencies(self, requirements_file: str = "requirements.txt") -> list[SupplyChainIssue]:
-        ""
         issues = []
         req_path = Path(requirements_file)
 
@@ -112,7 +106,6 @@ class SupplyChainChecker:
         return issues
 
     def get_all_issues(self) -> list[dict]:
-        ""
         issues = []
         issues.extend(self.check_python_packages())
         issues.extend(self.scan_dependencies())
