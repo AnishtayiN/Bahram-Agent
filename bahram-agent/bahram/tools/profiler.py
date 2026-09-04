@@ -70,6 +70,12 @@ class Profiler:
             list[ProfileResult]: a sequence of ProfileResult entries (empty when there is nothing to
                 report).
         """
+        # pstats raises TypeError when handed a Profile that recorded no
+        # calls - right after reset(), or when start()/stop() bracketed no
+        # work.  There is nothing to report in that case.
+        if not self._profiler.getstats():
+            return []
+
         stream = io.StringIO()
         stats = pstats.Stats(self._profiler, stream=stream)
         stats.sort_stats("cumulative")

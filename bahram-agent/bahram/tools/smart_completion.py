@@ -186,15 +186,22 @@ class SmartCodeCompletion:
         lines = context.code_before.split("\n")
 
         if lines:
-            last_line = lines[-1].strip()
+            raw_line = lines[-1]
+            last_line = raw_line.strip()
 
-            if last_line.startswith("import ") or last_line.startswith("from "):
+            # Compare on the first token: last_line has been stripped, so
+            # "import " (with its trailing space) can never match
+            # startswith("import ") and the branch was dead code.
+            first_word = last_line.split()[0] if last_line.split() else ""
+            if first_word in ("import", "from"):
                 completions.extend(self._get_import_completions(context))
 
             if last_line.startswith("def ") or last_line.startswith("class "):
                 completions.extend(self._get_definition_completions(context))
 
-            if len(lines) > 1 and last_line.startswith("    "):
+            # Indentation must be measured on the unstripped line - after
+            # strip() no line can ever start with four spaces.
+            if len(lines) > 1 and raw_line.startswith("    "):
                 completions.extend(self._get_function_body_completions(context))
 
         return completions

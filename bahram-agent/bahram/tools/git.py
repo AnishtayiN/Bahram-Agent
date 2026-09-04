@@ -46,9 +46,31 @@ class GitTool:
         """
         self.repo_path = repo_path
 
-    async def _run(self, command: str) -> dict[str, Any]:
-        proc = await asyncio.create_subprocess_shell(
-            f"git -C {self.repo_path} {command}",
+    async def _run(self, *args: str) -> dict[str, Any]:
+        """Run ``git`` with ``args`` inside :attr:`repo_path`.
+
+        Args:
+            *args (str): git sub-command and its arguments, one per element.
+
+        Returns:
+            dict[str, Any]: ``stdout``, ``stderr`` and ``returncode``, with both
+            streams decoded as UTF-8.
+
+        Note:
+            Coroutine - must be awaited.
+
+        Note:
+            Uses ``create_subprocess_exec`` with an argv list instead of
+            ``create_subprocess_shell`` with an interpolated string.  The shell
+            form broke every command containing shell metacharacters -
+            ``--format=%(refname:short)`` aborted with ``Syntax error: "("
+            unexpected``, and ``--format=%H|%an|%ai|%s`` had its ``%s``
+            swallowed - and a commit message such as ``fix: " && rm -rf /``
+            would have executed arbitrary commands.
+        """
+        argv = ["git", "-C", self.repo_path, *args]
+        proc = await asyncio.create_subprocess_exec(
+            *argv,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
@@ -69,13 +91,17 @@ class GitTool:
         Note:
             Coroutine - must be awaited.
         """
-        result = await self._run("status --porcelain")
+        result = await self._run("status", "--porcelain")
         files = []
-        for line in result["stdout"].strip().split("\n"):
-            if line:
+        # `git status --porcelain` emits "XY <path>"; the two status columns
+        # are significant, so only line terminators may be trimmed.  A plain
+        # .strip() also removed the leading space of the first line, which
+        # shifted every column by one and truncated the first path by a char.
+        for line in result["stdout"].splitlines():
+            if line.strip():
                 status = line[:2].strip()
-                file = line[3:]
-                files.append({"status": status, "file": file})
+                path = line[3:]
+                files.append({"status": status, "file": path})
         return {"files": files, "clean": len(files) == 0}
 
     async def log(self, limit: int = 10) -> list[GitCommit]:
@@ -92,7 +118,7 @@ class GitTool:
         Note:
             Coroutine - must be awaited.
         """
-        result = await self._run(f"log --oneline -{limit} --format=%H|%an|%ai|%s")
+        result = await self._run("log", f"-{limit}", "--format=%H|%an|%ai|%s")
         commits = []
         for line in result["stdout"].strip().split("\n"):
             if line:
@@ -121,10 +147,10 @@ class GitTool:
         Note:
             Coroutine - must be awaited.
         """
-        cmd = "diff"
+        args = ["diff"]
         if file_path:
-            cmd += f" {file_path}"
-        result = await self._run(cmd)
+            args.append(file_path)
+        result = await self._run(*args)
         return result["stdout"]
 
     async def add(self, files: list[str] = None) -> bool:
@@ -140,12 +166,7 @@ class GitTool:
         Note:
             Coroutine - must be awaited.
         """
-        cmd = "add"
-        if files:
-            cmd += " " + " ".join(files)
-        else:
-            cmd += " ."
-        result = await self._run(cmd)
+        result = await self._run("add", *(files or ["."]))
         return result["returncode"] == 0
 
     async def commit(self, message: str) -> bool:
@@ -161,7 +182,7 @@ class GitTool:
         Note:
             Coroutine - must be awaited.
         """
-        result = await self._run(f'commit -m "{message}"')
+        result = await self._run("commit", "-m", message)
         return result["returncode"] == 0
 
     async def push(self, remote: str = "origin", branch: str = "main") -> bool:
@@ -178,7 +199,7 @@ class GitTool:
         Note:
             Coroutine - must be awaited.
         """
-        result = await self._run(f"push {remote} {branch}")
+        result = await self._run("push", remote, branch)
         return result["returncode"] == 0
 
     async def pull(self, remote: str = "origin", branch: str = "main") -> bool:
@@ -195,7 +216,7 @@ class GitTool:
         Note:
             Coroutine - must be awaited.
         """
-        result = await self._run(f"pull {remote} {branch}")
+        result = await self._run("pull", remote, branch)
         return result["returncode"] == 0
 
     async def branch(self) -> list[str]:
@@ -208,7 +229,7 @@ class GitTool:
         Note:
             Coroutine - must be awaited.
         """
-        result = await self._run("branch --format=%(refname:short)")
+        result = await self._run("branch", "--format=%(refname:short)")
         return [b.strip() for b in result["stdout"].strip().split("\n") if b.strip()]
 
     async def checkout(self, branch: str) -> bool:
@@ -224,7 +245,7 @@ class GitTool:
         Note:
             Coroutine - must be awaited.
         """
-        result = await self._run(f"checkout {branch}")
+        result = await self._run("checkout", branch)
         return result["returncode"] == 0
 
     async def create_branch(self, branch: str) -> bool:
@@ -240,7 +261,7 @@ class GitTool:
         Note:
             Coroutine - must be awaited.
         """
-        result = await self._run(f"checkout -b {branch}")
+        result = await self._run("checkout", "-b", branch)
         return result["returncode"] == 0
 
     async def stash(self) -> bool:
@@ -266,7 +287,7 @@ class GitTool:
         Note:
             Coroutine - must be awaited.
         """
-        result = await self._run("stash pop")
+        result = await self._run("stash", "pop")
         return result["returncode"] == 0
 
     async def blame(self, file_path: str) -> str:
@@ -282,5 +303,5 @@ class GitTool:
         Note:
             Coroutine - must be awaited.
         """
-        result = await self._run(f"blame {file_path}")
+        result = await self._run("blame", file_path)
         return result["stdout"]

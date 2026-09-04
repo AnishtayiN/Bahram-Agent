@@ -10,6 +10,7 @@ import logging
 import re
 from dataclasses import dataclass
 from pathlib import Path
+from re import error
 
 logger = logging.getLogger(__name__)
 
@@ -140,31 +141,52 @@ class SmartDocGenerator:
 
         return sections
 
+    #: Captures a triple-quoted string, accepting either quote style.  The
+    #: earlier patterns were bare ``""`` / ``''`` literals with no capture
+    #: group, so every ``match.group(1)`` raised ``IndexError``.
+    _DOCSTRING = r'(?:"{3}(.*?)"{3}|\'{3}(.*?)\'{3})'
+
+    @classmethod
+    def _group(cls, match: re.Match, *indexes: int) -> str:
+        """Return the first non-empty capture group among ``indexes``."""
+        for index in indexes:
+            try:
+                value = match.group(index)
+            except (IndexError, error):
+                value = None
+            if value:
+                return value.strip()
+        return ""
+
     def _extract_module_docstring(self, content: str) -> str:
-        match = re.search(r'""', content, re.DOTALL)
+        match = re.search(self._DOCSTRING, content, re.DOTALL)
         if match:
-            return match.group(1).strip()
-        match = re.search(r"''", content, re.DOTALL)
-        if match:
-            return match.group(1).strip()
+            return self._group(match, 1, 2)
         return ""
 
     def _extract_classes(self, content: str) -> list[dict]:
         classes = []
-        pattern = r'class\s+(\w+)\s*(?:\(([^)]*)\))?:\s*\n(?:\s+"")?'
+        # The docstring is optional - a symbol without one is still listed,
+        # it just gets an empty ``docstring`` value.
+        pattern = (
+            r"class\s+(\w+)\s*(?:\(([^)]*)\))?:[ \t]*\n(?:[ \t]*" + self._DOCSTRING + r")?"
+        )
         for match in re.finditer(pattern, content, re.DOTALL):
             classes.append(
                 {
                     "name": match.group(1),
                     "parent": match.group(2),
-                    "docstring": match.group(3) or "",
+                    "docstring": self._group(match, 3, 4),
                 }
             )
         return classes
 
     def _extract_functions(self, content: str) -> list[dict]:
         functions = []
-        pattern = r'def\s+(\w+)\s*\(([^)]*)\)(?:\s*->\s*(\w+))?:\s*\n(?:\s+"")?'
+        pattern = (
+            r"def\s+(\w+)\s*\(([^)]*)\)(?:\s*->\s*([\w\[\], |]+?))?:[ \t]*\n"
+            r"(?:[ \t]*" + self._DOCSTRING + r")?"
+        )
         for match in re.finditer(pattern, content, re.DOTALL):
             if not match.group(1).startswith("_"):
                 functions.append(
@@ -172,7 +194,7 @@ class SmartDocGenerator:
                         "name": match.group(1),
                         "args": match.group(2),
                         "return_type": match.group(3),
-                        "docstring": match.group(4) or "",
+                        "docstring": self._group(match, 4, 5),
                     }
                 )
         return functions
