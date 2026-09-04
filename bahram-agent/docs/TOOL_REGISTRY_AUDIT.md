@@ -1,140 +1,125 @@
 # Tool Registry Audit
 
-## Registration Path
+What is actually registered, where it comes from, and what guards it.
 
-All tools are registered via `bahram/tools/__init__.py:init_tools()` which is called by `Agent._init_tools()` (`agent.py:177`). Each tool is instantiated and registered with `engine.register_tool(name, tool)` unless listed in `config.tools.disabled`.
+Regenerate with:
 
----
+```bash
+cd bahram-agent
+python - <<'PY'
+import asyncio
+from bahram.core.agent import Agent
+from bahram.core.config import Config
 
-## Registered Tools (11)
-
-| # | Name | Class | Module | Schema | Security Pipeline | Source File |
-|---|------|-------|--------|--------|-------------------|-------------|
-| 1 | `bash` | `BashTool` | `bahram.tools.bash` | ✅ | TirithScanner + SupplyChainGuard | `tools/bash.py` |
-| 2 | `read` | `ReadTool` | `bahram.tools.file` | ✅ | FileWriteSafety (read-only) | `tools/file.py:24` |
-| 3 | `write` | `WriteTool` | `bahram.tools.file` | ✅ | FileWriteSafety | `tools/file.py` |
-| 4 | `edit` | `EditTool` | `bahram.tools.file` | ✅ | FileWriteSafety | `tools/file.py` |
-| 5 | `webfetch` | `WebFetchTool` | `bahram.tools.web` | ✅ | WebsitePolicy + SSRFProtector | `tools/web.py:33` |
-| 6 | `websearch` | `WebSearchTool` | `bahram.tools.web` | ✅ | WebsitePolicy | `tools/web.py` |
-| 7 | `execute_code` | `ExecuteCodeTool` | `bahram.tools.execute_code` | ✅ | Sandboxed subprocess | `tools/execute_code.py:13` |
-| 8 | `git` | `GitTool` | `bahram.tools.extended` | ✅ | Subprocess shell | `tools/extended.py:12` |
-| 9 | `process_list` | `ProcessListTool` | `bahram.tools.extended` | ✅ | Subprocess shell | `tools/extended.py` |
-| 10 | `container` | `ContainerTool` | `bahram.tools.extended` | ✅ | Subprocess shell | `tools/extended.py` |
-| 11 | `document_read` | `DocumentReadTool` | `bahram.tools.extended` | ✅ | File read | `tools/extended.py` |
-
-### Registration Order
-
-Registration follows the `init_tools()` function order in `tools/__init__.py`:
-1. `bash` (line 16)
-2. `read` (line 22)
-3. `write` (line 23)
-4. `edit` (line 24)
-5. `webfetch` (line 30)
-6. `websearch` (line 31)
-7. `execute_code` (line 37)
-8. `git` (line 43)
-9. `process_list` (line 44)
-10. `container` (line 45)
-11. `document_read` (line 46)
-
----
-
-## Unregistered Tools (exist but NOT wired into the runtime)
-
-The following tool modules exist in `bahram/tools/` but are **not** imported or registered by `init_tools()`:
-
-| Module | File | Notes |
-|--------|------|-------|
-| `terminal` | `tools/terminal.py` | Raw terminal, not registered |
-| `terminal_enhanced` | `tools/terminal_enhanced.py` | Enhanced terminal, not registered |
-| `code_review` | `tools/code_review.py` | Code review tool, not registered |
-| `documentation` | `tools/documentation.py` | Doc generator, not registered |
-| `api_generator` | `tools/api_generator.py` | API generator, not registered |
-| `autocomplete` | `tools/autocomplete.py` | Autocomplete, not registered |
-| `browser` | `tools/browser.py` | Browser tool, not registered |
-| `bg_notify` | `tools/bg_notify.py` | Background notify, not registered |
-| `clarify` | `tools/clarify.py` | Clarification, not registered |
-| `code_search` | `tools/code_search.py` | Code search, not registered |
-| `complexity` | `tools/complexity.py` | Complexity analysis, not registered |
-| `database` | `tools/database.py` | Database tool, not registered |
-| `dependency` | `tools/dependency.py` | Dependency analysis, not registered |
-| `delegation` | `tools/delegation.py` | Delegation tool, not registered |
-| `deployment` | `tools/deployment.py` | Deployment tool, not registered |
-| `explainer` | `tools/explainer.py` | Code explainer, not registered |
-| `formatter` | `tools/formatter.py` | Code formatter, not registered |
-| `image_gen` | `tools/image_gen.py` | Image generation, not registered |
-| `lsp` | `tools/lsp.py` | LSP integration, not registered |
-| `migration` | `tools/migration.py` | Migration tool, not registered |
-| `monitoring` | `tools/monitoring.py` | Monitoring tool, not registered |
-| `optimizer` | `tools/optimizer.py` | Optimizer, not registered |
-| `process` | `tools/process.py` | Process tool, not registered |
-| `profiler` | `tools/profiler.py` | Profiler, not registered |
-| `search` | `tools/search.py` | Search tool, not registered |
-| `security_scan` | `tools/security_scan.py` | Security scan, not registered |
-| `smart_completion` | `tools/smart_completion.py` | Smart completion, not registered |
-| `smart_doc` | `tools/smart_doc.py` | Smart doc, not registered |
-| `task` | `tools/task.py` | Task tool, not registered |
-| `test_generator` | `tools/test_generator.py` | Test generator, not registered |
-| `testing` | `tools/testing.py` | Testing tool, not registered |
-| `todo` | `tools/todo.py` | Todo tool, not registered |
-| `translator` | `tools/translator.py` | Translator, not registered |
-| `websearch` (standalone) | `tools/websearch.py` | Standalone websearch, not registered |
-
-**Total: 34 unregistered tool modules exist. None are on the critical path.**
-
----
-
-## Execution Pipeline
-
-All registered tools go through `ToolExecutor.execute()` (`engine.py:157`):
-
-```
-Tool Call Request
-    ↓
-ToolExecutor.execute(tool_call, timeout)
-    ↓
-Tool name lookup (engine.tools dict)
-    ↓
-ApprovalSystem.check_command(command_string)
-    ↓ (if dangerous + critical/high risk)
-BLOCKED — returns error
-    ↓ (if safe or low/medium risk)
-asyncio.wait_for(tool.execute(**args), timeout=120s)
-    ↓
-ToolResult(success/content/error)
-    ↓
-Event logged to executor._log
+async def main():
+    c = Config(); c.memory.database = ":memory:"
+    a = Agent(config=c); await a.start()
+    for n, t in sorted(a.engine.tools.items()):
+        print(f"{n:15s} {type(t).__module__}.{type(t).__name__}")
+asyncio.run(main())
+PY
 ```
 
-### Security Filtering
+---
 
-The `ToolExecutor._get_command_string()` method (`engine.py:204`) extracts the command for security review:
-- `bash` → `arguments["command"]`
-- `execute_code` → `arguments["code"]`
-- All others → `f"{tool_name}({json.dumps(arguments)[:200]})"`
+## Registration path
 
-Critical/high risk commands are blocked by `ApprovalSystem` before execution. Medium/low risk commands proceed with logging.
+`bahram/tools/__init__.py`
+
+```
+init_tools(engine, config, strict=False)
+  → _disabled_names(config)        # config.tools.disabled
+  → _build_core_tools(tools_config)
+      → engine.register_tool(name, tool)   for each of the 11
+  → verify every DEFAULT_TOOL_NAMES entry is present or explicitly disabled
+```
+
+* Called from `Agent._init_tools()` during `await agent.start()`.
+* `DEFAULT_TOOL_NAMES` is the contract; if a name is missing after
+  registration and was not disabled, `init_tools` raises `ToolLoadError`.
+* `strict=True` turns a single failing tool into an exception instead of a
+  logged error and a partial registry.
+* Tool modules are imported lazily inside `_build_core_tools`, so a broken
+  optional dependency in one module cannot stop the package importing.
 
 ---
 
-## MCP Tool Integration
+## Registered by default — 11 tools
 
-MCP tools are registered in `Agent._init_mcp_tools()` (`agent.py:140`). Each discovered MCP tool is wrapped in `_MCPToolAdapter` (`agent.py:562`) and registered with prefix `mcp_`:
-- `_MCPToolAdapter.schema()` returns the MCP tool's name, description, and inputSchema
-- `_MCPToolAdapter.execute(**kwargs)` delegates to `client.call_tool(name, kwargs)`
+| # | Name | Class | Module | Schema | Guards reached from the tool |
+|---|------|-------|--------|--------|------------------------------|
+| 1 | `bash` | `BashTool` | `bahram/tools/bash.py` | ✅ | `TirithScanner`, `SupplyChainGuard` |
+| 2 | `read` | `ReadTool` | `bahram/tools/file.py` | ✅ | `FileWriteSafety` |
+| 3 | `write` | `WriteTool` | `bahram/tools/file.py` | ✅ | `FileWriteSafety` |
+| 4 | `edit` | `EditTool` | `bahram/tools/file.py` | ✅ | `FileWriteSafety` |
+| 5 | `webfetch` | `WebFetchTool` | `bahram/tools/web.py` | ✅ | `WebsitePolicy`, `SSRFProtector` |
+| 6 | `websearch` | `WebSearchTool` | `bahram/tools/web.py` | ✅ | `WebsitePolicy`, `SSRFProtector` |
+| 7 | `execute_code` | `ExecuteCodeTool` | `bahram/tools/execute_code.py` | ✅ | sandboxed subprocess |
+| 8 | `git` | `GitTool` | `bahram/tools/extended.py` | ✅ | `asyncio.create_subprocess_exec` (argv, no shell) |
+| 9 | `process_list` | `ProcessListTool` | `bahram/tools/extended.py` | ✅ | `ps` via subprocess |
+| 10 | `container` | `ContainerTool` | `bahram/tools/extended.py` | ✅ | `docker` via subprocess |
+| 11 | `document_read` | `DocumentReadTool` | `bahram/tools/extended.py` | ✅ | file read |
 
-MCP tools follow the same execution pipeline as native tools (ToolExecutor → ApprovalSystem → execute).
+**Every one of these additionally passes through `ApprovalSystem` in
+`ToolExecutor._execute_once`**, which renders the call to a command string and
+applies the 39 dangerous patterns and 6 hardline patterns. That gate is what
+makes "gated" true for tools that have no guard of their own.
+
+Registration order is the `_build_core_tools` order above:
+`bash, read, write, edit, webfetch, websearch, execute_code, git,
+process_list, container, document_read`.
 
 ---
 
-## Summary
+## Tool interface vs. classes that merely have an `execute()`
 
-| Metric | Value |
-|--------|-------|
-| Registered tools | 11 |
-| Unregistered tool modules | 34 |
-| Security pipeline coverage | 100% (all go through ApprovalSystem) |
-| Tool timeout | 120s (configurable via `config.tools.bash_timeout`) |
-| MCP tools | Dynamic (discovered at runtime) |
-| Tool schemas | All registered tools implement `schema()` |
-| Execution method | All tools implement `execute(**kwargs)` |
+Only the 11 tools above implement the interface the engine requires —
+`name`, `description`, `parameters` and `schema()` alongside
+`async execute(**kwargs)`.
+
+Two more modules define a class with an `execute()` method but **without**
+`name` / `parameters` / `schema()`, so they cannot be handed to
+`engine.register_tool` as they stand:
+
+| Class | Module | `execute()` signature | Notes |
+|---|---|---|---|
+| `DatabaseTool` | `bahram/tools/database.py` | `execute(query, params=None)` | SQL access; a library class, not an engine tool |
+| `TerminalTool` | `bahram/tools/terminal.py` | `async execute(command, …)` | persistent PTY session; the `os.fork()` path is exercised in a child interpreter by `tests/test_tools_capability_d.py` |
+
+An earlier draft of this file described both as "opt-in tools". That was
+wrong — `hasattr(DatabaseTool, "name")` is `False`. They are useful library
+code and they are tested, but wiring them as agent tools needs an adapter.
+
+---
+
+## The other tool modules
+
+`bahram/tools/` contains 50 modules. 39 of them are **not** agent tools: they
+expose domain methods rather than the `execute()` tool interface, and are not
+registered by anything. Examples — `ImageGenTool.generate()`,
+`SmartDocGenerator`, `SecurityScanner`, `Profiler`, `PerformanceMonitor`,
+`MigrationTool`, `LSPTool`, `RefactorTool`, `TaskTool`, `TodoTool`.
+
+They are covered by tests where they are covered
+(`tests/test_tools_capability_c.py`, `tests/test_tools_capability_d.py`) and
+are available as library code, but nothing in `bahram/` instantiates them.
+Listing them as "40+ tools" was wrong; this is the corrected count.
+
+---
+
+## Duplicate `git` module
+
+`bahram/tools/git.py` defines its own `GitTool`, and so does
+`bahram/tools/extended.py`. The registered one is **extended.py's**;
+`tools/git.py` is not imported by `init_tools`. Both are tested. Flagged here
+as a known wart rather than resolved, because deleting either one is a
+behaviour change for whoever imports it directly.
+
+---
+
+## MCP tools
+
+Tools discovered from a configured MCP server are registered as
+`mcp_<tool-name>` after the defaults, during `Agent._init_mcp_tools()`. They
+are plain adapters over `MCPClient.call_tool`, so they inherit the engine's
+approval gate. See `tests/test_mcp_integration.py`.
