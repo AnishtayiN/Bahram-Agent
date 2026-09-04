@@ -1,24 +1,21 @@
 from __future__ import annotations
 
 import asyncio
-import json
-import os
 import time
-import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
-from bahram.autonomy.plan import Plan, PlanStep, PlanStatus, StepStatus
-from bahram.autonomy.planner import Planner
-from bahram.autonomy.verification import VerificationEngine, VerificationResult
-from bahram.autonomy.replanner import Replanner
-from bahram.autonomy.subagent import SubagentEngine, SubagentResult
-from bahram.autonomy.jobs import JobEngine, Job, JobStatus, JobPriority
-from bahram.autonomy.recovery import RecoveryManager
-from bahram.autonomy.learning import LearningEngine, Lesson, SkillCandidate
-from bahram.autonomy.skill_lifecycle import SkillLifecycle
-from bahram.autonomy.budget import BudgetManager, BudgetConfig
+import pytest
+
+from bahram.autonomy.budget import BudgetConfig, BudgetManager
 from bahram.autonomy.events import EventTracker
-from bahram.autonomy.executor import PlanExecutor
+from bahram.autonomy.jobs import JobEngine, JobStatus
+from bahram.autonomy.learning import LearningEngine, Lesson, SkillCandidate
+from bahram.autonomy.plan import Plan, PlanStatus, PlanStep, StepStatus
+from bahram.autonomy.planner import Planner
+from bahram.autonomy.replanner import Replanner
+from bahram.autonomy.skill_lifecycle import SkillLifecycle
+from bahram.autonomy.subagent import SubagentEngine
+from bahram.autonomy.verification import VerificationEngine, VerificationResult
 
 
 def make_mock_provider(responses=None):
@@ -27,13 +24,18 @@ def make_mock_provider(responses=None):
         mock.complete = AsyncMock(side_effect=responses)
     else:
         resp = MagicMock()
-        resp.content = '{"strategy":"test","rationale":"test","steps":[{"id":"s1","objective":"step1","dependencies":[],"required_tools":[]}]}'
+        resp.content = (
+            '{"strategy":"test","rationale":"test",'
+            '"steps":[{"id":"s1","objective":"step1",'
+            '"dependencies":[],"required_tools":[]}]}'
+        )
         resp.tool_calls = []
         mock.complete = AsyncMock(return_value=resp)
     return mock
 
 
 # ── AUTO-01: Simple Direct Task ────────────────────────────
+
 
 class TestAUTO01_SimpleDirectTask:
     @pytest.mark.asyncio
@@ -49,13 +51,12 @@ class TestAUTO01_SimpleDirectTask:
     async def test_simple_plan_has_verification(self):
         planner = Planner()
         plan = await planner.create_plan("fix the login bug")
-        has_verification = any(
-            len(s.verification_criteria) > 0 for s in plan.steps
-        )
+        has_verification = any(len(s.verification_criteria) > 0 for s in plan.steps)
         assert has_verification
 
 
 # ── AUTO-02: Multi-Tool Task ───────────────────────────────
+
 
 class TestAUTO02_MultiToolTask:
     @pytest.mark.asyncio
@@ -79,6 +80,7 @@ class TestAUTO02_MultiToolTask:
 
 # ── AUTO-03: Multi-Step Plan ───────────────────────────────
 
+
 class TestAUTO03_MultiStepPlan:
     @pytest.mark.asyncio
     async def test_multi_step_plan_structure(self):
@@ -93,9 +95,7 @@ class TestAUTO03_MultiStepPlan:
     @pytest.mark.asyncio
     async def test_plan_dependencies_form_dag(self):
         planner = Planner()
-        plan = await planner.create_plan(
-            "fix bug: investigate, fix, test, deploy"
-        )
+        plan = await planner.create_plan("fix bug: investigate, fix, test, deploy")
         errors = plan.validate_dependencies()
         assert errors == []
         cycles = plan.detect_cycles()
@@ -104,16 +104,19 @@ class TestAUTO03_MultiStepPlan:
 
 # ── AUTO-04: Plan Dependency DAG ───────────────────────────
 
+
 class TestAUTO04_PlanDAG:
     def test_dag_with_parallel_steps(self):
         plan = Plan(id="p1", run_id="r1", goal="test")
         plan.add_step(PlanStep(id="s1", plan_id="p1", objective="analyze"))
         plan.add_step(PlanStep(id="s2", plan_id="p1", objective="research_a"))
         plan.add_step(PlanStep(id="s3", plan_id="p1", objective="research_b"))
-        plan.add_step(PlanStep(id="s4", plan_id="p1", objective="synthesize",
-                               dependencies=["s2", "s3"]))
-        plan.add_step(PlanStep(id="s5", plan_id="p1", objective="verify",
-                               dependencies=["s1", "s4"]))
+        plan.add_step(
+            PlanStep(id="s4", plan_id="p1", objective="synthesize", dependencies=["s2", "s3"])
+        )
+        plan.add_step(
+            PlanStep(id="s5", plan_id="p1", objective="verify", dependencies=["s1", "s4"])
+        )
 
         ready = plan.get_ready_steps()
         assert len(ready) == 3
@@ -135,6 +138,7 @@ class TestAUTO04_PlanDAG:
 
 # ── AUTO-05: Parallel Safe Steps ──────────────────────────
 
+
 class TestAUTO05_ParallelSteps:
     def test_independent_steps_can_run_in_parallel(self):
         plan = Plan(id="p1", run_id="r1", goal="test")
@@ -154,6 +158,7 @@ class TestAUTO05_ParallelSteps:
 
 
 # ── AUTO-06: Tool Failure → Retry ─────────────────────────
+
 
 class TestAUTO06_ToolFailureRetry:
     @pytest.mark.asyncio
@@ -184,6 +189,7 @@ class TestAUTO06_ToolFailureRetry:
 
 # ── AUTO-07: Tool Failure → Replan ────────────────────────
 
+
 class TestAUTO07_ToolFailureReplan:
     @pytest.mark.asyncio
     async def test_permission_denial_modifies_step(self):
@@ -213,6 +219,7 @@ class TestAUTO07_ToolFailureReplan:
 
 
 # ── AUTO-08: Verification Failure → Repair ────────────────
+
 
 class TestAUTO08_VerificationRepair:
     @pytest.mark.asyncio
@@ -249,6 +256,7 @@ class TestAUTO08_VerificationRepair:
 
 
 # ── AUTO-09: Subagent Delegation ──────────────────────────
+
 
 class TestAUTO09_SubagentDelegation:
     @pytest.mark.asyncio
@@ -297,6 +305,7 @@ class TestAUTO09_SubagentDelegation:
 
 # ── AUTO-10: Parallel Subagents ───────────────────────────
 
+
 class TestAUTO10_ParallelSubagents:
     @pytest.mark.asyncio
     async def test_parallel_subagent_spawn(self):
@@ -321,12 +330,15 @@ class TestAUTO10_ParallelSubagents:
 
 # ── AUTO-11: Persistent Background Job ────────────────────
 
+
 class TestAUTO11_BackgroundJob:
     @pytest.mark.asyncio
     async def test_job_persists_across_restarts(self, tmp_path):
         engine1 = JobEngine(data_dir=str(tmp_path))
         job = await engine1.enqueue(
-            "test_job", "r1", "s1",
+            "test_job",
+            "r1",
+            "s1",
             payload={"type": "test_job", "data": "important"},
         )
 
@@ -355,6 +367,7 @@ class TestAUTO11_BackgroundJob:
 
 # ── AUTO-12: Job Crash → Resume ───────────────────────────
 
+
 class TestAUTO12_JobResume:
     @pytest.mark.asyncio
     async def test_interrupted_job_detected(self, tmp_path):
@@ -370,6 +383,7 @@ class TestAUTO12_JobResume:
 
 
 # ── AUTO-13: Memory Reuse ─────────────────────────────────
+
 
 class TestAUTO13_MemoryReuse:
     @pytest.mark.asyncio
@@ -394,12 +408,14 @@ class TestAUTO13_MemoryReuse:
 
 # ── AUTO-14: Learning → Skill Generation ──────────────────
 
+
 class TestAUTO14_LearningSkillGeneration:
     @pytest.mark.asyncio
     async def test_learning_extracts_lessons(self, tmp_path):
         engine = LearningEngine(data_dir=str(tmp_path))
         analysis = await engine.analyze_outcome(
-            run_id="r1", goal="fix bug",
+            run_id="r1",
+            goal="fix bug",
             trajectory_steps=[{"step": 1}],
             tool_results=[{"tool": "bash", "success": False, "error": "command not found"}],
             success=False,
@@ -410,8 +426,11 @@ class TestAUTO14_LearningSkillGeneration:
     async def test_skill_generated_from_lessons(self, tmp_path):
         engine = LearningEngine(data_dir=str(tmp_path))
         engine._lessons["l1"] = Lesson(
-            id="l1", content="pytest requires -q flag", scope="testing",
-            source_run="r1", confidence=0.6,
+            id="l1",
+            content="pytest requires -q flag",
+            scope="testing",
+            source_run="r1",
+            confidence=0.6,
         )
         engine._save()
 
@@ -423,8 +442,14 @@ class TestAUTO14_LearningSkillGeneration:
     async def test_skill_validation_promotion(self, tmp_path):
         engine = LearningEngine(data_dir=str(tmp_path))
         skill = SkillCandidate(
-            id="s1", name="test", description="test", instructions="test",
-            triggers=["test"], usage_count=5, success_count=4, failure_count=1,
+            id="s1",
+            name="test",
+            description="test",
+            instructions="test",
+            triggers=["test"],
+            usage_count=5,
+            success_count=4,
+            failure_count=1,
             confidence=0.5,
         )
         engine._skills["s1"] = skill
@@ -437,13 +462,19 @@ class TestAUTO14_LearningSkillGeneration:
 
 # ── AUTO-15: Skill Reuse ──────────────────────────────────
 
+
 class TestAUTO15_SkillReuse:
     @pytest.mark.asyncio
     async def test_skill_retrieval_by_trigger(self, tmp_path):
         engine = LearningEngine(data_dir=str(tmp_path))
         skill = SkillCandidate(
-            id="s1", name="pytest_skill", description="run tests", instructions="use pytest -q",
-            triggers=["pytest", "test"], status="trusted", confidence=0.8,
+            id="s1",
+            name="pytest_skill",
+            description="run tests",
+            instructions="use pytest -q",
+            triggers=["pytest", "test"],
+            status="trusted",
+            confidence=0.8,
         )
         engine._skills["s1"] = skill
 
@@ -456,8 +487,12 @@ class TestAUTO15_SkillReuse:
     async def test_skill_usage_tracking(self, tmp_path):
         engine = LearningEngine(data_dir=str(tmp_path))
         skill = SkillCandidate(
-            id="s1", name="test", description="test", instructions="test",
-            triggers=["test"], confidence=0.5,
+            id="s1",
+            name="test",
+            description="test",
+            instructions="test",
+            triggers=["test"],
+            confidence=0.5,
         )
         engine._skills["s1"] = skill
 
@@ -472,19 +507,29 @@ class TestAUTO15_SkillReuse:
 
 # ── AUTO-16: Provider Failure → Fallback ──────────────────
 
+
 class TestAUTO16_ProviderFallback:
     @pytest.mark.asyncio
     async def test_fallback_provider_tries_chain(self):
+        from bahram.core.engine import AgentResponse
         from bahram.providers.base import BaseProvider
         from bahram.providers.fallback import FallbackProvider
-        from bahram.core.engine import AgentResponse
 
         class MockProvider(BaseProvider):
             def __init__(self, response=None, error=None):
                 self._response = response
                 self._error = error
 
-            async def _call_api(self, messages, system_msg=None, tools=None, model=None, temperature=0.7, max_tokens=4096, **kwargs):
+            async def _call_api(
+                self,
+                messages,
+                system_msg=None,
+                tools=None,
+                model=None,
+                temperature=0.7,
+                max_tokens=4096,
+                **kwargs,
+            ):
                 if self._error:
                     raise self._error
                 return self._response
@@ -505,7 +550,16 @@ class TestAUTO16_ProviderFallback:
             def __init__(self, error):
                 self._error = error
 
-            async def _call_api(self, messages, system_msg=None, tools=None, model=None, temperature=0.7, max_tokens=4096, **kwargs):
+            async def _call_api(
+                self,
+                messages,
+                system_msg=None,
+                tools=None,
+                model=None,
+                temperature=0.7,
+                max_tokens=4096,
+                **kwargs,
+            ):
                 raise self._error
 
         primary = MockProvider(Exception("primary failed"))
@@ -517,6 +571,7 @@ class TestAUTO16_ProviderFallback:
 
 
 # ── AUTO-17: Context Compression ──────────────────────────
+
 
 class TestAUTO17_ContextCompression:
     def test_budget_warning_at_threshold(self):
@@ -536,6 +591,7 @@ class TestAUTO17_ContextCompression:
 
 
 # ── AUTO-18: Budget Exhaustion ────────────────────────────
+
 
 class TestAUTO18_BudgetExhaustion:
     def test_budget_exceeded_stops_execution(self):
@@ -558,6 +614,7 @@ class TestAUTO18_BudgetExhaustion:
 
 
 # ── AUTO-19: Cancellation ────────────────────────────────
+
 
 class TestAUTO19_Cancellation:
     @pytest.mark.asyncio
@@ -599,13 +656,12 @@ class TestAUTO19_Cancellation:
 
 # ── AUTO-20: Long-Running Autonomous Task ─────────────────
 
+
 class TestAUTO20_LongRunningTask:
     @pytest.mark.asyncio
     async def test_full_plan_lifecycle(self):
         planner = Planner()
-        plan = await planner.create_plan(
-            "investigate bug, fix it, test, verify, summarize"
-        )
+        plan = await planner.create_plan("investigate bug, fix it, test, verify, summarize")
 
         verification = VerificationEngine()
         for step in plan.steps:
@@ -613,8 +669,7 @@ class TestAUTO20_LongRunningTask:
             step.started_at = time.time()
 
             vr = await verification.verify(
-                "ok",
-                [{"type": "content_check", "params": {"contains": "ok"}}]
+                "ok", [{"type": "content_check", "params": {"contains": "ok"}}]
             )
             if all(r.passed for r in vr):
                 step.status = StepStatus.COMPLETED
@@ -635,9 +690,7 @@ class TestAUTO20_LongRunningTask:
         plan.steps[0].status = StepStatus.COMPLETED
         plan.steps[1].status = StepStatus.COMPLETED
 
-        plan = await replanner.handle_step_failure(
-            plan, plan.steps[2], "tool failed: timeout"
-        )
+        plan = await replanner.handle_step_failure(plan, plan.steps[2], "tool failed: timeout")
 
         assert plan.steps[2].status == StepStatus.PENDING
         assert plan.steps[0].status == StepStatus.COMPLETED
@@ -645,6 +698,7 @@ class TestAUTO20_LongRunningTask:
 
 
 # ── Event Correlation Tests ───────────────────────────────
+
 
 class TestEventCorrelation:
     def test_all_events_have_ids(self, tmp_path):
@@ -665,6 +719,7 @@ class TestEventCorrelation:
 
 # ── State Invariant Tests ─────────────────────────────────
 
+
 class TestStateInvariants:
     def test_plan_completeness_requires_all_steps(self):
         plan = Plan(id="p1", run_id="r1", goal="test")
@@ -683,8 +738,13 @@ class TestStateInvariants:
     async def test_skill_cannot_promote_without_usage(self, tmp_path):
         engine = LearningEngine(data_dir=str(tmp_path))
         skill = SkillCandidate(
-            id="s1", name="test", description="test", instructions="test",
-            triggers=["test"], usage_count=0, confidence=0.3,
+            id="s1",
+            name="test",
+            description="test",
+            instructions="test",
+            triggers=["test"],
+            usage_count=0,
+            confidence=0.3,
         )
         engine._skills["s1"] = skill
         engine._save()

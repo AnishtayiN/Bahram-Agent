@@ -1,14 +1,12 @@
 from __future__ import annotations
 
-import asyncio
 import json
 import tempfile
-import time
-import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
-from typing import Any
+from unittest.mock import MagicMock
 
-from bahram.core.engine import AgentEngine, AgentResponse, Message, MessageRole, RunConfig
+import pytest
+
+from bahram.core.engine import AgentEngine, AgentResponse, Message, MessageRole
 from bahram.providers.fallback import FallbackProvider
 
 
@@ -84,6 +82,7 @@ class TestCircuitBreakerWiring:
 class TestBudgetWiring:
     def test_budget_manager_set_on_engine(self):
         from bahram.autonomy.budget import BudgetManager
+
         engine = AgentEngine()
         bm = BudgetManager()
         engine.set_budget_manager(bm)
@@ -91,6 +90,7 @@ class TestBudgetWiring:
 
     def test_event_tracker_set_on_engine(self):
         from bahram.autonomy.events import EventTracker
+
         engine = AgentEngine()
         et = EventTracker()
         engine.set_event_tracker(et)
@@ -98,13 +98,14 @@ class TestBudgetWiring:
 
     @pytest.mark.asyncio
     async def test_budget_check_stops_execution(self):
-        from bahram.autonomy.budget import BudgetManager, BudgetConfig
+        from bahram.autonomy.budget import BudgetConfig, BudgetManager
+
         engine = AgentEngine()
         bm = BudgetManager(BudgetConfig(max_model_calls=0))
         engine.set_budget_manager(bm)
-        engine.providers["test"] = MockProvider(responses=[
-            AgentResponse(content="hello", tool_calls=[])
-        ])
+        engine.providers["test"] = MockProvider(
+            responses=[AgentResponse(content="hello", tool_calls=[])]
+        )
 
         messages = [Message(role=MessageRole.USER, content="hi")]
         response = await engine.run(messages, model="test/model", session_id="s1")
@@ -114,6 +115,7 @@ class TestBudgetWiring:
 class TestEventTrackerWiring:
     def test_event_tracker_initialized_in_engine(self):
         from bahram.autonomy.events import EventTracker
+
         engine = AgentEngine()
         et = EventTracker()
         engine.set_event_tracker(et)
@@ -123,6 +125,7 @@ class TestEventTrackerWiring:
 class TestSmartContextIntegration:
     def test_smart_context_manager_works(self):
         from bahram.core.smart_context import SmartContextManager
+
         scm = SmartContextManager(max_tokens=1000)
         scm.set_system_prompt("You are helpful.")
         scm.add_history("user", "hello")
@@ -136,6 +139,7 @@ class TestSmartContextIntegration:
 
     def test_smart_context_optimize(self):
         from bahram.core.smart_context import SmartContextManager
+
         scm = SmartContextManager(max_tokens=100)
         scm.add_context("A" * 500, priority=1)
         scm.add_context("B" * 500, priority=5)
@@ -146,13 +150,16 @@ class TestSmartContextIntegration:
 class TestCompressorFix:
     def test_compressor_has_real_prompt(self):
         import inspect
+
         from bahram.core.compressor import ContextCompressor
+
         cc = ContextCompressor()
         source = inspect.getsource(cc._model_compress)
         assert "Compress the following conversation" in source
 
     def test_heuristic_compress_works(self):
         from bahram.core.compressor import ContextCompressor
+
         cc = ContextCompressor()
         messages = [
             {"role": "system", "content": "You are helpful."},
@@ -168,6 +175,7 @@ class TestCompressorFix:
 class TestGatewayService:
     def test_gateway_creates_unit_file(self):
         from bahram.core.gateway_service import GatewayService
+
         with tempfile.TemporaryDirectory() as tmpdir:
             gs = GatewayService(work_dir=tmpdir)
             unit = gs._generate_systemd_unit(system=False)
@@ -176,6 +184,7 @@ class TestGatewayService:
 
     def test_gateway_status_returns_dict(self):
         from bahram.core.gateway_service import GatewayService
+
         gs = GatewayService()
         status = gs.get_status()
         assert isinstance(status, dict)
@@ -184,8 +193,9 @@ class TestGatewayService:
 
 class TestSubagentEventWiring:
     def test_subagent_engine_accepts_event_tracker(self):
-        from bahram.autonomy.subagent import SubagentEngine
         from bahram.autonomy.events import EventTracker
+        from bahram.autonomy.subagent import SubagentEngine
+
         engine = AgentEngine()
         et = EventTracker()
         se = SubagentEngine(engine, event_tracker=et)
@@ -194,8 +204,9 @@ class TestSubagentEventWiring:
 
 class TestJobEventWiring:
     def test_job_engine_accepts_event_tracker(self):
-        from bahram.autonomy.jobs import JobEngine
         from bahram.autonomy.events import EventTracker
+        from bahram.autonomy.jobs import JobEngine
+
         et = EventTracker()
         with tempfile.TemporaryDirectory() as tmpdir:
             je = JobEngine(data_dir=tmpdir, event_tracker=et)
@@ -222,8 +233,13 @@ class TestFallbackProvider:
 class TestMCPToolAdapter:
     def test_adapter_schema(self):
         from bahram.core.agent import _MCPToolAdapter
+
         client = MagicMock()
-        tool_def = {"name": "test_tool", "description": "A test", "inputSchema": {"type": "object", "properties": {"x": {"type": "string"}}}}
+        tool_def = {
+            "name": "test_tool",
+            "description": "A test",
+            "inputSchema": {"type": "object", "properties": {"x": {"type": "string"}}},
+        }
         adapter = _MCPToolAdapter(client, tool_def)
         schema = adapter.schema()
         assert schema["name"] == "mcp_test_tool"

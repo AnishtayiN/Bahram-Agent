@@ -4,18 +4,18 @@ Verifies that memory, context, and skills are fully isolated between users
 and sessions. No mocks — real SemanticMemory, SmartContextManager, and
 LearningEngine instances with separate data directories.
 """
+
 from __future__ import annotations
 
 import shutil
 import tempfile
-from pathlib import Path
 
 import pytest
 
-from bahram.memory.semantic import SemanticMemory
-from bahram.core.smart_context import SmartContextManager
 from bahram.autonomy.learning import LearningEngine
 from bahram.autonomy.skill_lifecycle import SkillLifecycle
+from bahram.core.smart_context import SmartContextManager
+from bahram.memory.semantic import SemanticMemory
 
 
 @pytest.fixture(autouse=True)
@@ -111,12 +111,8 @@ class TestSessionMemoryIsolation:
         tmp_a = _tmpdir(_cleanup)
         tmp_b = _tmpdir(_cleanup)
 
-        SemanticMemory(data_dir=tmp_a).add(
-            "classified-alpha-only", source="session_alpha"
-        )
-        SemanticMemory(data_dir=tmp_b).add(
-            "classified-beta-only", source="session_beta"
-        )
+        SemanticMemory(data_dir=tmp_a).add("classified-alpha-only", source="session_alpha")
+        SemanticMemory(data_dir=tmp_b).add("classified-beta-only", source="session_beta")
 
         results_a = SemanticMemory(data_dir=tmp_a).search("classified", limit=10)
         results_b = SemanticMemory(data_dir=tmp_b).search("classified", limit=10)
@@ -206,6 +202,7 @@ class TestSkillIsolation:
 
         # Manually inject a skill for user A
         from bahram.autonomy.learning import SkillCandidate
+
         skill = SkillCandidate(
             id="skill_secret_001",
             name="secret_weapon_skill",
@@ -237,6 +234,7 @@ class TestSkillIsolation:
 
         # Generate a skill through user A's engine
         from bahram.autonomy.learning import Lesson
+
         lesson = Lesson(
             id="lesson_user_a",
             content="Always use async for I/O-bound tasks",
@@ -269,6 +267,7 @@ class TestSkillIsolation:
         engine_b = LearningEngine(data_dir=tmp_b)
 
         from bahram.autonomy.learning import SkillCandidate
+
         skill = SkillCandidate(
             id="cross_user_skill",
             name="forbidden_knowledge",
@@ -281,9 +280,7 @@ class TestSkillIsolation:
 
         lc_b = SkillLifecycle(learning_engine=engine_b)
         found = lc_b.get_skill("cross_user_skill")
-        assert found is None, (
-            "User B must not retrieve user A's skill by ID"
-        )
+        assert found is None, "User B must not retrieve user A's skill by ID"
 
 
 class TestCrossBoundaryLeakage:

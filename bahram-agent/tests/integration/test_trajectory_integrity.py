@@ -1,17 +1,15 @@
 """Tests for trajectory integrity and causal ordering of events."""
+
 from __future__ import annotations
 
-import asyncio
 import time
-import uuid
 
 import pytest
 
-from bahram.autonomy.events import EventTracker, Event
-from bahram.autonomy.jobs import JobEngine, JobStatus
+from bahram.autonomy.events import Event, EventTracker
+from bahram.autonomy.jobs import JobEngine
 from bahram.autonomy.learning import LearningEngine, SkillCandidate
 from bahram.autonomy.skill_lifecycle import SkillLifecycle
-from bahram.autonomy.verification import VerificationEngine, VerificationResult
 from bahram.core.engine import (
     AgentEngine,
     Message,
@@ -20,7 +18,6 @@ from bahram.core.engine import (
     Trajectory,
     TrajectoryStep,
 )
-
 
 # ── Helper: emit a full causal chain ───────────────────────
 
@@ -34,10 +31,26 @@ def _emit_full_lifecycle(tracker: EventTracker, sid: str, rid: str, pid: str) ->
     events.append(tracker.emit("skill_selected", session_id=sid, run_id=rid))
     events.append(tracker.emit_plan_created(sid, rid, pid))
     events.append(tracker.emit_step_started(sid, rid, pid, "step_0"))
-    events.append(tracker.emit("tool_requested", session_id=sid, run_id=rid, plan_id=pid, step_id="step_0",
-                               data={"tool": "bash", "tool_call_id": "tc_1"}))
-    events.append(tracker.emit("tool_completed", session_id=sid, run_id=rid, plan_id=pid, step_id="step_0",
-                               data={"tool": "bash", "tool_call_id": "tc_1"}))
+    events.append(
+        tracker.emit(
+            "tool_requested",
+            session_id=sid,
+            run_id=rid,
+            plan_id=pid,
+            step_id="step_0",
+            data={"tool": "bash", "tool_call_id": "tc_1"},
+        )
+    )
+    events.append(
+        tracker.emit(
+            "tool_completed",
+            session_id=sid,
+            run_id=rid,
+            plan_id=pid,
+            step_id="step_0",
+            data={"tool": "bash", "tool_call_id": "tc_1"},
+        )
+    )
     events.append(tracker.emit_step_completed(sid, rid, pid, "step_0"))
     events.append(tracker.emit_step_started(sid, rid, pid, "step_1"))
     events.append(tracker.emit_step_completed(sid, rid, pid, "step_1"))
@@ -55,7 +68,7 @@ class TestToolCallCausalOrdering:
         tc_id = "tc_1"
 
         tracker.emit("tool_requested", session_id=sid, run_id=rid, data={"tool_call_id": tc_id})
-        ev = tracker.emit("tool_completed", session_id=sid, run_id=rid, data={"tool_call_id": tc_id})
+        tracker.emit("tool_completed", session_id=sid, run_id=rid, data={"tool_call_id": tc_id})
 
         trace = tracker.get_trace(rid)
         tool_events = [e for e in trace if e.data.get("tool_call_id") == tc_id]
@@ -71,8 +84,16 @@ class TestToolCallCausalOrdering:
         tracker.emit("tool_completed", session_id=sid, run_id=rid, data={"tool_call_id": tc_id})
 
         trace = tracker.get_trace(rid)
-        tool_results = [e for e in trace if e.event_type == "tool_completed" and e.data.get("tool_call_id") == tc_id]
-        tool_requests = [e for e in trace if e.event_type == "tool_requested" and e.data.get("tool_call_id") == tc_id]
+        tool_results = [
+            e
+            for e in trace
+            if e.event_type == "tool_completed" and e.data.get("tool_call_id") == tc_id
+        ]
+        tool_requests = [
+            e
+            for e in trace
+            if e.event_type == "tool_requested" and e.data.get("tool_call_id") == tc_id
+        ]
         assert len(tool_requests) == 0
         assert len(tool_results) == 1
         assert tool_results[0].data.get("tool_call_id") == tc_id
@@ -82,10 +103,18 @@ class TestToolCallCausalOrdering:
         sid, rid = "s1", "r1"
 
         for i in range(5):
-            tracker.emit("tool_requested", session_id=sid, run_id=rid,
-                         data={"tool_call_id": f"tc_{i}", "tool": "bash"})
-            tracker.emit("tool_completed", session_id=sid, run_id=rid,
-                         data={"tool_call_id": f"tc_{i}", "tool": "bash"})
+            tracker.emit(
+                "tool_requested",
+                session_id=sid,
+                run_id=rid,
+                data={"tool_call_id": f"tc_{i}", "tool": "bash"},
+            )
+            tracker.emit(
+                "tool_completed",
+                session_id=sid,
+                run_id=rid,
+                data={"tool_call_id": f"tc_{i}", "tool": "bash"},
+            )
 
         trace = tracker.get_trace(rid)
         tc_events = [e for e in trace if e.data.get("tool_call_id", "").startswith("tc_")]
@@ -102,7 +131,7 @@ class TestStepCausalOrdering:
         sid, rid, pid = "s1", "r1", "p1"
 
         tracker.emit_step_started(sid, rid, pid, "step_0")
-        ev = tracker.emit_step_completed(sid, rid, pid, "step_0")
+        tracker.emit_step_completed(sid, rid, pid, "step_0")
 
         trace = tracker.get_trace(rid)
         step_events = [e for e in trace if e.step_id == "step_0"]
@@ -127,7 +156,7 @@ class TestStepCausalOrdering:
         sid, rid, pid = "s1", "r1", "p1"
 
         tracker.emit_step_started(sid, rid, pid, "step_err")
-        ev = tracker.emit_step_failed(sid, rid, pid, "step_err")
+        tracker.emit_step_failed(sid, rid, pid, "step_err")
 
         trace = tracker.get_trace(rid)
         step_events = [e for e in trace if e.step_id == "step_err"]
@@ -201,9 +230,15 @@ class TestSkillPromotedCausalOrdering:
     async def test_skill_promoted_has_preceding_validation(self, tmp_path):
         learning = LearningEngine(data_dir=str(tmp_path / "learning"))
         skill = SkillCandidate(
-            id="s1", name="test", description="test", instructions="test",
-            triggers=["test"], confidence=0.5, usage_count=5,
-            success_count=5, failure_count=0,
+            id="s1",
+            name="test",
+            description="test",
+            instructions="test",
+            triggers=["test"],
+            confidence=0.5,
+            usage_count=5,
+            success_count=5,
+            failure_count=0,
         )
         learning._skills["s1"] = skill
         learning._save()
@@ -215,8 +250,12 @@ class TestSkillPromotedCausalOrdering:
         tracker = EventTracker(data_dir=str(tmp_path / "events"))
         sid, rid = "s1", "r1"
 
-        tracker.emit("validation_completed", session_id=sid, run_id=rid,
-                     data={"skill_id": "s1", "result": skill.status})
+        tracker.emit(
+            "validation_completed",
+            session_id=sid,
+            run_id=rid,
+            data={"skill_id": "s1", "result": skill.status},
+        )
         tracker.emit_skill_promoted(sid, rid, data={"skill_id": "s1", "status": skill.status})
 
         trace = tracker.get_trace(rid)
@@ -245,10 +284,18 @@ class TestApprovalCausalOrdering:
         tracker = EventTracker(data_dir=str(tmp_path))
         sid, rid = "s1", "r1"
 
-        tracker.emit("approval_requested", session_id=sid, run_id=rid,
-                     data={"command": "rm -rf /", "risk": "critical"})
-        ev = tracker.emit("approval_granted", session_id=sid, run_id=rid,
-                          data={"command": "rm -rf /", "approved_by": "user"})
+        tracker.emit(
+            "approval_requested",
+            session_id=sid,
+            run_id=rid,
+            data={"command": "rm -rf /", "risk": "critical"},
+        )
+        tracker.emit(
+            "approval_granted",
+            session_id=sid,
+            run_id=rid,
+            data={"command": "rm -rf /", "approved_by": "user"},
+        )
 
         trace = tracker.get_trace("r1")
         approval_events = [e for e in trace if "approval" in e.event_type]
@@ -271,7 +318,9 @@ class TestImpossibleSequences:
         trace = tracker.get_trace("r1")
         step_events = [e for e in trace if e.step_id == "step_x"]
         started_indices = [i for i, e in enumerate(step_events) if e.event_type == "step_started"]
-        completed_indices = [i for i, e in enumerate(step_events) if e.event_type == "step_completed"]
+        completed_indices = [
+            i for i, e in enumerate(step_events) if e.event_type == "step_completed"
+        ]
 
         for si in started_indices:
             for ci in completed_indices:
@@ -336,44 +385,73 @@ class TestTrajectoryChronologicalOrder:
 class TestTrajectoryStepRequiredFields:
     def test_step_has_step_id(self):
         step = TrajectoryStep(
-            step_id="step_0", iteration=0, provider="anthropic",
-            model="claude", tool_calls=[], tool_results=[],
-            content_length=0, duration_ms=10.0, timestamp=time.time(),
+            step_id="step_0",
+            iteration=0,
+            provider="anthropic",
+            model="claude",
+            tool_calls=[],
+            tool_results=[],
+            content_length=0,
+            duration_ms=10.0,
+            timestamp=time.time(),
         )
         assert step.step_id == "step_0"
 
     def test_step_has_iteration(self):
         step = TrajectoryStep(
-            step_id="s1", iteration=3, provider="openai",
-            model="gpt-4", tool_calls=[], tool_results=[],
-            content_length=0, duration_ms=5.0, timestamp=time.time(),
+            step_id="s1",
+            iteration=3,
+            provider="openai",
+            model="gpt-4",
+            tool_calls=[],
+            tool_results=[],
+            content_length=0,
+            duration_ms=5.0,
+            timestamp=time.time(),
         )
         assert step.iteration == 3
 
     def test_step_has_tool_calls(self):
         step = TrajectoryStep(
-            step_id="s1", iteration=0, provider="anthropic",
-            model="claude", tool_calls=[{"name": "bash", "id": "tc_1"}],
+            step_id="s1",
+            iteration=0,
+            provider="anthropic",
+            model="claude",
+            tool_calls=[{"name": "bash", "id": "tc_1"}],
             tool_results=[{"tool": "bash", "success": True}],
-            content_length=100, duration_ms=50.0, timestamp=time.time(),
+            content_length=100,
+            duration_ms=50.0,
+            timestamp=time.time(),
         )
         assert len(step.tool_calls) == 1
         assert step.tool_calls[0]["name"] == "bash"
 
     def test_step_has_duration_ms(self):
         step = TrajectoryStep(
-            step_id="s1", iteration=0, provider="anthropic",
-            model="claude", tool_calls=[], tool_results=[],
-            content_length=0, duration_ms=123.45, timestamp=time.time(),
+            step_id="s1",
+            iteration=0,
+            provider="anthropic",
+            model="claude",
+            tool_calls=[],
+            tool_results=[],
+            content_length=0,
+            duration_ms=123.45,
+            timestamp=time.time(),
         )
         assert step.duration_ms == 123.45
 
     def test_step_has_timestamp(self):
         ts = time.time()
         step = TrajectoryStep(
-            step_id="s1", iteration=0, provider="anthropic",
-            model="claude", tool_calls=[], tool_results=[],
-            content_length=0, duration_ms=0, timestamp=ts,
+            step_id="s1",
+            iteration=0,
+            provider="anthropic",
+            model="claude",
+            tool_calls=[],
+            tool_results=[],
+            content_length=0,
+            duration_ms=0,
+            timestamp=ts,
         )
         assert step.timestamp == ts
 
@@ -427,9 +505,18 @@ class TestRunCompletionTrajectory:
 
         class MockProvider:
             async def complete(self, msgs, tools=None, **kw):
-                return type("Resp", (), {
-                    "content": "Done!", "tool_calls": [], "thinking": None, "metadata": {}, "state": RunState.COMPLETED
-                })()
+                return type(
+                    "Resp",
+                    (),
+                    {
+                        "content": "Done!",
+                        "tool_calls": [],
+                        "thinking": None,
+                        "metadata": {},
+                        "state": RunState.COMPLETED,
+                    },
+                )()
+
             async def stream(self, msgs, tools=None, **kw):
                 if False:
                     yield ""
@@ -504,16 +591,23 @@ class TestFullLifecycleIntegrity:
     def test_full_lifecycle_has_all_expected_events(self, tmp_path):
         tracker = EventTracker(data_dir=str(tmp_path))
         sid, rid = "s1", "r1"
-        events = _emit_full_lifecycle(tracker, sid, rid, "p1")
+        _emit_full_lifecycle(tracker, sid, rid, "p1")
 
         trace = tracker.get_trace(rid)
         event_types = [e.event_type for e in trace]
 
         expected = [
-            "run_created", "context_loaded", "memory_retrieved",
-            "skill_selected", "plan_created",
-            "step_started", "tool_requested", "tool_completed",
-            "step_completed", "step_started", "step_completed",
+            "run_created",
+            "context_loaded",
+            "memory_retrieved",
+            "skill_selected",
+            "plan_created",
+            "step_started",
+            "tool_requested",
+            "tool_completed",
+            "step_completed",
+            "step_started",
+            "step_completed",
             "run_completed",
         ]
         for exp in expected:

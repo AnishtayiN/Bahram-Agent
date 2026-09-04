@@ -1,9 +1,10 @@
 """Tests for monitoring status report and doctor check."""
+
 from __future__ import annotations
 
 import pytest
 
-from bahram.monitoring.status import status_report, doctor_check, RuntimeStatus
+from bahram.monitoring.status import doctor_check, status_report
 
 
 class TestStatusReportReturnsDict:
@@ -56,7 +57,14 @@ class TestStatusReportWithEngine:
     def test_collects_circuit_breaker_states(self) -> None:
         class FakeBreaker:
             def get_status(self):
-                return {"anthropic": {"state": "closed", "failures": 0, "successes": 10, "last_failure": 0.0}}
+                return {
+                    "anthropic": {
+                        "state": "closed",
+                        "failures": 0,
+                        "successes": 10,
+                        "last_failure": 0.0,
+                    }
+                }
 
         class FakeEngine:
             _tool_executor = None
@@ -85,7 +93,9 @@ class TestDoctorCheckIdentifiesHealthy:
                 return 2
 
         class FakeBudgetManager:
-            class config:
+            # ``config`` is lowercase on purpose: it mirrors the real
+            # BudgetManager attribute name that ``doctor_check`` reads.
+            class config:  # noqa: N801
                 max_cost_usd = 5.0
 
         result = doctor_check(

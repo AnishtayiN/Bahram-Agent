@@ -1,18 +1,35 @@
+"""
+Status.
+
+Public objects: ``redact_secrets``, ``RuntimeStatus``, ``status_report``, ``ComponentHealth``,
+    ``doctor_check``.
+"""
+
 from __future__ import annotations
 
 import logging
 import os
 import re
-import time
 from dataclasses import dataclass, field
 from typing import Any
 
 logger = logging.getLogger(__name__)
 
 _SECRET_PATTERNS: list[tuple[re.Pattern[str], str]] = [
-    (re.compile(r"(?:api[_-]?key|apikey)\s*[:=]\s*[\"']?([A-Za-z0-9_\-\.]{20,})", re.IGNORECASE), "API_KEY"),
-    (re.compile(r"(?:token|bot_token|bot_token)\s*[:=]\s*[\"']?([A-Za-z0-9:_\-]{20,})", re.IGNORECASE), "TOKEN"),
-    (re.compile(r"(?:secret|password|passwd)\s*[:=]\s*[\"']?([^\s\"',;]{8,})", re.IGNORECASE), "SECRET"),
+    (
+        re.compile(r"(?:api[_-]?key|apikey)\s*[:=]\s*[\"']?([A-Za-z0-9_\-\.]{20,})", re.IGNORECASE),
+        "API_KEY",
+    ),
+    (
+        re.compile(
+            r"(?:token|bot_token|bot_token)\s*[:=]\s*[\"']?([A-Za-z0-9:_\-]{20,})", re.IGNORECASE
+        ),
+        "TOKEN",
+    ),
+    (
+        re.compile(r"(?:secret|password|passwd)\s*[:=]\s*[\"']?([^\s\"',;]{8,})", re.IGNORECASE),
+        "SECRET",
+    ),
     (re.compile(r"sk-[A-Za-z0-9]{20,}"), "OPENAI_KEY"),
     (re.compile(r"AIza[A-Za-z0-9_\-]{20,}"), "GEMINI_KEY"),
     (re.compile(r"xoxb-[A-Za-z0-9\-]+"), "SLACK_TOKEN"),
@@ -53,6 +70,12 @@ class RuntimeStatus:
     estimated_cost: float = 0.0
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Serialise the object to a JSON-serialisable dictionary.
+
+        Returns:
+            dict[str, Any]: a mapping of str, Any.
+        """
         return {
             "active_runs": self.active_runs,
             "active_jobs": self.active_jobs,
@@ -118,10 +141,16 @@ def status_report(
         rs.active_jobs = running
 
     if subagent_engine is not None:
-        rs.active_subagents = subagent_engine.get_active_count() if hasattr(subagent_engine, "get_active_count") else 0
+        rs.active_subagents = (
+            subagent_engine.get_active_count()
+            if hasattr(subagent_engine, "get_active_count")
+            else 0
+        )
 
     if budget_manager is not None:
-        all_usage = budget_manager.get_all_usage() if hasattr(budget_manager, "get_all_usage") else {}
+        all_usage = (
+            budget_manager.get_all_usage() if hasattr(budget_manager, "get_all_usage") else {}
+        )
         runs = all_usage.get("runs", {})
         total_cost = sum(r.get("cost_usd", 0.0) for r in runs.values())
         rs.estimated_cost = total_cost
@@ -135,6 +164,15 @@ def status_report(
 
 @dataclass
 class ComponentHealth:
+    """
+    Component health.
+
+    Attributes:
+        name (str): name of the object.
+        healthy (bool): when ``True``, enable healthy.
+        message (str): message to process.
+    """
+
     name: str
     healthy: bool
     message: str = ""
@@ -178,10 +216,13 @@ def doctor_check(
     if budget_manager is not None:
         config = budget_manager.config if hasattr(budget_manager, "config") else None
         if config is not None:
-            components.append(ComponentHealth(
-                "budget_manager", True,
-                f"max_cost=${config.max_cost_usd:.2f}",
-            ))
+            components.append(
+                ComponentHealth(
+                    "budget_manager",
+                    True,
+                    f"max_cost=${config.max_cost_usd:.2f}",
+                )
+            )
         else:
             components.append(ComponentHealth("budget_manager", True, "Available"))
     else:

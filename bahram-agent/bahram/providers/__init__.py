@@ -1,26 +1,32 @@
+"""LLM provider registry.
+
+Public objects: ``init_providers`` - builds the provider map from the API keys
+that are actually present in the environment or configuration.
+"""
+
 from __future__ import annotations
 
 import logging
 from typing import Any
 
-from bahram.providers.base import BaseProvider
-from bahram.providers.openai import OpenAIProvider
 from bahram.providers.anthropic import AnthropicProvider
-from bahram.providers.groq import GroqProvider
+from bahram.providers.base import BaseProvider
+from bahram.providers.custom import CustomProvider
 from bahram.providers.deepseek import DeepSeekProvider
+from bahram.providers.google import GoogleProvider
+from bahram.providers.groq import GroqProvider
+from bahram.providers.huggingface import HuggingFaceProvider
+from bahram.providers.kimi import KimiProvider
+from bahram.providers.lmstudio import LMStudioProvider
+from bahram.providers.minimax import MiniMaxProvider
 from bahram.providers.mistral import MistralProvider
-from bahram.providers.openrouter import OpenRouterProvider
 from bahram.providers.nous import NousProvider
 from bahram.providers.nvidia import NvidiaProvider
-from bahram.providers.google import GoogleProvider
-from bahram.providers.huggingface import HuggingFaceProvider
-from bahram.providers.xiaomi import XiaomiProvider
-from bahram.providers.minimax import MiniMaxProvider
-from bahram.providers.kimi import KimiProvider
-from bahram.providers.zhipu import ZhipuProvider
 from bahram.providers.ollama import OllamaProvider
-from bahram.providers.lmstudio import LMStudioProvider
-from bahram.providers.custom import CustomProvider
+from bahram.providers.openai import OpenAIProvider
+from bahram.providers.openrouter import OpenRouterProvider
+from bahram.providers.xiaomi import XiaomiProvider
+from bahram.providers.zhipu import ZhipuProvider
 
 __all__ = [
     "BaseProvider",
@@ -65,7 +71,18 @@ PROVIDER_MAP: dict[str, type[BaseProvider]] = {
     "custom": CustomProvider,
 }
 
+
 async def init_providers(engine: Any, config: Any) -> None:
+    """
+    Initialise providers.
+
+    Args:
+        engine (Any): engine.
+        config (Any): configuration object.
+
+    Note:
+        Coroutine - must be awaited.
+    """
     for provider_name, provider_config in config.providers.items():
         try:
             provider_class = PROVIDER_MAP.get(provider_name)

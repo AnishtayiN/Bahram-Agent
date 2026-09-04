@@ -1,7 +1,12 @@
+"""
+File.
+
+Public objects: ``ReadTool``, ``WriteTool``, ``EditTool``.
+"""
+
 from __future__ import annotations
 
 import logging
-import os
 from pathlib import Path
 from typing import Any
 
@@ -11,27 +16,61 @@ logger = logging.getLogger(__name__)
 
 _file_safety = None
 
+
 def _get_file_safety():
     global _file_safety
     if _file_safety is None:
         try:
             from bahram.security.file_safety import FileWriteSafety
+
             _file_safety = FileWriteSafety()
-        except Exception:
-            pass
+        except Exception as exc:  # pragma: no cover - defensive
+            # Fail loudly: a missing guard must never be invisible.
+            logger.warning(
+                "Security component could not be initialised (%s): %s",
+                "file-write safety guard",
+                exc,
+            )
     return _file_safety
 
+
 class ReadTool(BaseTool):
+    """
+    Read tool.
+    """
+
     @property
     def name(self) -> str:
+        """
+        Return the registry name of the ReadTool object.
+
+        Returns the constant string ``'read'``.
+
+        Returns:
+            str: the rendered string.
+        """
         return "read"
 
     @property
     def description(self) -> str:
+        """
+        Return the human readable description shown to the model.
+
+        Returns the constant string ``'Read a file and return its contents with line numbers.'``.
+
+        Returns:
+            str: the rendered string.
+        """
         return "Read a file and return its contents with line numbers."
 
     @property
     def parameters(self) -> dict[str, Any]:
+        """
+        Return the JSON schema describing this tool's arguments.
+
+        Returns:
+            dict[str, Any]: a mapping of str, Any.
+        """
         return {
             "type": "object",
             "properties": {
@@ -52,6 +91,18 @@ class ReadTool(BaseTool):
         }
 
     async def execute(self, **kwargs: Any) -> str:
+        """
+        Execute the tool and return its textual result.
+
+        Args:
+            **kwargs (Any): keyword arguments forwarded to the implementation.
+
+        Returns:
+            str: the rendered string.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         file_path = kwargs.get("file_path", "")
         offset = kwargs.get("offset", 0)
         limit = kwargs.get("limit", 2000)
@@ -68,7 +119,7 @@ class ReadTool(BaseTool):
             return f"Error: Not a file: {file_path}"
 
         try:
-            with open(path, "r", encoding="utf-8", errors="replace") as f:
+            with open(path, encoding="utf-8", errors="replace") as f:
                 lines = f.readlines()
 
             lines = lines[offset : offset + limit]
@@ -82,17 +133,45 @@ class ReadTool(BaseTool):
         except Exception as e:
             return f"Error reading file: {e}"
 
+
 class WriteTool(BaseTool):
+    """
+    Write tool.
+    """
+
     @property
     def name(self) -> str:
+        """
+        Return the registry name of the WriteTool object.
+
+        Returns the constant string ``'write'``.
+
+        Returns:
+            str: the rendered string.
+        """
         return "write"
 
     @property
     def description(self) -> str:
+        """
+        Return the human readable description shown to the model.
+
+        Returns the constant string ``'Write content to a file, creating parent directories if
+            needed.'``.
+
+        Returns:
+            str: the rendered string.
+        """
         return "Write content to a file, creating parent directories if needed."
 
     @property
     def parameters(self) -> dict[str, Any]:
+        """
+        Return the JSON schema describing this tool's arguments.
+
+        Returns:
+            dict[str, Any]: a mapping of str, Any.
+        """
         return {
             "type": "object",
             "properties": {
@@ -113,6 +192,18 @@ class WriteTool(BaseTool):
         }
 
     async def execute(self, **kwargs: Any) -> str:
+        """
+        Execute the tool and return its textual result.
+
+        Args:
+            **kwargs (Any): keyword arguments forwarded to the implementation.
+
+        Returns:
+            str: the rendered string.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         file_path = kwargs.get("file_path", "")
         content = kwargs.get("content", "")
         create_dirs = kwargs.get("create_dirs", True)
@@ -138,17 +229,45 @@ class WriteTool(BaseTool):
         except Exception as e:
             return f"Error writing file: {e}"
 
+
 class EditTool(BaseTool):
+    """
+    Edit tool.
+    """
+
     @property
     def name(self) -> str:
+        """
+        Return the registry name of the EditTool object.
+
+        Returns the constant string ``'edit'``.
+
+        Returns:
+            str: the rendered string.
+        """
         return "edit"
 
     @property
     def description(self) -> str:
+        """
+        Return the human readable description shown to the model.
+
+        Returns the constant string ``'Edit a file by replacing a specific string with a new
+            string.'``.
+
+        Returns:
+            str: the rendered string.
+        """
         return "Edit a file by replacing a specific string with a new string."
 
     @property
     def parameters(self) -> dict[str, Any]:
+        """
+        Return the JSON schema describing this tool's arguments.
+
+        Returns:
+            dict[str, Any]: a mapping of str, Any.
+        """
         return {
             "type": "object",
             "properties": {
@@ -173,6 +292,18 @@ class EditTool(BaseTool):
         }
 
     async def execute(self, **kwargs: Any) -> str:
+        """
+        Execute the tool and return its textual result.
+
+        Args:
+            **kwargs (Any): keyword arguments forwarded to the implementation.
+
+        Returns:
+            str: the rendered string.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         file_path = kwargs.get("file_path", "")
         old_string = kwargs.get("old_string", "")
         new_string = kwargs.get("new_string", "")
@@ -196,7 +327,7 @@ class EditTool(BaseTool):
             return f"Error: File not found: {file_path}"
 
         try:
-            with open(path, "r", encoding="utf-8") as f:
+            with open(path, encoding="utf-8") as f:
                 content = f.read()
 
             if old_string not in content:
@@ -204,7 +335,10 @@ class EditTool(BaseTool):
 
             count = content.count(old_string)
             if count > 1 and not replace_all:
-                return f"Error: Found {count} occurrences of old_string. Use replace_all or provide more context."
+                return (
+                    f"Error: Found {count} occurrences of old_string. Use replace_all or provide "
+                    f"more context."
+                )
 
             if replace_all:
                 new_content = content.replace(old_string, new_string)

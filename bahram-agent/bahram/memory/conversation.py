@@ -1,18 +1,34 @@
+"""
+Conversation.
+
+Public objects: ``ConversationMemory``.
+"""
+
 from __future__ import annotations
 
 import json
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from bahram.memory.base import BaseMemory, MemoryEntry
 
 logger = logging.getLogger(__name__)
 
+
 class ConversationMemory(BaseMemory):
+    """
+    Conversation memory.
+    """
 
     def __init__(self, storage_path: str = "data/conversations.json") -> None:
+        """
+        Initialise a ConversationMemory instance.
+
+        Args:
+            storage_path (str): storage path string. Defaults to ``'data/conversations.json'``.
+        """
         self.storage_path = Path(storage_path)
         self._memories: dict[str, MemoryEntry] = {}
         self._load()
@@ -54,7 +70,20 @@ class ConversationMemory(BaseMemory):
         except Exception as e:
             logger.error(f"Failed to save memories: {e}")
 
-    async def add(self, content: str, metadata: Optional[dict[str, Any]] = None) -> str:
+    async def add(self, content: str, metadata: dict[str, Any] | None = None) -> str:
+        """
+        Add.
+
+        Args:
+            content (str): text content to process.
+            metadata (dict[str, Any] | None): mapping of metadata. Defaults to ``None``.
+
+        Returns:
+            str: the rendered string.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         import uuid
 
         memory_id = str(uuid.uuid4())
@@ -68,7 +97,19 @@ class ConversationMemory(BaseMemory):
         self._save()
         return memory_id
 
-    async def get(self, memory_id: str) -> Optional[MemoryEntry]:
+    async def get(self, memory_id: str) -> MemoryEntry | None:
+        """
+        Get.
+
+        Args:
+            memory_id (str): memory id string.
+
+        Returns:
+            MemoryEntry | None: the resulting object, or ``None`` when it is not available.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         entry = self._memories.get(memory_id)
         if entry:
             entry.access_count += 1
@@ -76,6 +117,20 @@ class ConversationMemory(BaseMemory):
         return entry
 
     async def search(self, query: str, limit: int = 10) -> list[MemoryEntry]:
+        """
+        Search.
+
+        Args:
+            query (str): search query.
+            limit (int): maximum number of items to return. Defaults to ``10``.
+
+        Returns:
+            list[MemoryEntry]: a sequence of MemoryEntry entries (empty when there is nothing to
+                report).
+
+        Note:
+            Coroutine - must be awaited.
+        """
         query_lower = query.lower()
         results = []
 
@@ -87,6 +142,19 @@ class ConversationMemory(BaseMemory):
         return results[:limit]
 
     async def update(self, memory_id: str, content: str) -> bool:
+        """
+        Update.
+
+        Args:
+            memory_id (str): memory id string.
+            content (str): text content to process.
+
+        Returns:
+            bool: ``True`` when the operation succeeds, otherwise ``False``.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         if memory_id in self._memories:
             self._memories[memory_id].content = content
             self._save()
@@ -94,6 +162,18 @@ class ConversationMemory(BaseMemory):
         return False
 
     async def delete(self, memory_id: str) -> bool:
+        """
+        Delete.
+
+        Args:
+            memory_id (str): memory id string.
+
+        Returns:
+            bool: ``True`` when the operation succeeds, otherwise ``False``.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         if memory_id in self._memories:
             del self._memories[memory_id]
             self._save()
@@ -101,20 +181,65 @@ class ConversationMemory(BaseMemory):
         return False
 
     async def list_all(self, limit: int = 100) -> list[MemoryEntry]:
+        """
+        List all.
+
+        Args:
+            limit (int): maximum number of items to return. Defaults to ``100``.
+
+        Returns:
+            list[MemoryEntry]: a sequence of MemoryEntry entries (empty when there is nothing to
+                report).
+
+        Note:
+            Coroutine - must be awaited.
+        """
         entries = list(self._memories.values())
         entries.sort(key=lambda x: x.timestamp, reverse=True)
         return entries[:limit]
 
     async def clear(self) -> None:
+        """
+        Clear.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         self._memories.clear()
         self._save()
 
     async def get_recent(self, limit: int = 10) -> list[MemoryEntry]:
+        """
+        Return the recent.
+
+        Args:
+            limit (int): maximum number of items to return. Defaults to ``10``.
+
+        Returns:
+            list[MemoryEntry]: a sequence of MemoryEntry entries (empty when there is nothing to
+                report).
+
+        Note:
+            Coroutine - must be awaited.
+        """
         entries = list(self._memories.values())
         entries.sort(key=lambda x: x.timestamp, reverse=True)
         return entries[:limit]
 
     async def get_important(self, limit: int = 10) -> list[MemoryEntry]:
+        """
+        Return the important.
+
+        Args:
+            limit (int): maximum number of items to return. Defaults to ``10``.
+
+        Returns:
+            list[MemoryEntry]: a sequence of MemoryEntry entries (empty when there is nothing to
+                report).
+
+        Note:
+            Coroutine - must be awaited.
+        """
         entries = list(self._memories.values())
         entries.sort(key=lambda x: x.importance, reverse=True)
         return entries[:limit]

@@ -1,19 +1,15 @@
 from __future__ import annotations
 
-import asyncio
 import os
-import tempfile
-import time
-import uuid
 
 import pytest
 
-from bahram.autonomy.tool_gateway import ToolGateway, ToolRoute, ToolSearchResult
-from bahram.security.kernel import SecurityKernel, Capability, AuthorizationRequest
-from bahram.core.context_architecture import ContextArchitecture, ContextElement, ContextCategory
-from bahram.core.observability import Observability, ObservabilityEvent
+from bahram.autonomy.tool_gateway import ToolGateway
+from bahram.core.context_architecture import ContextArchitecture
+from bahram.core.engine import AgentEngine, AgentResponse, Message, MessageRole, ToolCall
+from bahram.core.observability import Observability
 from bahram.memory.semantic import SemanticMemory
-from bahram.core.engine import AgentEngine, AgentResponse, Message, MessageRole, RunConfig, ToolCall
+from bahram.security.kernel import AuthorizationRequest, Capability, SecurityKernel
 
 
 class FakeTool:
@@ -23,7 +19,11 @@ class FakeTool:
         self.description = desc
 
     def schema(self):
-        return {"name": self._name, "description": self._desc, "parameters": {"type": "object", "properties": {}}}
+        return {
+            "name": self._name,
+            "description": self._desc,
+            "parameters": {"type": "object", "properties": {}},
+        }
 
     async def execute(self, **kwargs):
         return f"{self._name} done"
@@ -32,6 +32,7 @@ class FakeTool:
 # ═══════════════════════════════════════════════════════════════
 # TOOL GATEWAY TESTS
 # ═══════════════════════════════════════════════════════════════
+
 
 class TestToolGatewayRoutes:
     def test_initializes_routes_for_all_tools(self):
@@ -106,6 +107,7 @@ class TestToolGatewayRoutes:
 # SECURITY KERNEL TESTS
 # ═══════════════════════════════════════════════════════════════
 
+
 class TestSecurityKernel:
     def test_default_capabilities_granted(self):
         kernel = SecurityKernel()
@@ -118,8 +120,11 @@ class TestSecurityKernel:
     def test_authorization_granted_for_existing_capability(self):
         kernel = SecurityKernel()
         req = AuthorizationRequest(
-            request_id="r1", identity="system", capability="file_read",
-            resource="/tmp/test.txt", risk_level="low",
+            request_id="r1",
+            identity="system",
+            capability="file_read",
+            resource="/tmp/test.txt",
+            risk_level="low",
         )
         result = kernel.check_authorization(req)
         assert result.granted is True
@@ -128,8 +133,11 @@ class TestSecurityKernel:
     def test_authorization_denied_for_missing_capability(self):
         kernel = SecurityKernel()
         req = AuthorizationRequest(
-            request_id="r2", identity="unknown_user", capability="file_read",
-            resource="/tmp/test.txt", risk_level="low",
+            request_id="r2",
+            identity="unknown_user",
+            capability="file_read",
+            resource="/tmp/test.txt",
+            risk_level="low",
         )
         result = kernel.check_authorization(req)
         assert result.granted is False
@@ -137,12 +145,20 @@ class TestSecurityKernel:
 
     def test_authorization_denied_for_risk_exceeding_capability(self):
         kernel = SecurityKernel()
-        kernel.grant_capability("limited_user", Capability(
-            name="execute", scope="workspace", max_risk="low",
-        ))
+        kernel.grant_capability(
+            "limited_user",
+            Capability(
+                name="execute",
+                scope="workspace",
+                max_risk="low",
+            ),
+        )
         req = AuthorizationRequest(
-            request_id="r3", identity="limited_user", capability="execute",
-            resource="rm -rf /", risk_level="critical",
+            request_id="r3",
+            identity="limited_user",
+            capability="execute",
+            resource="rm -rf /",
+            risk_level="critical",
         )
         result = kernel.check_authorization(req)
         assert result.granted is False
@@ -156,18 +172,30 @@ class TestSecurityKernel:
 
     def test_one_time_capability(self):
         kernel = SecurityKernel()
-        kernel.grant_capability("temp_user", Capability(
-            name="single_use", scope="session", max_risk="low", one_time=True,
-        ))
+        kernel.grant_capability(
+            "temp_user",
+            Capability(
+                name="single_use",
+                scope="session",
+                max_risk="low",
+                one_time=True,
+            ),
+        )
         req1 = AuthorizationRequest(
-            request_id="r4", identity="temp_user", capability="single_use",
-            resource="x", risk_level="low",
+            request_id="r4",
+            identity="temp_user",
+            capability="single_use",
+            resource="x",
+            risk_level="low",
         )
         result1 = kernel.check_authorization(req1)
         assert result1.granted is True
         req2 = AuthorizationRequest(
-            request_id="r5", identity="temp_user", capability="single_use",
-            resource="x", risk_level="low",
+            request_id="r5",
+            identity="temp_user",
+            capability="single_use",
+            resource="x",
+            risk_level="low",
         )
         result2 = kernel.check_authorization(req2)
         assert result2.granted is False
@@ -175,8 +203,11 @@ class TestSecurityKernel:
     def test_audit_log_records_denials(self):
         kernel = SecurityKernel()
         req = AuthorizationRequest(
-            request_id="r6", identity="attacker", capability="admin",
-            resource="/etc/shadow", risk_level="critical",
+            request_id="r6",
+            identity="attacker",
+            capability="admin",
+            resource="/etc/shadow",
+            risk_level="critical",
         )
         kernel.check_authorization(req)
         log = kernel.get_audit_log()
@@ -187,8 +218,11 @@ class TestSecurityKernel:
         kernel = SecurityKernel()
         assert kernel.revoke_capability("system", "file_read") is True
         req = AuthorizationRequest(
-            request_id="r7", identity="system", capability="file_read",
-            resource="x", risk_level="low",
+            request_id="r7",
+            identity="system",
+            capability="file_read",
+            resource="x",
+            risk_level="low",
         )
         result = kernel.check_authorization(req)
         assert result.granted is False
@@ -197,6 +231,7 @@ class TestSecurityKernel:
 # ═══════════════════════════════════════════════════════════════
 # CONTEXT ARCHITECTURE TESTS
 # ═══════════════════════════════════════════════════════════════
+
 
 class TestContextArchitecture:
     def test_build_messages_preserves_order(self):
@@ -246,6 +281,7 @@ class TestContextArchitecture:
 # ═══════════════════════════════════════════════════════════════
 # OBSERVABILITY TESTS
 # ═══════════════════════════════════════════════════════════════
+
 
 class TestObservability:
     def test_emit_creates_event(self, tmp_path):
@@ -324,6 +360,7 @@ class TestObservability:
 # MEMORY 2.0 TESTS
 # ═══════════════════════════════════════════════════════════════
 
+
 class TestMemoryV2:
     def test_scope_isolation(self, tmp_path):
         m1 = SemanticMemory(data_dir=str(tmp_path / "m1"))
@@ -377,10 +414,14 @@ class TestMemoryV2:
 
     def test_migration_adds_columns(self, tmp_path):
         import sqlite3
+
         db_path = str(tmp_path / "mem" / "memory.db")
         os.makedirs(os.path.dirname(db_path), exist_ok=True)
         conn = sqlite3.connect(db_path)
-        conn.execute("CREATE TABLE memories (id TEXT PRIMARY KEY, content TEXT, source TEXT, timestamp REAL, metadata TEXT)")
+        conn.execute(
+            "CREATE TABLE memories (id TEXT PRIMARY KEY, content TEXT, source TEXT, timestamp "
+            "REAL, metadata TEXT)"
+        )
         conn.commit()
         conn.close()
         mem = SemanticMemory(data_dir=str(tmp_path / "mem"))
@@ -396,9 +437,11 @@ class TestMemoryV2:
 # ENGINE TRAJECTORY PERSISTENCE TESTS
 # ═══════════════════════════════════════════════════════════════
 
+
 class WorkingProvider:
     async def complete(self, messages, tools=None, **kwargs):
         return AgentResponse(content="done")
+
     async def stream(self, messages, tools=None, **kwargs):
         yield ""
 
@@ -406,6 +449,7 @@ class WorkingProvider:
 class AlwaysFailProvider:
     async def complete(self, messages, tools=None, **kwargs):
         raise Exception("provider failed")
+
     async def stream(self, messages, tools=None, **kwargs):
         yield ""
 
@@ -418,7 +462,8 @@ class TestEngineTrajectory:
         engine.set_trajectory_dir(str(tmp_path / "traj"))
         resp = await engine.run(
             [Message(role=MessageRole.USER, content="hello")],
-            model="test/model", session_id="s1",
+            model="test/model",
+            session_id="s1",
         )
         assert resp.state.value == "completed"
         assert "trajectory" in resp.metadata
@@ -433,7 +478,8 @@ class TestEngineTrajectory:
         engine.set_trajectory_dir(str(tmp_path / "traj"))
         resp = await engine.run(
             [Message(role=MessageRole.USER, content="hello")],
-            model="test/model", session_id="s1",
+            model="test/model",
+            session_id="s1",
         )
         assert resp.state.value == "failed"
         traj_files = os.listdir(str(tmp_path / "traj"))
@@ -446,6 +492,7 @@ class TestEngineTrajectory:
         class CancelAfterCall:
             def __init__(self):
                 self.n = 0
+
             async def complete(self, messages, tools=None, **kwargs):
                 self.n += 1
                 if self.n == 1:
@@ -455,18 +502,31 @@ class TestEngineTrajectory:
                         tool_calls=[ToolCall(id="tc1", name="fast", arguments={})],
                     )
                 return AgentResponse(content="x")
+
             async def stream(self, messages, tools=None, **kwargs):
                 yield ""
 
         engine.providers["test"] = CancelAfterCall()
-        engine.register_tool("fast", type("T", (), {
-            "schema": lambda s: {"name": "fast", "description": "f", "parameters": {"type": "object", "properties": {}}},
-            "execute": lambda s, **kw: "ok",
-        })())
+        engine.register_tool(
+            "fast",
+            type(
+                "T",
+                (),
+                {
+                    "schema": lambda s: {
+                        "name": "fast",
+                        "description": "f",
+                        "parameters": {"type": "object", "properties": {}},
+                    },
+                    "execute": lambda s, **kw: "ok",
+                },
+            )(),
+        )
         engine.set_trajectory_dir(str(tmp_path / "traj"))
         resp = await engine.run(
             [Message(role=MessageRole.USER, content="hello")],
-            model="test/model", session_id="s1",
+            model="test/model",
+            session_id="s1",
         )
         assert resp.state.value == "cancelled"
         traj_files = os.listdir(str(tmp_path / "traj"))

@@ -1,14 +1,15 @@
 from __future__ import annotations
 
 import pytest
-import asyncio
 
 from bahram.tools.base import BaseTool, ToolSchema
 
 
 class TestToolSchema:
     def test_create_schema(self):
-        schema = ToolSchema(name="test", description="A test tool", parameters={"type": "object", "properties": {}})
+        schema = ToolSchema(
+            name="test", description="A test tool", parameters={"type": "object", "properties": {}}
+        )
         assert schema.name == "test"
         assert schema.to_dict()["name"] == "test"
 

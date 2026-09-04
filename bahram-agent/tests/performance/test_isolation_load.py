@@ -2,6 +2,7 @@
 
 Uses asyncio.gather for concurrency and real components with tmpdir isolation.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -44,7 +45,8 @@ class TestMemoryIsolationUnderLoad:
 
             own_results = memory.search(query=user_tag, limit=50)
             assert len(own_results) >= NUM_MEMORIES_PER_USER, (
-                f"User {user_idx}: expected >= {NUM_MEMORIES_PER_USER} own memories, got {len(own_results)}"
+                f"User {user_idx}: expected >= {NUM_MEMORIES_PER_USER} own memories, got "
+                f"{len(own_results)}"
             )
             memory.close()
 
@@ -83,7 +85,8 @@ class TestBudgetIsolationUnderLoad:
                 f"Run {i}: expected {NUM_MODEL_CALLS_PER_RUN} calls, got {run_budget.model_calls}"
             )
             assert run_budget.total_tokens == NUM_MODEL_CALLS_PER_RUN * 800, (
-                f"Run {i}: expected {NUM_MODEL_CALLS_PER_RUN * 800} tokens, got {run_budget.total_tokens}"
+                f"Run {i}: expected {NUM_MODEL_CALLS_PER_RUN * 800} tokens, got "
+                f"{run_budget.total_tokens}"
             )
 
         # Session budgets must also match
@@ -94,8 +97,7 @@ class TestBudgetIsolationUnderLoad:
 
         # Cross-check: no run should see another run's counts
         all_run_calls = [
-            bm.get_run_budget(f"run_{i}").model_calls
-            for i in range(NUM_CONCURRENT_USERS)
+            bm.get_run_budget(f"run_{i}").model_calls for i in range(NUM_CONCURRENT_USERS)
         ]
         assert all(c == NUM_MODEL_CALLS_PER_RUN for c in all_run_calls)
 
@@ -153,10 +155,9 @@ class TestSmartContextIsolationUnderLoad:
             for msg in msgs:
                 content = msg.get("content", "")
                 # Either it contains our marker, or it's a history message from this instance
-                assert (
-                    marker in content
-                    or f"from {idx}" in content
-                ), f"Cross-contamination detected in context {idx}: {content[:80]}"
+                assert marker in content or f"from {idx}" in content, (
+                    f"Cross-contamination detected in context {idx}: {content[:80]}"
+                )
 
             # No other context's marker should appear
             for other_idx in range(NUM_SMART_CONTEXTS):
@@ -186,7 +187,11 @@ class TestSmartContextIsolationUnderLoad:
             msgs = ctx.build_messages()
             for msg in msgs:
                 content = msg.content if hasattr(msg, "content") else msg.get("content", "")
-                if marker not in content and f"from {idx}" not in content and str(idx) not in content:
+                if (
+                    marker not in content
+                    and f"from {idx}" not in content
+                    and str(idx) not in content
+                ):
                     pytest.fail(f"Context {idx}: unexpected message content: {content[:100]}")
 
         await asyncio.gather(*(verify(i) for i in range(NUM_SMART_CONTEXTS)))
@@ -215,7 +220,9 @@ class TestConcurrentJobCreation:
 
         # All IDs must be unique
         ids = [j.id for j in jobs]
-        assert len(set(ids)) == NUM_JOBS, f"Duplicate job IDs found: {NUM_JOBS - len(set(ids))} collisions"
+        assert len(set(ids)) == NUM_JOBS, (
+            f"Duplicate job IDs found: {NUM_JOBS - len(set(ids))} collisions"
+        )
 
         # All jobs must be persisted and retrievable
         for job in jobs:

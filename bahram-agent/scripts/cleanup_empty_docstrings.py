@@ -5,6 +5,7 @@ Only removes *expression statements* that are exactly an empty string literal
 on a single line (AST-verified), which are pure no-ops. Never touches real
 code, strings inside multiline literals, or `x = ""` assignments.
 """
+
 from __future__ import annotations
 
 import ast

@@ -3,6 +3,7 @@
 Tests that subagents are properly bounded in concurrency,
 and that parent state remains stable under concurrent child execution.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -10,7 +11,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from bahram.autonomy.subagent import SubagentEngine, SubagentResult
+from bahram.autonomy.subagent import SubagentEngine
 from bahram.core.engine import AgentResponse, RunState
 
 
@@ -233,6 +234,16 @@ class TestSubagentConcurrency:
 
         assert tracker.emit_subagent_spawned.called
         assert tracker.emit_subagent_completed.called
+
+
+class TestSubagentCancellation:
+    """Cancellation is synchronous, so it lives outside the async test class.
+
+    ``asyncio_mode = "auto"`` makes pytest-asyncio mark every test in a class
+    that contains coroutine tests, which produces a spurious
+    "marked with asyncio but not an async function" warning for sync tests.
+    Keeping sync-only tests in their own class avoids that.
+    """
 
     def test_cancel_nonexistent_task(self):
         """Cancelling a non-existent task should return False."""

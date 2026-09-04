@@ -1,25 +1,46 @@
+"""
+Tirith.
+
+Public objects: ``ScanResult``, ``TirithScanner``.
+"""
+
 from __future__ import annotations
 
 import logging
 import re
 from dataclasses import dataclass, field
-from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class ScanResult:
+    """
+    Scan result.
+
+    Attributes:
+        safe (bool): when ``True``, enable safe.
+        issues (list[str]): collection of issues.
+        warnings (list[str]): collection of warnings.
+        blocked (list[str]): collection of blocked.
+    """
 
     safe: bool
     issues: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
     blocked: list[str] = field(default_factory=list)
 
+
 class TirithScanner:
+    """
+    Tirith scanner.
+    """
 
     def __init__(self) -> None:
+        """
+        Initialise a TirithScanner instance.
+        """
         self._dangerous_patterns: list[tuple[str, str, str]] = [
-
             (r"rm\s+-rf\s+/", "critical", "Recursive delete from root"),
             (r"mkfs\.", "critical", "Format filesystem"),
             (r"dd\s+if=.*of=/dev/", "critical", "Direct disk write"),
@@ -40,6 +61,15 @@ class TirithScanner:
         ]
 
     def scan(self, content: str) -> ScanResult:
+        """
+        Scan.
+
+        Args:
+            content (str): text content to process.
+
+        Returns:
+            ScanResult: the resulting ScanResult.
+        """
         issues = []
         warnings = []
         blocked = []
@@ -66,18 +96,59 @@ class TirithScanner:
         )
 
     def scan_command(self, command: str) -> ScanResult:
+        """
+        Scan command.
+
+        Args:
+            command (str): shell command to execute.
+
+        Returns:
+            ScanResult: the resulting ScanResult.
+        """
         return self.scan(command)
 
     def scan_code(self, code: str) -> ScanResult:
+        """
+        Scan code.
+
+        Args:
+            code (str): source code to execute.
+
+        Returns:
+            ScanResult: the resulting ScanResult.
+        """
         return self.scan(code)
 
     def add_dangerous_pattern(self, pattern: str, severity: str, description: str) -> None:
+        """
+        Add dangerous pattern.
+
+        Args:
+            pattern (str): pattern string.
+            severity (str): severity string.
+            description (str): human readable description.
+        """
         self._dangerous_patterns.append((pattern, severity, description))
 
     def add_blocked_pattern(self, pattern: str) -> None:
+        """
+        Add blocked pattern.
+
+        Args:
+            pattern (str): pattern string.
+        """
         self._blocked_patterns.append(pattern)
 
     def get_scan_report(self, content: str) -> str:
+        """
+        Return the scan report.
+
+        Args:
+            content (str): text content to process.
+
+        Returns:
+            str: the rendered string.
+        """
         result = self.scan(content)
 
         lines = ["=== Security Scan Report ===", ""]

@@ -1,23 +1,45 @@
+"""
+Ai generator.
+
+Public objects: ``GeneratedFile``, ``AICodeGenerator``.
+"""
+
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class GeneratedFile:
+    """
+    Generated file.
+
+    Attributes:
+        path (str): filesystem path to operate on.
+        content (str): text content to process.
+        language (str): language string.
+        description (str): human readable description.
+    """
 
     path: str
     content: str
     language: str
     description: str = ""
 
+
 class AICodeGenerator:
+    """
+    Ai code generator.
+    """
 
     def __init__(self) -> None:
+        """
+        Initialise a AICodeGenerator instance.
+        """
         self._templates: dict[str, dict] = {
             "fastapi": {
                 "files": [
@@ -50,6 +72,21 @@ class AICodeGenerator:
         framework: str = "fastapi",
         output_dir: str = "generated",
     ) -> list[GeneratedFile]:
+        """
+        Generate.
+
+        Args:
+            description (str): human readable description.
+            framework (str): framework string. Defaults to ``'fastapi'``.
+            output_dir (str): output dir string. Defaults to ``'generated'``.
+
+        Returns:
+            list[GeneratedFile]: a sequence of GeneratedFile entries (empty when there is nothing to
+                report).
+
+        Note:
+            Coroutine - must be awaited.
+        """
         template = self._templates.get(framework, {})
         if not template:
             return []
@@ -62,11 +99,13 @@ class AICodeGenerator:
                 language=file_spec["language"],
                 framework=framework,
             )
-            files.append(GeneratedFile(
-                path=file_spec["path"],
-                content=content,
-                language=file_spec["language"],
-            ))
+            files.append(
+                GeneratedFile(
+                    path=file_spec["path"],
+                    content=content,
+                    language=file_spec["language"],
+                )
+            )
 
         output_path = Path(output_dir)
         output_path.mkdir(parents=True, exist_ok=True)
@@ -102,13 +141,13 @@ class AICodeGenerator:
         return ""
 
     def _generate_fastapi_main(self, description: str) -> str:
-        return f''
+        return ""
 
     def _generate_cli_main(self, description: str) -> str:
-        return f''
+        return ""
 
     def _generate_react_app(self, description: str) -> str:
-        return f''
+        return ""
 
     def _generate_requirements(self, framework: str) -> str:
         requirements = {
@@ -118,12 +157,12 @@ class AICodeGenerator:
         return requirements.get(framework, "")
 
     def _generate_package_json(self, description: str) -> str:
-        return f''
+        return ""
 
     def _generate_dockerfile(self, framework: str) -> str:
         if framework == "fastapi":
-            return ''
+            return ""
         return ""
 
     def _generate_readme(self, description: str, framework: str) -> str:
-        return f""
+        return ""

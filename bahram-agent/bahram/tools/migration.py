@@ -1,15 +1,32 @@
+"""
+Migration.
+
+Public objects: ``MigrationRule``, ``CodeMigration``.
+"""
+
 from __future__ import annotations
 
 import logging
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class MigrationRule:
+    """
+    Migration rule.
+
+    Attributes:
+        name (str): name of the object.
+        source_pattern (str): source pattern string.
+        target_pattern (str): target pattern string.
+        language (str): language string.
+        description (str): human readable description.
+    """
 
     name: str
     source_pattern: str
@@ -17,23 +34,66 @@ class MigrationRule:
     language: str
     description: str = ""
 
+
 class CodeMigration:
+    """
+    Code migration.
+    """
 
     def __init__(self) -> None:
+        """
+        Initialise a CodeMigration instance.
+        """
         self._rules: dict[str, list[MigrationRule]] = {
             "python2_to_3": [
-                MigrationRule("print_function", r"print\s+(.+)", r"print(\1)", "python", "Convert print statement to function"),
-                MigrationRule("except_syntax", r"except\s+(\w+)\s*,\s*(\w+)", r"except \1 as \2", "python", "Convert except syntax"),
-                MigrationRule("unicode_literal", r"u\"(.+)\"", r"\"\1\"", "python", "Remove unicode prefix"),
-                MigrationRule("xrange", r"xrange\(", r"range(", "python", "Replace xrange with range"),
-                MigrationRule("raw_input", r"raw_input\(", r"input(", "python", "Replace raw_input with input"),
+                MigrationRule(
+                    "print_function",
+                    r"print\s+(.+)",
+                    r"print(\1)",
+                    "python",
+                    "Convert print statement to function",
+                ),
+                MigrationRule(
+                    "except_syntax",
+                    r"except\s+(\w+)\s*,\s*(\w+)",
+                    r"except \1 as \2",
+                    "python",
+                    "Convert except syntax",
+                ),
+                MigrationRule(
+                    "unicode_literal", r"u\"(.+)\"", r"\"\1\"", "python", "Remove unicode prefix"
+                ),
+                MigrationRule(
+                    "xrange", r"xrange\(", r"range(", "python", "Replace xrange with range"
+                ),
+                MigrationRule(
+                    "raw_input", r"raw_input\(", r"input(", "python", "Replace raw_input with input"
+                ),
             ],
             "fastapi_migration": [
-                MigrationRule("router", r"@app\.(get|post|put|delete)\(", r"@router.\1(", "python", "Migrate to router-based routing"),
+                MigrationRule(
+                    "router",
+                    r"@app\.(get|post|put|delete)\(",
+                    r"@router.\1(",
+                    "python",
+                    "Migrate to router-based routing",
+                ),
             ],
             "pydantic_v1_to_v2": [
-                MigrationRule("validator", r"@validator\((.+)\)", r"@field_validator(\1, mode='before')", "python", "Migrate Pydantic v1 to v2"),
-                MigrationRule("class_config", r"class Config:", r"model_config = ConfigDict(", "python", "Migrate Config class"),
+                MigrationRule(
+                    "validator",
+                    r"@validator\((.+)\)",
+                    r"@field_validator(\1, mode='before')",
+                    "python",
+                    "Migrate Pydantic v1 to v2",
+                ),
+                MigrationRule(
+                    "class_config",
+                    r"class Config:",
+                    r"model_config = ConfigDict(",
+                    "python",
+                    "Migrate Config class",
+                ),
             ],
         }
 
@@ -44,6 +104,21 @@ class CodeMigration:
         migration_type: str,
         dry_run: bool = False,
     ) -> dict[str, Any]:
+        """
+        Migrate.
+
+        Args:
+            source_path (str): source path string.
+            target_path (str): target path string.
+            migration_type (str): migration type string.
+            dry_run (bool): when ``True`` nothing is written. Defaults to ``False``.
+
+        Returns:
+            dict[str, Any]: a mapping of str, Any.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         rules = self._rules.get(migration_type, [])
         if not rules:
             return {"error": f"Unknown migration type: {migration_type}"}
@@ -72,11 +147,13 @@ class CodeMigration:
                 if rule.language == "python" or source.suffix == ".py":
                     new_content = re.sub(rule.source_pattern, rule.target_pattern, content)
                     if new_content != content:
-                        changes.append({
-                            "rule": rule.name,
-                            "description": rule.description,
-                            "count": len(re.findall(rule.source_pattern, content)),
-                        })
+                        changes.append(
+                            {
+                                "rule": rule.name,
+                                "description": rule.description,
+                                "count": len(re.findall(rule.source_pattern, content)),
+                            }
+                        )
                         content = new_content
 
             target = Path(target_path)
@@ -116,9 +193,24 @@ class CodeMigration:
         }
 
     def get_migration_types(self) -> list[str]:
+        """
+        Return the migration types.
+
+        Returns:
+            list[str]: a sequence of str entries (empty when there is nothing to report).
+        """
         return list(self._rules.keys())
 
     def get_rules(self, migration_type: str) -> list[dict]:
+        """
+        Return the rules.
+
+        Args:
+            migration_type (str): migration type string.
+
+        Returns:
+            list[dict]: a sequence of dict entries (empty when there is nothing to report).
+        """
         rules = self._rules.get(migration_type, [])
         return [
             {

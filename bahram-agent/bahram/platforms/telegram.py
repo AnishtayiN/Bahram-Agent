@@ -1,8 +1,13 @@
+"""
+Telegram.
+
+Public objects: ``TelegramPlatform``.
+"""
+
 from __future__ import annotations
 
 import logging
-import os
-from typing import TYPE_CHECKING, Any, Callable, Optional
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from telegram import Update
@@ -12,9 +17,19 @@ from bahram.platforms.base import BasePlatform, PlatformMessage
 
 logger = logging.getLogger(__name__)
 
+
 class TelegramPlatform(BasePlatform):
+    """
+    Telegram platform.
+    """
 
     def __init__(self, config: Any) -> None:
+        """
+        Initialise a TelegramPlatform instance.
+
+        Args:
+            config (Any): configuration object.
+        """
         super().__init__(config)
         self.app = None
         self.bot = None
@@ -23,20 +38,41 @@ class TelegramPlatform(BasePlatform):
         self._chat_sessions: dict[str, str] = {}
 
     def set_agent(self, agent: Any) -> None:
+        """
+        Set the agent.
+
+        Args:
+            agent (Any): agent.
+        """
         self._agent = agent
 
     @property
     def name(self) -> str:
+        """
+        Return the registry name of the TelegramPlatform object.
+
+        Returns the constant string ``'telegram'``.
+
+        Returns:
+            str: the rendered string.
+        """
         return "telegram"
 
     async def start(self) -> None:
+        """
+        Start the component and acquire any resources it needs.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         try:
-            from telegram import Update, BotCommand
+            # Imported here (not at module scope) so that the optional
+            # ``python-telegram-bot`` dependency is only required at runtime,
+            # and so ``start()`` can report a clean error when it is missing.
             from telegram.ext import (
                 ApplicationBuilder,
-                ContextTypes,
-                MessageHandler,
                 CommandHandler,
+                MessageHandler,
                 filters,
             )
 
@@ -56,15 +92,11 @@ class TelegramPlatform(BasePlatform):
             self.app.add_handler(
                 MessageHandler(filters.TEXT & ~filters.COMMAND, self._handle_message)
             )
-            self.app.add_handler(
-                MessageHandler(filters.VOICE | filters.AUDIO, self._handle_voice)
-            )
+            self.app.add_handler(MessageHandler(filters.VOICE | filters.AUDIO, self._handle_voice))
             self.app.add_handler(
                 MessageHandler(filters.PHOTO | filters.Document.IMAGE, self._handle_image)
             )
-            self.app.add_handler(
-                MessageHandler(filters.Document.ALL, self._handle_document)
-            )
+            self.app.add_handler(MessageHandler(filters.Document.ALL, self._handle_document))
 
             await self._set_bot_commands()
 
@@ -84,6 +116,12 @@ class TelegramPlatform(BasePlatform):
             raise
 
     async def stop(self) -> None:
+        """
+        Stop the component and release any resources it holds.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         if self.app:
             await self.app.updater.stop()
             await self.app.stop()
@@ -104,12 +142,24 @@ class TelegramPlatform(BasePlatform):
         await self.app.bot.set_my_commands(commands)
 
     async def send_message(self, chat_id: str, content: str, parse_mode: str = "Markdown") -> None:
+        """
+        Send message.
+
+        Args:
+            chat_id (str): chat id string.
+            content (str): text content to process.
+            parse_mode (str): parse mode string. Defaults to ``'Markdown'``.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         if self.bot:
             try:
-
                 max_length = 4096
                 if len(content) > max_length:
-                    chunks = [content[i : i + max_length] for i in range(0, len(content), max_length)]
+                    chunks = [
+                        content[i : i + max_length] for i in range(0, len(content), max_length)
+                    ]
                     for chunk in chunks:
                         await self.bot.send_message(
                             chat_id=chat_id,
@@ -128,9 +178,30 @@ class TelegramPlatform(BasePlatform):
                 await self.bot.send_message(chat_id=chat_id, text=content)
 
     async def reply(self, message: PlatformMessage, content: str) -> None:
+        """
+        Reply.
+
+        Args:
+            message (PlatformMessage): message to process.
+            content (str): text content to process.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         await self.send_message(message.chat_id, content)
 
     async def edit_message(self, chat_id: str, message_id: str, content: str) -> None:
+        """
+        Edit message.
+
+        Args:
+            chat_id (str): chat id string.
+            message_id (str): message id string.
+            content (str): text content to process.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         if self.bot:
             try:
                 await self.bot.edit_message_text(
@@ -142,15 +213,45 @@ class TelegramPlatform(BasePlatform):
                 logger.error(f"Failed to edit message: {e}")
 
     async def send_typing(self, chat_id: str) -> None:
+        """
+        Send typing.
+
+        Args:
+            chat_id (str): chat id string.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         if self.bot:
             await self.bot.send_chat_action(chat_id=chat_id, action="typing")
 
     async def send_voice(self, chat_id: str, voice_path: str) -> None:
+        """
+        Send voice.
+
+        Args:
+            chat_id (str): chat id string.
+            voice_path (str): voice path string.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         if self.bot:
             with open(voice_path, "rb") as voice:
                 await self.bot.send_voice(chat_id=chat_id, voice=voice)
 
     async def send_document(self, chat_id: str, document_path: str, caption: str = "") -> None:
+        """
+        Send document.
+
+        Args:
+            chat_id (str): chat id string.
+            document_path (str): document path string.
+            caption (str): caption string. Defaults to ``''``.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         if self.bot:
             with open(document_path, "rb") as doc:
                 await self.bot.send_document(
@@ -160,6 +261,17 @@ class TelegramPlatform(BasePlatform):
                 )
 
     async def send_photo(self, chat_id: str, photo_path: str, caption: str = "") -> None:
+        """
+        Send photo.
+
+        Args:
+            chat_id (str): chat id string.
+            photo_path (str): photo path string.
+            caption (str): caption string. Defaults to ``''``.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         if self.bot:
             with open(photo_path, "rb") as photo:
                 await self.bot.send_photo(
@@ -245,17 +357,11 @@ class TelegramPlatform(BasePlatform):
             await update.message.reply_text(f"Model changed to: {model}")
         else:
             await update.message.reply_text(
-                "Usage: /model <model_name>\n"
-                "Example: /model anthropic/claude-sonnet-4-6"
+                "Usage: /model <model_name>\nExample: /model anthropic/claude-sonnet-4-6"
             )
 
     async def _handle_status(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        status = (
-            "Bahram Agent Status\n\n"
-            "Version: 1.0.0\n"
-            "Status: Online\n"
-            "Platform: Telegram\n"
-        )
+        status = "Bahram Agent Status\n\nVersion: 1.0.0\nStatus: Online\nPlatform: Telegram\n"
         await update.message.reply_text(status)
 
     async def _handle_message(self, update_or_message: Any, context: Any = None) -> None:
@@ -311,12 +417,11 @@ class TelegramPlatform(BasePlatform):
             status = "Online"
             if self._agent._budget_manager:
                 usage = self._agent._budget_manager.get_all_usage()
-                total_tokens = sum(
-                    r.get("total_tokens", 0)
-                    for r in usage.get("runs", {}).values()
-                )
+                total_tokens = sum(r.get("total_tokens", 0) for r in usage.get("runs", {}).values())
                 status += f"\nBudget: {total_tokens} tokens used"
-            await self.send_message(chat_id, f"Bahram Agent Status\n\nVersion: 1.0.0\nStatus: {status}")
+            await self.send_message(
+                chat_id, f"Bahram Agent Status\n\nVersion: 1.0.0\nStatus: {status}"
+            )
             return
 
         await self.send_typing(chat_id)

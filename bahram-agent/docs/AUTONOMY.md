@@ -225,3 +225,49 @@ Run autonomy tests only:
 ```bash
 python3 -m pytest tests/test_autonomy.py tests/evaluation/test_benchmarks.py -q
 ```
+
+---
+
+## Verification
+
+Each component above has a test that constructs it and drives it. Checking a
+claim in this file means running the matching test:
+
+| Component | Test |
+|---|---|
+| Plan, PlanStep, DAG dependencies | `tests/test_autonomy.py` |
+| Planner (LLM + template fallback) | `tests/test_autonomy.py`, `tests/test_agent_boot.py::TestAgentPlanning` |
+| Verification engine | `tests/test_autonomy.py` |
+| Replanner | `tests/test_autonomy.py` |
+| Plan executor | `tests/test_autonomy.py`, `tests/test_agent_boot.py::TestAgentPlanning` |
+| Subagent engine | `tests/redteam/test_redteam.py::TestSubagentEscalation`, `tests/test_agent_boot.py` |
+| Background jobs | `tests/test_autonomy.py`, `tests/test_agent_boot.py::TestAgentAutonomyAccessors` |
+| Recovery manager | `tests/test_autonomy.py::TestRecoveryManager`, `tests/phase11/test_crash_recovery.py` |
+| Learning engine + skill lifecycle | `tests/test_autonomy.py`, `tests/test_agent_boot.py::test_analyze_and_learn` |
+| Budget manager (incl. USD cost) | `tests/test_autonomy.py` (`-k cost`), `docs/COST_MODEL.md` |
+| Event tracker | `tests/test_autonomy.py` |
+
+```bash
+cd bahram-agent
+python -m pytest tests/test_autonomy.py tests/test_agent_boot.py tests/phase11 -q
+```
+
+## Not wired
+
+* `bahram/autonomy/tool_gateway.py` — routing/validation wrapper for tool
+  calls. Nothing in `bahram/` constructs it; only
+  `tests/phase14/test_new_components.py` does. `AgentEngine.ToolExecutor`
+  performs that role today.
+* `PlanStep` exposes `id`, not `step_id`. `Agent.run_with_plan` previously
+  read `step.step_id` and the resulting `AttributeError` was swallowed by a
+  broad `except`, so auto-learning silently never ran — fixed, and covered by
+  `tests/test_agent_boot.py::TestAgentPlanning`.
+
+## Ephemeral mode
+
+Every subsystem that writes to disk takes `data_dir: str | None`. When
+`config.memory.database == ":memory:"`, `Agent._init_autonomy` passes `None`
+for events, recovery, learning and jobs, and `AgentEngine.set_trajectory_dir(
+None)` disables trajectory files — so an in-memory run touches no files at
+all. Asserted by
+`tests/test_agent_boot.py::test_in_memory_run_creates_no_files`.

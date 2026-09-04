@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-import pytest
-
-from bahram.security.approval import ApprovalSystem, ApprovalConfig, ApprovalMode
+from bahram.security.approval import ApprovalConfig, ApprovalMode, ApprovalSystem
 from bahram.security.file_safety import FileWriteSafety
 from bahram.security.tirith import TirithScanner
 

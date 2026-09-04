@@ -3,15 +3,15 @@
 Tests that MCP tools enter the same pipeline as built-in tools:
 discovery -> normalization -> ToolRegistry -> security -> approval -> executor -> trajectory.
 """
+
 from __future__ import annotations
 
 import asyncio
 import json
-from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from bahram.core.engine import AgentEngine, ToolExecutor, ToolCall, ToolResult
+from bahram.core.engine import AgentEngine, ToolCall, ToolExecutor
 
 
 class FakeMCPTool:
@@ -37,9 +37,7 @@ class FakeMCPTool:
             "description": self.description,
             "parameters": {
                 "type": "object",
-                "properties": {
-                    "input": {"type": "string", "description": "Input parameter"}
-                },
+                "properties": {"input": {"type": "string", "description": "Input parameter"}},
             },
         }
 
@@ -94,7 +92,7 @@ class TestMCPIntegration:
     @pytest.mark.asyncio
     async def test_mcp_tool_security_applies(self):
         """Security pipeline should apply to MCP tools."""
-        from bahram.security.approval import ApprovalSystem, ApprovalConfig, ApprovalMode
+        from bahram.security.approval import ApprovalConfig, ApprovalMode, ApprovalSystem
 
         config = ApprovalConfig(mode=ApprovalMode.SMART)
         approval = ApprovalSystem(config)
@@ -135,7 +133,11 @@ class TestMCPIntegration:
                 return "should not reach"
 
             def schema(self):
-                return {"name": "mcp_slow", "description": "slow", "parameters": {"type": "object", "properties": {}}}
+                return {
+                    "name": "mcp_slow",
+                    "description": "slow",
+                    "parameters": {"type": "object", "properties": {}},
+                }
 
         engine.register_tool("mcp_slow", SlowMCPTool())
 

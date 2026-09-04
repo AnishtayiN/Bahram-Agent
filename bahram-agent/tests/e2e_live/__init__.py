@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import os
+
 import pytest
-from typing import Any
 
 
 def _has_live_credentials() -> bool:
@@ -25,7 +25,10 @@ def _get_model() -> str:
 
 pytestmark = pytest.mark.skipif(
     not _has_live_credentials(),
-    reason="No live LLM credentials available (set ANTHROPIC_API_KEY, OPENAI_API_KEY, or OPENROUTER_API_KEY)",
+    reason=(
+        "No live LLM credentials available (set ANTHROPIC_API_KEY, OPENAI_API_KEY, or "
+        "OPENROUTER_API_KEY)"
+    ),
 )
 
 

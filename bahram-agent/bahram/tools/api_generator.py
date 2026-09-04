@@ -1,13 +1,30 @@
+"""
+API generator.
+
+Public objects: ``APIEndpoint``, ``APIGenerator``.
+"""
+
 from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class APIEndpoint:
+    """
+    API endpoint.
+
+    Attributes:
+        path (str): filesystem path to operate on.
+        method (str): method string.
+        handler (str): handler string.
+        description (str): human readable description.
+        parameters (list[dict]): collection of parameters.
+        response_schema (dict): mapping of response schema.
+    """
 
     path: str
     method: str
@@ -16,9 +33,16 @@ class APIEndpoint:
     parameters: list[dict] = field(default_factory=list)
     response_schema: dict = field(default_factory=dict)
 
+
 class APIGenerator:
+    """
+    API generator.
+    """
 
     def __init__(self) -> None:
+        """
+        Initialise a APIGenerator instance.
+        """
         self._endpoints: list[APIEndpoint] = []
         self._templates: dict[str, str] = {
             "fastapi": self._get_fastapi_template(),
@@ -27,9 +51,24 @@ class APIGenerator:
         }
 
     def add_endpoint(self, endpoint: APIEndpoint) -> None:
+        """
+        Add endpoint.
+
+        Args:
+            endpoint (APIEndpoint): endpoint.
+        """
         self._endpoints.append(endpoint)
 
     def generate(self, framework: str = "fastapi") -> str:
+        """
+        Generate.
+
+        Args:
+            framework (str): framework string. Defaults to ``'fastapi'``.
+
+        Returns:
+            str: the rendered string.
+        """
         template = self._templates.get(framework, "")
         if not template:
             return f"# Unsupported framework: {framework}"
@@ -42,11 +81,11 @@ class APIGenerator:
 
     def _generate_endpoint(self, endpoint: APIEndpoint, framework: str) -> str:
         if framework == "fastapi":
-            return f""
+            return ""
         elif framework == "flask":
-            return f""
+            return ""
         elif framework == "express":
-            return f""
+            return ""
         return ""
 
     def _get_params(self, endpoint: APIEndpoint) -> str:
@@ -55,7 +94,9 @@ class APIGenerator:
             if param.get("required"):
                 params.append(f"{param['name']}: {param.get('type', 'str')}")
             else:
-                params.append(f"{param['name']}: {param.get('type', 'str')} = {param.get('default', 'None')}")
+                params.append(
+                    f"{param['name']}: {param.get('type', 'str')} = {param.get('default', 'None')}"
+                )
         return ", ".join(params)
 
     def _get_fastapi_template(self) -> str:
@@ -68,6 +109,12 @@ class APIGenerator:
         return ""
 
     def generate_openapi(self) -> dict:
+        """
+        Generate openapi.
+
+        Returns:
+            dict: a mapping of str, Any.
+        """
         paths = {}
         for endpoint in self._endpoints:
             if endpoint.path not in paths:

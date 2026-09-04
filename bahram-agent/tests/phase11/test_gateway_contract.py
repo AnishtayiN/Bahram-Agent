@@ -3,16 +3,14 @@
 Tests the gateway service for request routing, session management,
 authorization, cancellation, and response normalization.
 """
+
 from __future__ import annotations
 
 import tempfile
 from pathlib import Path
 
-import pytest
-
-from bahram.core.agent import Agent, Session
+from bahram.core.agent import Agent
 from bahram.core.config import Config
-from bahram.core.engine import Message, MessageRole
 
 
 class FakeGateway:
@@ -38,11 +36,13 @@ class FakeGateway:
         return session.id
 
     def route_request(self, session_id: str, user_id: str, message: str) -> dict:
-        self._request_log.append({
-            "session_id": session_id,
-            "user_id": user_id,
-            "message": message,
-        })
+        self._request_log.append(
+            {
+                "session_id": session_id,
+                "user_id": user_id,
+                "message": message,
+            }
+        )
 
         if not self.is_authorized(session_id, user_id):
             return {"error": "Unauthorized", "status": 403}
@@ -77,6 +77,7 @@ class TestGatewayContract:
 
     def teardown_method(self):
         import shutil
+
         for d in self._tmpdirs:
             shutil.rmtree(d, ignore_errors=True)
 
@@ -164,7 +165,12 @@ class TestGatewayContract:
         agent = self._make_agent()
         gw = FakeGateway(agent)
 
-        raw = {"content": "hello", "state": "completed", "session_id": "s1", "metadata": {"key": "val"}}
+        raw = {
+            "content": "hello",
+            "state": "completed",
+            "session_id": "s1",
+            "metadata": {"key": "val"},
+        }
         normalized = gw.normalize_response(raw)
 
         assert "content" in normalized

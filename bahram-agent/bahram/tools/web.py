@@ -1,3 +1,9 @@
+"""
+Web.
+
+Public objects: ``WebFetchTool``, ``WebSearchTool``.
+"""
+
 from __future__ import annotations
 
 import logging
@@ -10,42 +16,90 @@ logger = logging.getLogger(__name__)
 _website_policy = None
 _ssrf_checker = None
 
+
 def _get_website_policy():
     global _website_policy
     if _website_policy is None:
         try:
             from bahram.security.website_policy import WebsitePolicy
+
             _website_policy = WebsitePolicy()
-        except Exception:
-            pass
+        except Exception as exc:  # pragma: no cover - defensive
+            # Fail loudly: a missing guard must never be invisible.
+            logger.warning(
+                "Security component could not be initialised (%s): %s",
+                "website policy",
+                exc,
+            )
     return _website_policy
+
 
 def _get_ssrf_checker():
     global _ssrf_checker
     if _ssrf_checker is None:
         try:
             from bahram.security.protection import SSRFProtector
+
             _ssrf_checker = SSRFProtector()
-        except Exception:
-            pass
+        except Exception as exc:  # pragma: no cover - defensive
+            # Fail loudly: a missing guard must never be invisible.
+            logger.warning(
+                "Security component could not be initialised (%s): %s",
+                "SSRF protector",
+                exc,
+            )
     return _ssrf_checker
 
+
 class WebFetchTool(BaseTool):
+    """
+    Web fetch tool.
+    """
+
     def __init__(self, config: Any = None) -> None:
+        """
+        Initialise a WebFetchTool instance.
+
+        Args:
+            config (Any): configuration object. Defaults to ``None``.
+        """
         self.config = config
         self.timeout = getattr(config, "webfetch_timeout", 30) if config else 30
         self.max_size = getattr(config, "webfetch_max_size", 1048576) if config else 1048576
 
     @property
     def name(self) -> str:
+        """
+        Return the registry name of the WebFetchTool object.
+
+        Returns the constant string ``'webfetch'``.
+
+        Returns:
+            str: the rendered string.
+        """
         return "webfetch"
 
     @property
     def description(self) -> str:
+        """
+        Return the human readable description shown to the model.
+
+        Returns the constant string ``'Fetch a URL and return its content as text, markdown, or
+            HTML.'``.
+
+        Returns:
+            str: the rendered string.
+        """
         return "Fetch a URL and return its content as text, markdown, or HTML."
 
     @property
     def parameters(self) -> dict[str, Any]:
+        """
+        Return the JSON schema describing this tool's arguments.
+
+        Returns:
+            dict[str, Any]: a mapping of str, Any.
+        """
         return {
             "type": "object",
             "properties": {
@@ -63,6 +117,18 @@ class WebFetchTool(BaseTool):
         }
 
     async def execute(self, **kwargs: Any) -> str:
+        """
+        Execute the tool and return its textual result.
+
+        Args:
+            **kwargs (Any): keyword arguments forwarded to the implementation.
+
+        Returns:
+            str: the rendered string.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         import httpx
 
         url = kwargs.get("url", "")
@@ -99,6 +165,7 @@ class WebFetchTool(BaseTool):
                     return response.text
                 elif format_type == "markdown":
                     import re
+
                     text = response.text
                     text = re.sub(r"<[^>]+>", " ", text)
                     text = re.sub(r"\s+", " ", text).strip()
@@ -106,10 +173,12 @@ class WebFetchTool(BaseTool):
                 else:
                     try:
                         from readability import Document
+
                         doc = Document(response.text)
                         return doc.summary()
                     except ImportError:
                         import re
+
                         text = response.text
                         text = re.sub(r"<[^>]+>", " ", text)
                         text = re.sub(r"\s+", " ", text).strip()
@@ -122,20 +191,53 @@ class WebFetchTool(BaseTool):
         except Exception as e:
             return f"Error fetching URL: {e}"
 
+
 class WebSearchTool(BaseTool):
+    """
+    Web search tool.
+    """
+
     def __init__(self, config: Any = None) -> None:
+        """
+        Initialise a WebSearchTool instance.
+
+        Args:
+            config (Any): configuration object. Defaults to ``None``.
+        """
         self.config = config
 
     @property
     def name(self) -> str:
+        """
+        Return the registry name of the WebSearchTool object.
+
+        Returns the constant string ``'websearch'``.
+
+        Returns:
+            str: the rendered string.
+        """
         return "websearch"
 
     @property
     def description(self) -> str:
+        """
+        Return the human readable description shown to the model.
+
+        Returns the constant string ``'Search the web using DuckDuckGo and return results.'``.
+
+        Returns:
+            str: the rendered string.
+        """
         return "Search the web using DuckDuckGo and return results."
 
     @property
     def parameters(self) -> dict[str, Any]:
+        """
+        Return the JSON schema describing this tool's arguments.
+
+        Returns:
+            dict[str, Any]: a mapping of str, Any.
+        """
         return {
             "type": "object",
             "properties": {
@@ -152,6 +254,18 @@ class WebSearchTool(BaseTool):
         }
 
     async def execute(self, **kwargs: Any) -> str:
+        """
+        Execute the tool and return its textual result.
+
+        Args:
+            **kwargs (Any): keyword arguments forwarded to the implementation.
+
+        Returns:
+            str: the rendered string.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         import httpx
 
         query = kwargs.get("query", "")

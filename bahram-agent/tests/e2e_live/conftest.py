@@ -30,9 +30,7 @@ def live_agent():
     from bahram.core.config import Config
 
     config = Config.from_file("config/config.yaml")
-    config.agent.model = os.environ.get(
-        "BAHRAM_MODEL", "anthropic/claude-sonnet-4-20250514"
-    )
+    config.agent.model = os.environ.get("BAHRAM_MODEL", "anthropic/claude-sonnet-4-20250514")
     agent = Agent(config=config)
     return agent
 

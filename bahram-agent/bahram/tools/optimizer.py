@@ -1,14 +1,33 @@
+"""
+Optimizer.
+
+Public objects: ``OptimizationSuggestion``, ``PerformanceOptimizer``.
+"""
+
 from __future__ import annotations
 
 import logging
 import re
-from dataclasses import dataclass, field
-from typing import Any, Optional
+from dataclasses import dataclass
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class OptimizationSuggestion:
+    """
+    Optimization suggestion.
+
+    Attributes:
+        file (str): file string.
+        line (int): numeric value for line.
+        type (str): type string.
+        severity (str): severity string.
+        description (str): human readable description.
+        before (str): before string.
+        after (str): after string.
+        impact (str): impact string.
+    """
 
     file: str
     line: int
@@ -19,24 +38,85 @@ class OptimizationSuggestion:
     after: str
     impact: str
 
+
 class PerformanceOptimizer:
+    """
+    Performance optimizer.
+    """
 
     def __init__(self) -> None:
+        """
+        Initialise a PerformanceOptimizer instance.
+        """
         self._rules: list[tuple[str, str, str, str, str]] = [
-
-            (r"for .+ in range\(len\((.+)\)\)", r"for i, item in enumerate(\1)", "Use enumerate instead of range(len())", "performance", "medium"),
-            (r"\.append\((.+)\)\s*\n", r".append(\1)  # Consider list comprehension\n", "Consider list comprehension for multiple appends", "performance", "medium"),
-            (r"if (.+) in \[(.+)\]", r"if \1 in {\2}", "Use set for membership testing", "performance", "high"),
-            (r"string\s*\+\s*string", r"f\"string\"", "Consider f-strings for string concatenation", "readability", "low"),
+            (
+                r"for .+ in range\(len\((.+)\)\)",
+                r"for i, item in enumerate(\1)",
+                "Use enumerate instead of range(len())",
+                "performance",
+                "medium",
+            ),
+            (
+                r"\.append\((.+)\)\s*\n",
+                r".append(\1)  # Consider list comprehension\n",
+                "Consider list comprehension for multiple appends",
+                "performance",
+                "medium",
+            ),
+            (
+                r"if (.+) in \[(.+)\]",
+                r"if \1 in {\2}",
+                "Use set for membership testing",
+                "performance",
+                "high",
+            ),
+            (
+                r"string\s*\+\s*string",
+                r"f\"string\"",
+                "Consider f-strings for string concatenation",
+                "readability",
+                "low",
+            ),
             (r"dict\.keys\(\)", r"dict", "Don't call .keys() unnecessarily", "performance", "low"),
-            (r"list\((.+)\)", r"\1[:]", "Use slicing instead of list() for copying", "performance", "medium"),
-            (r"while True:", r"while True:  # Consider loop limit", "Add loop limit for safety", "performance", "medium"),
-            (r"except Exception:", r"except Exception as e:", "Catch specific exception with 'as'", "readability", "low"),
+            (
+                r"list\((.+)\)",
+                r"\1[:]",
+                "Use slicing instead of list() for copying",
+                "performance",
+                "medium",
+            ),
+            (
+                r"while True:",
+                r"while True:  # Consider loop limit",
+                "Add loop limit for safety",
+                "performance",
+                "medium",
+            ),
+            (
+                r"except Exception:",
+                r"except Exception as e:",
+                "Catch specific exception with 'as'",
+                "readability",
+                "low",
+            ),
         ]
 
     async def analyze(self, file_path: str) -> list[OptimizationSuggestion]:
+        """
+        Analyze.
+
+        Args:
+            file_path (str): path of the file to operate on.
+
+        Returns:
+            list[OptimizationSuggestion]: a sequence of OptimizationSuggestion entries (empty when
+                there is nothing to report).
+
+        Note:
+            Coroutine - must be awaited.
+        """
         try:
-            with open(file_path, "r", encoding="utf-8", errors="replace") as f:
+            with open(file_path, encoding="utf-8", errors="replace") as f:
                 content = f.read()
                 lines = content.split("\n")
 
@@ -45,16 +125,18 @@ class PerformanceOptimizer:
                 for pattern, replacement, description, opt_type, impact in self._rules:
                     if re.search(pattern, line):
                         new_line = re.sub(pattern, replacement, line)
-                        suggestions.append(OptimizationSuggestion(
-                            file=file_path,
-                            line=i,
-                            type=opt_type,
-                            severity=impact,
-                            description=description,
-                            before=line.strip(),
-                            after=new_line.strip(),
-                            impact=impact,
-                        ))
+                        suggestions.append(
+                            OptimizationSuggestion(
+                                file=file_path,
+                                line=i,
+                                type=opt_type,
+                                severity=impact,
+                                description=description,
+                                before=line.strip(),
+                                after=new_line.strip(),
+                                impact=impact,
+                            )
+                        )
 
             return suggestions
 
@@ -63,6 +145,15 @@ class PerformanceOptimizer:
             return []
 
     def format_suggestions(self, suggestions: list[OptimizationSuggestion]) -> str:
+        """
+        Format suggestions.
+
+        Args:
+            suggestions (list[OptimizationSuggestion]): collection of suggestions.
+
+        Returns:
+            str: the rendered string.
+        """
         if not suggestions:
             return "No optimization suggestions!"
 
@@ -88,6 +179,15 @@ class PerformanceOptimizer:
         return "\n".join(lines)
 
     def get_summary(self, suggestions: list[OptimizationSuggestion]) -> dict[str, int]:
+        """
+        Return the summary.
+
+        Args:
+            suggestions (list[OptimizationSuggestion]): collection of suggestions.
+
+        Returns:
+            dict[str, int]: a mapping of str, int.
+        """
         summary = {"high": 0, "medium": 0, "low": 0}
         for s in suggestions:
             summary[s.impact] = summary.get(s.impact, 0) + 1

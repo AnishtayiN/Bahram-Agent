@@ -1,32 +1,70 @@
+"""
+Compressor.
+
+Public objects: ``CompressionResult``, ``ContextCompressor``.
+"""
+
 from __future__ import annotations
 
 import json
 import logging
-from dataclasses import dataclass, field
-from typing import Any, Optional, Callable
+from collections.abc import Callable
+from dataclasses import dataclass
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class CompressionResult:
+    """
+    Compression result.
+
+    Attributes:
+        compressed (str): compressed string.
+        original_tokens (int): numeric value for original tokens.
+        compressed_tokens (int): numeric value for compressed tokens.
+        ratio (float): numeric value for ratio.
+    """
 
     compressed: str
     original_tokens: int
     compressed_tokens: int
     ratio: float
 
+
 class ContextCompressor:
+    """
+    Context compressor.
+    """
 
     def __init__(self) -> None:
+        """
+        Initialise a ContextCompressor instance.
+        """
         self._compression_level = 0.5
         self._enabled = True
 
     async def compress(
         self,
         messages: list[dict],
-        model_fn: Callable = None,
+        model_fn: Callable[..., Any] | None = None,
         target_tokens: int = 4000,
     ) -> CompressionResult:
+        """
+        Compress.
+
+        Args:
+            messages (list[dict]): chat messages to send to the model.
+            model_fn (Callable): callable used for model fn. Defaults to ``None``.
+            target_tokens (int): numeric value for target tokens. Defaults to ``4000``.
+
+        Returns:
+            CompressionResult: the resulting CompressionResult.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         if not self._enabled or not messages:
             return CompressionResult(
                 compressed=json.dumps(messages),
@@ -46,7 +84,7 @@ class ContextCompressor:
                 ratio=1.0,
             )
 
-        if model_fn:
+        if model_fn is not None:
             compressed = await self._model_compress(messages, model_fn, target_tokens)
         else:
             compressed = self._heuristic_compress(messages, target_tokens)
@@ -101,15 +139,30 @@ class ContextCompressor:
 
         if len(messages) > target_count:
             skipped = len(messages) - target_count
-            result.insert(1, {
-                "role": "system",
-                "content": f"[Context compressed: {skipped} earlier messages summarized]",
-            })
+            result.insert(
+                1,
+                {
+                    "role": "system",
+                    "content": f"[Context compressed: {skipped} earlier messages summarized]",
+                },
+            )
 
         return json.dumps(result)
 
     def set_level(self, level: float) -> None:
+        """
+        Set the level.
+
+        Args:
+            level (float): numeric value for level.
+        """
         self._compression_level = max(0, min(1, level))
 
     def set_enabled(self, enabled: bool) -> None:
+        """
+        Set the enabled.
+
+        Args:
+            enabled (bool): when ``True`` the object is active.
+        """
         self._enabled = enabled

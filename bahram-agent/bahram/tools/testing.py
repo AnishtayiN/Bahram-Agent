@@ -1,14 +1,31 @@
+"""
+Testing.
+
+Public objects: ``TestCase``, ``TestRunner``.
+"""
+
 from __future__ import annotations
 
 import asyncio
 import logging
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class TestCase:
+    """
+    Test case.
+
+    Attributes:
+        name (str): name of the object.
+        description (str): human readable description.
+        steps (list[dict]): collection of steps.
+        expected (str): expected string.
+        status (str): status string.
+    """
 
     name: str
     description: str = ""
@@ -16,13 +33,31 @@ class TestCase:
     expected: str = ""
     status: str = "pending"
 
+
 class TestRunner:
+    """
+    Test runner.
+    """
 
     def __init__(self) -> None:
+        """
+        Initialise a TestRunner instance.
+        """
         self._test_cases: dict[str, TestCase] = {}
         self._results: list[dict] = []
 
     def add_test(self, name: str, steps: list[dict], expected: str = "") -> TestCase:
+        """
+        Add test.
+
+        Args:
+            name (str): name of the object.
+            steps (list[dict]): collection of steps.
+            expected (str): expected string. Defaults to ``''``.
+
+        Returns:
+            TestCase: the resulting TestCase.
+        """
         test = TestCase(
             name=name,
             steps=steps,
@@ -32,6 +67,19 @@ class TestRunner:
         return test
 
     async def run_test(self, name: str, executor: Any = None) -> dict:
+        """
+        Run test.
+
+        Args:
+            name (str): name of the object.
+            executor (Any): executor. Defaults to ``None``.
+
+        Returns:
+            dict: a mapping of str, Any.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         test = self._test_cases.get(name)
         if not test:
             return {"error": f"Test '{name}' not found"}
@@ -47,6 +95,7 @@ class TestRunner:
                     result["status"] = "failed"
                     break
         except Exception as e:
+            logger.error("Test step failed: %s", e, exc_info=True)
             result["status"] = "failed"
             result["error"] = str(e)
 
@@ -84,6 +133,18 @@ class TestRunner:
             }
 
     async def run_all(self, executor: Any = None) -> list[dict]:
+        """
+        Run all.
+
+        Args:
+            executor (Any): executor. Defaults to ``None``.
+
+        Returns:
+            list[dict]: a sequence of dict entries (empty when there is nothing to report).
+
+        Note:
+            Coroutine - must be awaited.
+        """
         results = []
         for name in self._test_cases:
             result = await self.run_test(name, executor)
@@ -91,6 +152,12 @@ class TestRunner:
         return results
 
     def get_summary(self) -> dict[str, int]:
+        """
+        Return the summary.
+
+        Returns:
+            dict[str, int]: a mapping of str, int.
+        """
         passed = sum(1 for r in self._results if r["status"] == "passed")
         failed = sum(1 for r in self._results if r["status"] == "failed")
         return {
@@ -100,10 +167,19 @@ class TestRunner:
         }
 
     def format_report(self) -> str:
+        """
+        Format report.
+
+        Returns:
+            str: the rendered string.
+        """
         summary = self.get_summary()
         lines = [
             "## Test Report",
-            f"Total: {summary['total']} | Passed: {summary['passed']} | Failed: {summary['failed']}",
+            (
+                f"Total: {summary['total']} | Passed: {summary['passed']} | Failed: "
+                f"{summary['failed']}"
+            ),
             "",
         ]
 

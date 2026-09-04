@@ -1,16 +1,33 @@
+"""
+Server.
+
+Public objects: ``MCPServer``.
+"""
+
 from __future__ import annotations
 
 import asyncio
 import json
 import logging
 import sys
-from typing import Any, Callable, Optional
+from collections.abc import Callable
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
+
 class MCPServer:
+    """
+    MCP server.
+    """
 
     def __init__(self, name: str = "bahram-agent") -> None:
+        """
+        Initialise a MCPServer instance.
+
+        Args:
+            name (str): name of the object. Defaults to ``'bahram-agent'``.
+        """
         self.name = name
         self.tools: dict[str, dict] = {}
         self._tool_handlers: dict[str, Callable] = {}
@@ -22,6 +39,15 @@ class MCPServer:
         input_schema: dict[str, Any],
         handler: Callable,
     ) -> None:
+        """
+        Register tool.
+
+        Args:
+            name (str): name of the object.
+            description (str): human readable description.
+            input_schema (dict[str, Any]): mapping of input schema.
+            handler (Callable): callable used for handler.
+        """
         self.tools[name] = {
             "name": name,
             "description": description,
@@ -30,6 +56,18 @@ class MCPServer:
         self._tool_handlers[name] = handler
 
     async def handle_request(self, request: dict) -> dict:
+        """
+        Handle request.
+
+        Args:
+            request (dict): mapping of request.
+
+        Returns:
+            dict: a mapping of str, Any.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         method = request.get("method")
         params = request.get("params", {})
         request_id = request.get("id")
@@ -102,13 +140,17 @@ class MCPServer:
             }
 
     async def run_stdio(self) -> None:
+        """
+        Run stdio.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         logger.info("MCP server started on stdio")
 
         try:
             while True:
-                line = await asyncio.get_event_loop().run_in_executor(
-                    None, sys.stdin.readline
-                )
+                line = await asyncio.get_event_loop().run_in_executor(None, sys.stdin.readline)
                 if not line:
                     break
 
@@ -123,6 +165,16 @@ class MCPServer:
             logger.info("MCP server stopped")
 
     async def run_http(self, host: str = "0.0.0.0", port: int = 8080) -> None:
+        """
+        Run http.
+
+        Args:
+            host (str): host string. Defaults to ``'0.0.0.0'``.
+            port (int): numeric value for port. Defaults to ``8080``.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         try:
             from aiohttp import web
 

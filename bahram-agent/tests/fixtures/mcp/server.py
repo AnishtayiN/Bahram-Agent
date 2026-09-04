@@ -7,11 +7,12 @@ Exposes three tools:
 
 Runs as a stdio MCP server using JSON-RPC protocol.
 """
+
 from __future__ import annotations
 
 import json
-import sys
 import logging
+import sys
 
 logger = logging.getLogger(__name__)
 
@@ -23,9 +24,7 @@ TOOLS = [
         "description": "Echoes the input back. Safe tool, no approval needed.",
         "inputSchema": {
             "type": "object",
-            "properties": {
-                "message": {"type": "string", "description": "Message to echo"}
-            },
+            "properties": {"message": {"type": "string", "description": "Message to echo"}},
             "required": ["message"],
         },
     },

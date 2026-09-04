@@ -1,24 +1,55 @@
+"""
+Executor.
+
+Public objects: ``LLMProviderForExecutor``, ``PlanExecutor``.
+"""
+
 from __future__ import annotations
 
 import logging
+import time
 from typing import Any, Protocol
 
-from bahram.autonomy.plan import Plan, PlanStatus, PlanStep, StepStatus
-from bahram.autonomy.verification import VerificationEngine, VerificationResult
-from bahram.autonomy.replanner import Replanner
-from bahram.autonomy.budget import BudgetManager, BudgetConfig
+from bahram.autonomy.budget import BudgetManager
 from bahram.autonomy.events import EventTracker
+from bahram.autonomy.plan import Plan, PlanStatus, PlanStep, StepStatus
+from bahram.autonomy.replanner import Replanner
+from bahram.autonomy.verification import VerificationEngine
 
 logger = logging.getLogger(__name__)
 
 
 class LLMProviderForExecutor(Protocol):
+    """
+    LLM provider for executor.
+    """
+
     async def complete(
         self, messages: list[Any], tools: list[dict[str, Any]] | None = None, **kwargs: Any
-    ) -> Any: ...
+    ) -> Any:
+        """Send a chat completion request and return the raw provider response.
+
+        Args:
+            messages (list[Any]): conversation history to send.
+            tools (list[dict[str, Any]] | None): OpenAI-style tool schemas.
+                Defaults to ``None``.
+            **kwargs (Any): provider specific overrides.
+
+        Returns:
+            Any: the provider response object (``AgentResponse`` for the real
+                engine implementations).
+
+        Note:
+            Coroutine - must be awaited.
+        """
+        ...
 
 
 class PlanExecutor:
+    """
+    Plan executor.
+    """
+
     def __init__(
         self,
         engine: Any,
@@ -29,6 +60,18 @@ class PlanExecutor:
         event_tracker: EventTracker | None = None,
         recovery_manager: Any = None,
     ) -> None:
+        """
+        Initialise a PlanExecutor instance.
+
+        Args:
+            engine (Any): engine.
+            planner (Any): planner.
+            verification_engine (VerificationEngine): verification engine.
+            replanner (Replanner): replanner.
+            budget_manager (BudgetManager | None): budget manager. Defaults to ``None``.
+            event_tracker (EventTracker | None): event tracker. Defaults to ``None``.
+            recovery_manager (Any): recovery manager. Defaults to ``None``.
+        """
         self._engine = engine
         self._planner = planner
         self._verification_engine = verification_engine
@@ -45,12 +88,30 @@ class PlanExecutor:
         session_id: str = "",
         run_id: str = "",
     ) -> Plan:
+        """
+        Execute plan.
+
+        Args:
+            plan (Plan): plan.
+            messages (list[Any]): chat messages to send to the model.
+            model (str | None): model identifier in ``provider/model`` form. Defaults to ``None``.
+            session_id (str): session identifier. Defaults to ``''``.
+            run_id (str): run identifier. Defaults to ``''``.
+
+        Returns:
+            Plan: the resulting Plan.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         plan.status = PlanStatus.EXECUTING
         plan.updated_at = time.time()
 
         if self._event_tracker:
             self._event_tracker.emit_plan_created(
-                session_id=session_id, run_id=run_id, plan_id=plan.id,
+                session_id=session_id,
+                run_id=run_id,
+                plan_id=plan.id,
                 data={"goal": plan.goal, "steps": len(plan.steps)},
             )
 
@@ -61,7 +122,13 @@ class PlanExecutor:
                     plan.status = PlanStatus.FAILED
                 else:
                     all_done = all(
-                        s.status in (StepStatus.COMPLETED, StepStatus.SKIPPED, StepStatus.CANCELLED, StepStatus.FAILED)
+                        s.status
+                        in (
+                            StepStatus.COMPLETED,
+                            StepStatus.SKIPPED,
+                            StepStatus.CANCELLED,
+                            StepStatus.FAILED,
+                        )
                         for s in plan.steps
                     )
                     if all_done:
@@ -78,8 +145,10 @@ class PlanExecutor:
 
                 if self._event_tracker:
                     self._event_tracker.emit_step_started(
-                        session_id=session_id, run_id=run_id,
-                        plan_id=plan.id, step_id=step.id,
+                        session_id=session_id,
+                        run_id=run_id,
+                        plan_id=plan.id,
+                        step_id=step.id,
                         data={"objective": step.objective, "attempt": step.attempt_count},
                     )
 
@@ -100,7 +169,9 @@ class PlanExecutor:
                                 step.verification_result = "passed"
                             else:
                                 step.status = StepStatus.FAILED
-                                step.failure_reason = "; ".join(r.details for r in vr if not r.passed)
+                                step.failure_reason = "; ".join(
+                                    r.details for r in vr if not r.passed
+                                )
                                 step.verification_result = "failed"
                         else:
                             step.status = StepStatus.COMPLETED
@@ -109,6 +180,7 @@ class PlanExecutor:
                         step.failure_reason = result.get("error", "Unknown error")
 
                 except Exception as e:
+                    logger.error("Step %s execution failed: %s", step.id, e, exc_info=True)
                     step.status = StepStatus.FAILED
                     step.failure_reason = str(e)
 
@@ -122,15 +194,18 @@ class PlanExecutor:
                         else self._event_tracker.emit_step_failed
                     )
                     event_fn(
-                        session_id=session_id, run_id=run_id,
-                        plan_id=plan.id, step_id=step.id,
+                        session_id=session_id,
+                        run_id=run_id,
+                        plan_id=plan.id,
+                        step_id=step.id,
                         data={"status": step.status.value, "error": step.failure_reason},
                     )
 
                 if step.status == StepStatus.COMPLETED and self._recovery_manager is not None:
                     try:
                         self._recovery_manager.checkpoint(
-                            run_id=run_id, plan=plan,
+                            run_id=run_id,
+                            plan=plan,
                             context_summary=f"Step {step.id} completed: {step.objective[:100]}",
                         )
                     except Exception as e:
@@ -138,14 +213,18 @@ class PlanExecutor:
 
                 if step.status == StepStatus.FAILED:
                     plan = await self._replanner.handle_step_failure(
-                        plan, step, step.failure_reason or "Unknown error",
+                        plan,
+                        step,
+                        step.failure_reason or "Unknown error",
                         step.result or "",
                     )
 
                     if plan.status == PlanStatus.REPLANNING:
                         if self._event_tracker:
                             self._event_tracker.emit_replanned(
-                                session_id=session_id, run_id=run_id, plan_id=plan.id,
+                                session_id=session_id,
+                                run_id=run_id,
+                                plan_id=plan.id,
                                 data={"replan_count": plan.replan_count},
                             )
                         plan.status = PlanStatus.EXECUTING
@@ -182,13 +261,19 @@ class PlanExecutor:
         ]
 
         provider = self._engine.get_provider(
-            model or (self._engine.config.agent.model if self._engine.config else "anthropic/claude-sonnet-4-20250514")
+            model
+            or (
+                self._engine.config.agent.model
+                if self._engine.config
+                else "anthropic/claude-sonnet-4-20250514"
+            )
         )
 
         tools_schema = self._engine.get_tools_schema()
         if step.required_tools:
             tools_schema = [
-                t for t in tools_schema
+                t
+                for t in tools_schema
                 if t.get("function", {}).get("name", "") in step.required_tools
             ]
 
@@ -217,6 +302,7 @@ class PlanExecutor:
                 executor = self._engine._tool_executor
                 if executor is None:
                     from bahram.core.engine import ToolExecutor
+
                     executor = ToolExecutor(self._engine.tools, self._engine._approval_system)
 
                 result = await executor.execute(tool_call, timeout=60.0)
@@ -225,28 +311,31 @@ class PlanExecutor:
                 if self._budget_manager:
                     self._budget_manager.record_tool_call(run_id)
 
-                tool_calls_data.append({
-                    "tool": tool_call.name,
-                    "success": result.success,
-                })
+                tool_calls_data.append(
+                    {
+                        "tool": tool_call.name,
+                        "success": result.success,
+                    }
+                )
 
-                step_messages.append(Message(
-                    role=MessageRole.TOOL,
-                    content=result.content if result.success else f"Error: {result.error}",
-                    tool_call_id=result.tool_call_id,
-                ))
+                step_messages.append(
+                    Message(
+                        role=MessageRole.TOOL,
+                        content=result.content if result.success else f"Error: {result.error}",
+                        tool_call_id=result.tool_call_id,
+                    )
+                )
 
-            step_messages.append(Message(
-                role=MessageRole.ASSISTANT,
-                content=response.content or "",
-                metadata={"tool_calls": response.tool_calls} if response.tool_calls else {},
-            ))
+            step_messages.append(
+                Message(
+                    role=MessageRole.ASSISTANT,
+                    content=response.content or "",
+                    metadata={"tool_calls": response.tool_calls} if response.tool_calls else {},
+                )
+            )
 
         return {
             "success": False,
             "error": "Max iterations reached in step execution",
             "tool_calls": tool_calls_data,
         }
-
-
-import time

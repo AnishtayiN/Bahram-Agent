@@ -4,17 +4,17 @@ Verifies that SubagentEngine properly limits concurrent subagent execution,
 queues excess spawns, frees slots on completion, and enforces per-subagent
 token budget and recursion depth limits.
 """
+
 from __future__ import annotations
 
 import asyncio
 import time
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import MagicMock
 
 import pytest
 
-from bahram.autonomy.subagent import SubagentEngine, SubagentResult
+from bahram.autonomy.subagent import SubagentEngine
 from bahram.core.engine import AgentResponse, RunState
-
 
 # ── Helpers ────────────────────────────────────────────────
 
@@ -123,8 +123,7 @@ class TestActiveCountNeverExceedsLimit:
         se = SubagentEngine(engine, max_concurrent=max_concurrent)
 
         tasks = [
-            se.spawn(parent_run_id="p", objective=f"task{i}", timeout_seconds=5.0)
-            for i in range(6)
+            se.spawn(parent_run_id="p", objective=f"task{i}", timeout_seconds=5.0) for i in range(6)
         ]
         await asyncio.gather(*tasks)
 
@@ -137,8 +136,7 @@ class TestActiveCountNeverExceedsLimit:
         se = SubagentEngine(engine, max_concurrent=1)
 
         tasks = [
-            se.spawn(parent_run_id="p", objective=f"task{i}", timeout_seconds=5.0)
-            for i in range(4)
+            se.spawn(parent_run_id="p", objective=f"task{i}", timeout_seconds=5.0) for i in range(4)
         ]
         await asyncio.gather(*tasks)
 
@@ -152,8 +150,7 @@ class TestActiveCountNeverExceedsLimit:
         se = SubagentEngine(engine, max_concurrent=n)
 
         tasks = [
-            se.spawn(parent_run_id="p", objective=f"task{i}", timeout_seconds=5.0)
-            for i in range(n)
+            se.spawn(parent_run_id="p", objective=f"task{i}", timeout_seconds=5.0) for i in range(n)
         ]
         await asyncio.gather(*tasks)
 
@@ -174,19 +171,13 @@ class TestSpawnsWaitWhenLimitReached:
         assert se.get_active_count() == 0
 
         # Launch 2 tasks (equal to limit) — they should both be active
-        t1 = asyncio.create_task(
-            se.spawn(parent_run_id="p", objective="a", timeout_seconds=5.0)
-        )
-        t2 = asyncio.create_task(
-            se.spawn(parent_run_id="p", objective="b", timeout_seconds=5.0)
-        )
+        t1 = asyncio.create_task(se.spawn(parent_run_id="p", objective="a", timeout_seconds=5.0))
+        t2 = asyncio.create_task(se.spawn(parent_run_id="p", objective="b", timeout_seconds=5.0))
         await asyncio.sleep(0.05)  # Let them start
         assert se.get_active_count() == 2
 
         # Launch a 3rd — it should queue, not run yet
-        t3 = asyncio.create_task(
-            se.spawn(parent_run_id="p", objective="c", timeout_seconds=5.0)
-        )
+        t3 = asyncio.create_task(se.spawn(parent_run_id="p", objective="c", timeout_seconds=5.0))
         await asyncio.sleep(0.05)
         assert se.get_active_count() == 2
         assert se.get_queue_depth() >= 1
@@ -200,20 +191,14 @@ class TestSpawnsWaitWhenLimitReached:
         engine = FakeEngine(provider=provider)
         se = SubagentEngine(engine, max_concurrent=1)
 
-        t1 = asyncio.create_task(
-            se.spawn(parent_run_id="p", objective="a", timeout_seconds=5.0)
-        )
+        t1 = asyncio.create_task(se.spawn(parent_run_id="p", objective="a", timeout_seconds=5.0))
         await asyncio.sleep(0.05)
 
-        t2 = asyncio.create_task(
-            se.spawn(parent_run_id="p", objective="b", timeout_seconds=5.0)
-        )
+        t2 = asyncio.create_task(se.spawn(parent_run_id="p", objective="b", timeout_seconds=5.0))
         await asyncio.sleep(0.05)
         assert se.get_queue_depth() == 1
 
-        t3 = asyncio.create_task(
-            se.spawn(parent_run_id="p", objective="c", timeout_seconds=5.0)
-        )
+        t3 = asyncio.create_task(se.spawn(parent_run_id="p", objective="c", timeout_seconds=5.0))
         await asyncio.sleep(0.05)
         assert se.get_queue_depth() == 2
 
@@ -231,9 +216,7 @@ class TestSlotFreedOnCompletion:
         se = SubagentEngine(engine, max_concurrent=1)
 
         # Two sequential spawns — second should wait for first
-        t1 = asyncio.create_task(
-            se.spawn(parent_run_id="p", objective="fast", timeout_seconds=5.0)
-        )
+        t1 = asyncio.create_task(se.spawn(parent_run_id="p", objective="fast", timeout_seconds=5.0))
         t2 = asyncio.create_task(
             se.spawn(parent_run_id="p", objective="queued", timeout_seconds=5.0)
         )
@@ -252,21 +235,13 @@ class TestSlotFreedOnCompletion:
         se = SubagentEngine(engine, max_concurrent=2)
 
         # Fill 2 slots
-        t1 = asyncio.create_task(
-            se.spawn(parent_run_id="p", objective="a", timeout_seconds=5.0)
-        )
-        t2 = asyncio.create_task(
-            se.spawn(parent_run_id="p", objective="b", timeout_seconds=5.0)
-        )
+        t1 = asyncio.create_task(se.spawn(parent_run_id="p", objective="a", timeout_seconds=5.0))
+        t2 = asyncio.create_task(se.spawn(parent_run_id="p", objective="b", timeout_seconds=5.0))
         await asyncio.sleep(0.05)
 
         # Queue 2 more
-        t3 = asyncio.create_task(
-            se.spawn(parent_run_id="p", objective="c", timeout_seconds=5.0)
-        )
-        t4 = asyncio.create_task(
-            se.spawn(parent_run_id="p", objective="d", timeout_seconds=5.0)
-        )
+        t3 = asyncio.create_task(se.spawn(parent_run_id="p", objective="c", timeout_seconds=5.0))
+        t4 = asyncio.create_task(se.spawn(parent_run_id="p", objective="d", timeout_seconds=5.0))
         await asyncio.sleep(0.05)
         assert se.get_queue_depth() == 2
 
@@ -379,12 +354,18 @@ class TestTokenBudgetEnforcement:
         se = SubagentEngine(engine, max_concurrent=5)
 
         r1 = await se.spawn(
-            parent_run_id="p", objective="a",
-            token_budget=512, tool_budget=1, timeout_seconds=5.0,
+            parent_run_id="p",
+            objective="a",
+            token_budget=512,
+            tool_budget=1,
+            timeout_seconds=5.0,
         )
         r2 = await se.spawn(
-            parent_run_id="p", objective="b",
-            token_budget=4096, tool_budget=20, timeout_seconds=5.0,
+            parent_run_id="p",
+            objective="b",
+            token_budget=4096,
+            tool_budget=20,
+            timeout_seconds=5.0,
         )
         assert r1.status == "completed"
         assert r2.status == "completed"
@@ -456,13 +437,9 @@ class TestEdgeCases:
         engine = FakeEngine(provider=provider)
         se = SubagentEngine(engine, max_concurrent=1)
 
-        t1 = asyncio.create_task(
-            se.spawn(parent_run_id="p", objective="a", timeout_seconds=5.0)
-        )
+        t1 = asyncio.create_task(se.spawn(parent_run_id="p", objective="a", timeout_seconds=5.0))
         await asyncio.sleep(0.05)
-        t2 = asyncio.create_task(
-            se.spawn(parent_run_id="p", objective="b", timeout_seconds=5.0)
-        )
+        t2 = asyncio.create_task(se.spawn(parent_run_id="p", objective="b", timeout_seconds=5.0))
         await asyncio.sleep(0.05)
 
         tasks = se.list_tasks()
@@ -486,8 +463,7 @@ class TestEdgeCases:
         se = SubagentEngine(engine, max_concurrent=2)
 
         tasks = [
-            se.spawn(parent_run_id="p", objective=f"task{i}", timeout_seconds=5.0)
-            for i in range(3)
+            se.spawn(parent_run_id="p", objective=f"task{i}", timeout_seconds=5.0) for i in range(3)
         ]
         results = await asyncio.gather(*tasks)
         assert all(r.status == "failed" for r in results)

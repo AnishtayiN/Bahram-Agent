@@ -1,13 +1,26 @@
+"""
+Webfetch.
+
+Public objects: ``WebFetchTool``.
+"""
+
 from __future__ import annotations
 
 import logging
-from typing import Any, Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
+
 class WebFetchTool:
+    """
+    Web fetch tool.
+    """
 
     def __init__(self) -> None:
+        """
+        Initialise a WebFetchTool instance.
+        """
         self._timeout: float = 30.0
         self._max_size: int = 1024 * 1024
 
@@ -17,6 +30,20 @@ class WebFetchTool:
         format: str = "text",
         timeout: float = None,
     ) -> dict[str, Any]:
+        """
+        Fetch.
+
+        Args:
+            url (str): url string.
+            format (str): format string. Defaults to ``'text'``.
+            timeout (float): timeout in seconds. Defaults to ``None``.
+
+        Returns:
+            dict[str, Any]: a mapping of str, Any.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         try:
             import httpx
 
@@ -36,7 +63,7 @@ class WebFetchTool:
                         "content": "",
                     }
 
-                content = response.text[:self._max_size]
+                content = response.text[: self._max_size]
 
                 if format == "text":
                     return {"content": content}
@@ -53,15 +80,51 @@ class WebFetchTool:
             return {"error": str(e)}
 
     async def fetch_text(self, url: str) -> str:
+        """
+        Fetch text.
+
+        Args:
+            url (str): url string.
+
+        Returns:
+            str: the rendered string.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         result = await self.fetch(url, format="text")
         return result.get("content", result.get("error", ""))
 
     async def fetch_json(self, url: str) -> Any:
+        """
+        Fetch JSON.
+
+        Args:
+            url (str): url string.
+
+        Returns:
+            Any: the resulting Any.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         result = await self.fetch(url, format="json")
         return result.get("content", result.get("error", ""))
 
     def set_timeout(self, timeout: float) -> None:
+        """
+        Set the timeout.
+
+        Args:
+            timeout (float): timeout in seconds.
+        """
         self._timeout = timeout
 
     def set_max_size(self, max_size: int) -> None:
+        """
+        Set the max size.
+
+        Args:
+            max_size (int): numeric value for max size.
+        """
         self._max_size = max_size

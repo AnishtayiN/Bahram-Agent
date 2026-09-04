@@ -2,11 +2,10 @@
 
 Tests that cost estimation works correctly for known and unknown models.
 """
+
 from __future__ import annotations
 
-import pytest
-
-from bahram.autonomy.cost import estimate_cost, get_pricing_info, MODEL_PRICING
+from bahram.autonomy.cost import MODEL_PRICING, estimate_cost, get_pricing_info
 
 
 class TestCostAccounting:
@@ -14,7 +13,9 @@ class TestCostAccounting:
 
     def test_known_model_cost(self):
         """Known model should return positive cost."""
-        cost = estimate_cost("anthropic/claude-sonnet-4-20250514", input_tokens=1000, output_tokens=500)
+        cost = estimate_cost(
+            "anthropic/claude-sonnet-4-20250514", input_tokens=1000, output_tokens=500
+        )
         assert cost > 0
         expected = (1000 / 1000) * 0.003 + (500 / 1000) * 0.015
         assert abs(cost - expected) < 0.001
@@ -45,8 +46,12 @@ class TestCostAccounting:
 
     def test_output_more_expensive_than_input(self):
         """Output tokens should be more expensive than input tokens."""
-        cost_in = estimate_cost("anthropic/claude-sonnet-4-20250514", input_tokens=1000, output_tokens=0)
-        cost_out = estimate_cost("anthropic/claude-sonnet-4-20250514", input_tokens=0, output_tokens=1000)
+        cost_in = estimate_cost(
+            "anthropic/claude-sonnet-4-20250514", input_tokens=1000, output_tokens=0
+        )
+        cost_out = estimate_cost(
+            "anthropic/claude-sonnet-4-20250514", input_tokens=0, output_tokens=1000
+        )
         assert cost_out > cost_in
 
     def test_pricing_info_returns_none_for_unknown(self):

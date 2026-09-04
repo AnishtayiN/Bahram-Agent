@@ -1,34 +1,66 @@
+"""
+Supply chain.
+
+Public objects: ``SupplyChainIssue``, ``SupplyChainChecker``, ``SupplyChainGuard``.
+"""
+
 from __future__ import annotations
 
 import json
 import logging
+import re
 import subprocess
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class SupplyChainIssue:
+    """
+    Supply chain issue.
+
+    Attributes:
+        package (str): package string.
+        severity (str): severity string.
+        description (str): human readable description.
+        recommendation (str): recommendation string.
+    """
 
     package: str
     severity: str
     description: str
     recommendation: str
 
+
 class SupplyChainChecker:
+    """
+    Supply chain checker.
+    """
 
     def __init__(self, data_dir: str = "data/security") -> None:
+        """
+        Initialise a SupplyChainChecker instance.
+
+        Args:
+            data_dir (str): directory that holds the on-disk state. Defaults to ``'data/security'``.
+        """
         self.data_dir = Path(data_dir)
         self.data_dir.mkdir(parents=True, exist_ok=True)
         self._issues: list[SupplyChainIssue] = []
 
     def check_python_packages(self) -> list[SupplyChainIssue]:
+        """
+        Check python packages.
+
+        Returns:
+            list[SupplyChainIssue]: a sequence of SupplyChainIssue entries (empty when there is
+                nothing to report).
+        """
         issues = []
 
         try:
-
             result = subprocess.run(
                 ["pip", "list", "--format=json"],
                 capture_output=True,
@@ -44,12 +76,14 @@ class SupplyChainChecker:
                     name = pkg.get("name", "").lower()
                     version = pkg.get("version", "")
                     if name in vulnerable:
-                        issues.append(SupplyChainIssue(
-                            package=f"{name}=={version}",
-                            severity="high",
-                            description=f"Known vulnerability in {name}",
-                            recommendation=f"Update {name} to latest version",
-                        ))
+                        issues.append(
+                            SupplyChainIssue(
+                                package=f"{name}=={version}",
+                                severity="high",
+                                description=f"Known vulnerability in {name}",
+                                recommendation=f"Update {name} to latest version",
+                            )
+                        )
         except Exception as e:
             logger.warning(f"Failed to check packages: {e}")
 
@@ -65,24 +99,48 @@ class SupplyChainChecker:
         }
 
     def check_file_permissions(self, path: str) -> list[SupplyChainIssue]:
+        """
+        Check file permissions.
+
+        Args:
+            path (str): filesystem path to operate on.
+
+        Returns:
+            list[SupplyChainIssue]: a sequence of SupplyChainIssue entries (empty when there is
+                nothing to report).
+        """
         issues = []
         file_path = Path(path)
 
         if file_path.exists():
-
             import stat
+
             mode = file_path.stat().st_mode
             if mode & stat.S_IWOTH:
-                issues.append(SupplyChainIssue(
-                    package=str(path),
-                    severity="medium",
-                    description="File is world-writable",
-                    recommendation="Remove world-write permission",
-                ))
+                issues.append(
+                    SupplyChainIssue(
+                        package=str(path),
+                        severity="medium",
+                        description="File is world-writable",
+                        recommendation="Remove world-write permission",
+                    )
+                )
 
         return issues
 
-    def scan_dependencies(self, requirements_file: str = "requirements.txt") -> list[SupplyChainIssue]:
+    def scan_dependencies(
+        self, requirements_file: str = "requirements.txt"
+    ) -> list[SupplyChainIssue]:
+        """
+        Scan dependencies.
+
+        Args:
+            requirements_file (str): requirements file string. Defaults to ``'requirements.txt'``.
+
+        Returns:
+            list[SupplyChainIssue]: a sequence of SupplyChainIssue entries (empty when there is
+                nothing to report).
+        """
         issues = []
         req_path = Path(requirements_file)
 
@@ -92,23 +150,36 @@ class SupplyChainChecker:
                 for line in content.split("\n"):
                     line = line.strip()
                     if line and not line.startswith("#"):
-
                         if "==" not in line and ">=" not in line and "<=" not in line:
-                            issues.append(SupplyChainIssue(
-                                package=line,
-                                severity="low",
-                                description="Unpinned dependency version",
-                                recommendation=f"Pin version for {line}",
-                            ))
+                            issues.append(
+                                SupplyChainIssue(
+                                    package=line,
+                                    severity="low",
+                                    description="Unpinned dependency version",
+                                    recommendation=f"Pin version for {line}",
+                                )
+                            )
             except Exception as e:
                 logger.warning(f"Failed to scan dependencies: {e}")
 
         return issues
 
-    def get_all_issues(self) -> list[dict]:
+    def get_all_issues(self, requirements_file: str = "requirements.txt") -> list[dict]:
+        """Collect every finding from the package and declaration checks.
+
+        Args:
+            requirements_file (str): requirements file to audit. Defaults to
+                ``'requirements.txt'``.  This used to be hard-coded, so an
+                instance configured with its own data directory still audited
+                whatever requirements file sat in the current working
+                directory.
+
+        Returns:
+            list[dict]: a sequence of dict entries (empty when there is nothing to report).
+        """
         issues = []
         issues.extend(self.check_python_packages())
-        issues.extend(self.scan_dependencies())
+        issues.extend(self.scan_dependencies(requirements_file))
         return [
             {
                 "package": i.package,
@@ -118,3 +189,82 @@ class SupplyChainChecker:
             }
             for i in issues
         ]
+
+
+class SupplyChainGuard:
+    """Refuse shell commands that install packages unsafely.
+
+    :class:`SupplyChainChecker` audits what is already installed; this class
+    refuses the *commands* that would install something dangerous in the first
+    place.  It is the guard ``bahram/tools/bash.py`` asks for - until this
+    class existed, that import raised ``ImportError`` on every call, the
+    exception was swallowed by a bare ``except``, and bash ran with no
+    supply-chain protection at all while logging nothing but a debug warning.
+
+    Only unambiguous attacks are refused.  A plain ``pip install requests`` is
+    allowed: pinning is a policy choice, not a security boundary, and refusing
+    it would make the tool unusable.
+    """
+
+    #: index URLs that are not the public package index
+    _INDEX_FLAGS = ("--index-url", "--extra-index-url", "-i")
+    _TRUSTED_INDEX_HOSTS = ("pypi.org", "files.pythonhosted.org", "pypi.python.org")
+    _REGISTRY_FLAGS = ("--registry",)
+    _TRUSTED_REGISTRY_HOSTS = ("registry.npmjs.org",)
+
+    def validate_command(self, command: str) -> tuple[bool, str]:
+        """Check an install command for supply-chain attacks.
+
+        Args:
+            command (str): the shell command about to run.
+
+        Returns:
+            tuple[bool, str]: ``(safe, reason)``.  ``safe`` is ``False`` only
+                for a dependency-confusion attempt, a disabled TLS/host
+                verification, or an unverified remote install script.
+        """
+        if not command:
+            return (True, "")
+
+        lowered = command.lower()
+
+        for flag in self._INDEX_FLAGS + self._REGISTRY_FLAGS:
+            target = self._flag_value(command, flag)
+            if target is None:
+                continue
+            trusted = (
+                self._TRUSTED_INDEX_HOSTS
+                if flag in self._INDEX_FLAGS
+                else self._TRUSTED_REGISTRY_HOSTS
+            )
+            if not any(host in target for host in trusted):
+                return (
+                    False,
+                    f"dependency confusion: {flag} points at a non-public index ({target})",
+                )
+
+        for flag in ("--trusted-host", "--no-verify", "--disable-gpg", "--ignore-requires-python"):
+            if flag in lowered:
+                return (False, f"package verification disabled by {flag}")
+
+        for pattern, description in (
+            (r"curl\s+[^|]*\|\s*(sudo\s+)?(ba)?sh", "unverified remote install script"),
+            (r"wget\s+[^|]*\|\s*(sudo\s+)?(ba)?sh", "unverified remote install script"),
+            (r"\bbash\s*<\(\s*curl", "unverified remote install script"),
+            (r"\bnpm\s+install\s+.*--ignore-scripts\s*=\s*false", "force-enabled install scripts"),
+        ):
+            if re.search(pattern, command, re.IGNORECASE):
+                return (False, description)
+
+        return (True, "")
+
+    @staticmethod
+    def _flag_value(command: str, flag: str) -> str | None:
+        """Return the value that follows ``flag``, or ``None`` if absent."""
+        tokens = command.split()
+        for index, token in enumerate(tokens):
+            if token == flag and index + 1 < len(tokens):
+                return tokens[index + 1]
+            if token.startswith(f"{flag}="):
+                return token.split("=", 1)[1]
+        return None

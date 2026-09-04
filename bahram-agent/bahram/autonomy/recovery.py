@@ -1,3 +1,9 @@
+"""
+Recovery.
+
+Public objects: ``CheckpointData``, ``RecoveryManager``.
+"""
+
 from __future__ import annotations
 
 import json
@@ -7,13 +13,28 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from bahram.autonomy.plan import Plan, PlanStatus, PlanStep, StepStatus
+from bahram.autonomy.plan import Plan, PlanStatus, StepStatus
 
 logger = logging.getLogger(__name__)
 
 
 @dataclass
 class CheckpointData:
+    """
+    Checkpoint data.
+
+    Attributes:
+        run_id (str): run identifier.
+        plan_id (str): plan identifier.
+        plan_state (dict[str, Any]): mapping of plan state.
+        completed_steps (list[str]): collection of completed steps.
+        context_summary (str): context summary string.
+        job_state (dict[str, Any] | None): mapping of job state.
+        tool_state (dict[str, Any]): mapping of tool state.
+        retry_info (dict[str, Any]): mapping of retry info.
+        timestamp (float): numeric value for timestamp.
+    """
+
     run_id: str
     plan_id: str
     plan_state: dict[str, Any]
@@ -26,14 +47,30 @@ class CheckpointData:
 
 
 class RecoveryManager:
-    def __init__(self, data_dir: str = "data/recovery") -> None:
-        self._data_dir = Path(data_dir)
-        self._data_dir.mkdir(parents=True, exist_ok=True)
-        self._checkpoints_file = self._data_dir / "recovery_checkpoints.json"
+    """
+    Recovery manager.
+    """
+
+    def __init__(self, data_dir: str | None = "data/recovery") -> None:
+        """
+        Initialise a RecoveryManager instance.
+
+        Args:
+            data_dir (str): directory that holds the on-disk state, or ``None`` for ephemeral
+                in-memory operation. Defaults to ``'data/recovery'``.
+        """
+        self._data_dir = Path(data_dir) if data_dir else None
+        if self._data_dir is not None:
+            self._data_dir.mkdir(parents=True, exist_ok=True)
+        self._checkpoints_file = (
+            self._data_dir / "recovery_checkpoints.json" if self._data_dir else None
+        )
         self._checkpoints: dict[str, CheckpointData] = {}
         self._load()
 
     def _load(self) -> None:
+        if self._checkpoints_file is None:
+            return
         if self._checkpoints_file.exists():
             try:
                 with open(self._checkpoints_file) as f:
@@ -54,6 +91,8 @@ class RecoveryManager:
                 logger.warning(f"Failed to load recovery checkpoints: {e}")
 
     def _save(self) -> None:
+        if self._checkpoints_file is None:
+            return
         try:
             data = {}
             for run_id, cp in self._checkpoints.items():
@@ -81,6 +120,19 @@ class RecoveryManager:
         job_state: dict[str, Any] | None = None,
         tool_state: dict[str, Any] | None = None,
     ) -> CheckpointData:
+        """
+        Checkpoint.
+
+        Args:
+            run_id (str): run identifier.
+            plan (Plan): plan.
+            context_summary (str): context summary string. Defaults to ``''``.
+            job_state (dict[str, Any] | None): mapping of job state. Defaults to ``None``.
+            tool_state (dict[str, Any] | None): mapping of tool state. Defaults to ``None``.
+
+        Returns:
+            CheckpointData: the resulting CheckpointData.
+        """
         completed_steps = [s.id for s in plan.get_completed_steps()]
 
         cp = CheckpointData(
@@ -102,9 +154,25 @@ class RecoveryManager:
         return cp
 
     def load_checkpoint(self, run_id: str) -> CheckpointData | None:
+        """
+        Load checkpoint.
+
+        Args:
+            run_id (str): run identifier.
+
+        Returns:
+            CheckpointData | None: the resulting object, or ``None`` when it is not available.
+        """
         return self._checkpoints.get(run_id)
 
     def list_checkpoints(self) -> list[dict[str, Any]]:
+        """
+        List checkpoints.
+
+        Returns:
+            list[dict[str, Any]]: a sequence of dict[str, Any] entries (empty when there is nothing
+                to report).
+        """
         return [
             {
                 "run_id": cp.run_id,
@@ -117,6 +185,15 @@ class RecoveryManager:
         ]
 
     def delete_checkpoint(self, run_id: str) -> bool:
+        """
+        Delete checkpoint.
+
+        Args:
+            run_id (str): run identifier.
+
+        Returns:
+            bool: ``True`` when the operation succeeds, otherwise ``False``.
+        """
         if run_id in self._checkpoints:
             del self._checkpoints[run_id]
             self._save()
@@ -156,11 +233,17 @@ class RecoveryManager:
         return False
 
     def cleanup_old(self, max_age_hours: float = 24) -> int:
+        """
+        Cleanup old.
+
+        Args:
+            max_age_hours (float): numeric value for max age hours. Defaults to ``24``.
+
+        Returns:
+            int: the computed numeric value.
+        """
         cutoff = time.time() - (max_age_hours * 3600)
-        to_remove = [
-            run_id for run_id, cp in self._checkpoints.items()
-            if cp.timestamp < cutoff
-        ]
+        to_remove = [run_id for run_id, cp in self._checkpoints.items() if cp.timestamp < cutoff]
         for run_id in to_remove:
             del self._checkpoints[run_id]
         if to_remove:

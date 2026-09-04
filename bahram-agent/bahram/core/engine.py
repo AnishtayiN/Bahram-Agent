@@ -1,3 +1,10 @@
+"""
+Engine.
+
+Public objects: ``MessageRole``, ``RunState``, ``Message``, ``ToolCall``, ``ToolResult``,
+    ``AgentResponse``, ``LLMProvider``, ``TrajectoryStep`` (+4 more).
+"""
+
 from __future__ import annotations
 
 import asyncio
@@ -6,9 +13,10 @@ import logging
 import os
 import time
 import uuid
+from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, AsyncIterator, Protocol
+from typing import Any, Protocol
 
 logger = logging.getLogger(__name__)
 
@@ -17,13 +25,23 @@ try:
 except ImportError:
     CircuitBreaker = None  # type: ignore[assignment,misc]
 
+
 class MessageRole(str, Enum):
+    """
+    Message role.
+    """
+
     SYSTEM = "system"
     USER = "user"
     ASSISTANT = "assistant"
     TOOL = "tool"
 
+
 class RunState(str, Enum):
+    """
+    Run state.
+    """
+
     CREATED = "created"
     LOADING = "loading"
     PLANNING = "planning"
@@ -38,8 +56,21 @@ class RunState(str, Enum):
     CANCELLED = "cancelled"
     TIMEOUT = "timeout"
 
+
 @dataclass
 class Message:
+    """
+    Message.
+
+    Attributes:
+        role (MessageRole): role.
+        content (str): text content to process.
+        name (str | None): name of the object.
+        tool_call_id (str | None): tool call id string.
+        timestamp (float): numeric value for timestamp.
+        metadata (dict[str, Any]): mapping of metadata.
+    """
+
     role: MessageRole
     content: str
     name: str | None = None
@@ -47,41 +78,143 @@ class Message:
     timestamp: float = field(default_factory=time.time)
     metadata: dict[str, Any] = field(default_factory=dict)
 
+
 @dataclass
 class ToolCall:
+    """
+    Tool call.
+
+    Attributes:
+        id (str): id string.
+        name (str): name of the object.
+        arguments (dict[str, Any]): mapping of arguments.
+    """
+
     id: str
     name: str
     arguments: dict[str, Any]
 
+
 @dataclass
 class ToolResult:
+    """
+    Tool result.
+
+    Attributes:
+        tool_call_id (str): tool call id string.
+        content (str): text content to process.
+        success (bool): when ``True``, enable success.
+        error (str | None): error string.
+        metadata (dict[str, Any]): mapping of metadata.
+    """
+
     tool_call_id: str
     content: str
     success: bool
     error: str | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
 
+
 @dataclass
 class AgentResponse:
+    """
+    Agent response.
+
+    Attributes:
+        content (str): text content to process.
+        tool_calls (list[ToolCall]): collection of tool calls.
+        thinking (str | None): thinking string.
+        metadata (dict[str, Any]): mapping of metadata.
+        state (RunState): state.
+    """
+
     content: str
     tool_calls: list[ToolCall] = field(default_factory=list)
     thinking: str | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
     state: RunState = RunState.COMPLETED
 
-class LLMProvider(Protocol):
-    async def complete(
-        self, messages: list[Message], tools: list[dict[str, Any]] | None = None,
-        **kwargs: Any,
-    ) -> AgentResponse: ...
 
-    async def stream(
-        self, messages: list[Message], tools: list[dict[str, Any]] | None = None,
+class LLMProvider(Protocol):
+    """
+    LLM provider.
+    """
+
+    async def complete(
+        self,
+        messages: list[Message],
+        tools: list[dict[str, Any]] | None = None,
         **kwargs: Any,
-    ) -> AsyncIterator[str]: ...
+    ) -> AgentResponse:
+        """Send a chat completion request and return the full response.
+
+        Args:
+            messages (list[Message]): conversation history to send.
+            tools (list[dict[str, Any]] | None): OpenAI-style tool schemas the
+                model may call. Defaults to ``None``.
+            **kwargs (Any): provider specific overrides (``model``,
+                ``temperature``, ``max_tokens``, ...).
+
+        Returns:
+            AgentResponse: the assistant message plus any tool calls.
+
+        Raises:
+            Exception: transport/HTTP errors propagate to
+                :class:`AgentEngine`, which fails over to the next provider.
+
+        Note:
+            Coroutine - must be awaited.
+        """
+        ...
+
+    def stream(
+        self,
+        messages: list[Message],
+        tools: list[dict[str, Any]] | None = None,
+        **kwargs: Any,
+    ) -> AsyncIterator[str]:
+        """Stream a chat completion token by token.
+
+        Declared as a plain ``def`` returning an async iterator, because every
+        implementation is an *async generator* (``async def`` + ``yield``).
+        Annotating it ``async def ... -> AsyncIterator[str]`` made mypy treat
+        the result as a coroutine and reject ``async for chunk in
+        provider.stream(...)`` - which is how it is actually called.
+
+        Args:
+            messages (list[Message]): conversation history to send.
+            tools (list[dict[str, Any]] | None): tool schemas. Defaults to
+                ``None``.
+            **kwargs (Any): provider specific overrides.
+
+        Returns:
+            AsyncIterator[str]: async iterator yielding text deltas.
+
+        Note:
+            Iterate the result with ``async for``; do not await it.
+        """
+        ...
+
 
 @dataclass
 class TrajectoryStep:
+    """
+    Trajectory step.
+
+    Attributes:
+        step_id (str): plan-step identifier.
+        iteration (int): numeric value for iteration.
+        provider (str): provider string.
+        model (str): model identifier in ``provider/model`` form.
+        tool_calls (list[dict[str, Any]]): collection of tool calls.
+        tool_results (list[dict[str, Any]]): collection of tool results.
+        content_length (int): numeric value for content length.
+        duration_ms (float): numeric value for duration ms.
+        timestamp (float): numeric value for timestamp.
+        state (str): state string.
+        error (str | None): error string.
+    """
+
     step_id: str
     iteration: int
     provider: str
@@ -94,8 +227,27 @@ class TrajectoryStep:
     state: str = ""
     error: str | None = None
 
+
 @dataclass
 class Trajectory:
+    """
+    Trajectory.
+
+    Attributes:
+        run_id (str): run identifier.
+        session_id (str): session identifier.
+        goal (str): goal string.
+        steps (list[TrajectoryStep]): collection of steps.
+        started_at (float): numeric value for started at.
+        finished_at (float | None): numeric value for finished at.
+        status (str): status string.
+        final_content (str): final content string.
+        total_tool_calls (int): numeric value for total tool calls.
+        total_duration_ms (float): numeric value for total duration ms.
+        model (str): model identifier in ``provider/model`` form.
+        provider (str): provider string.
+    """
+
     run_id: str
     session_id: str
     goal: str
@@ -110,6 +262,12 @@ class Trajectory:
     provider: str = ""
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Serialise the object to a JSON-serialisable dictionary.
+
+        Returns:
+            dict[str, Any]: a mapping of str, Any.
+        """
         return {
             "run_id": self.run_id,
             "session_id": self.session_id,
@@ -140,16 +298,40 @@ class Trajectory:
             "provider": self.provider,
         }
 
+
 @dataclass
 class RunConfig:
+    """
+    Run config.
+
+    Attributes:
+        max_iterations (int): numeric value for max iterations.
+        max_runtime_seconds (float): numeric value for max runtime seconds.
+        max_tool_calls (int): numeric value for max tool calls.
+        max_retries (int): numeric value for max retries.
+        tool_timeout_seconds (float): numeric value for tool timeout seconds.
+    """
+
     max_iterations: int = 15
     max_runtime_seconds: float = 300.0
     max_tool_calls: int = 50
     max_retries: int = 3
     tool_timeout_seconds: float = 120.0
 
+
 class ToolExecutor:
+    """
+    Tool executor.
+    """
+
     def __init__(self, tools: dict[str, Any], approval_system: Any = None) -> None:
+        """
+        Initialise a ToolExecutor instance.
+
+        Args:
+            tools (dict[str, Any]): mapping of tools.
+            approval_system (Any): approval system. Defaults to ``None``.
+        """
         self.tools = tools
         self.approval_system = approval_system
         self._log: list[dict[str, Any]] = []
@@ -157,6 +339,19 @@ class ToolExecutor:
         self._inflight: dict[str, asyncio.Event] = {}
 
     async def execute(self, tool_call: ToolCall, timeout: float = 120.0) -> ToolResult:
+        """
+        Execute the tool and return its textual result.
+
+        Args:
+            tool_call (ToolCall): tool call.
+            timeout (float): timeout in seconds. Defaults to ``120.0``.
+
+        Returns:
+            ToolResult: the resulting ToolResult.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         tool_call_id = tool_call.id
 
         # Return cached results for already-executed tool calls (idempotency).
@@ -185,7 +380,9 @@ class ToolExecutor:
 
         if tool_name not in self.tools:
             return ToolResult(
-                tool_call_id=tool_call.id, content="", success=False,
+                tool_call_id=tool_call.id,
+                content="",
+                success=False,
                 error=f"Unknown tool: {tool_name}",
             )
 
@@ -197,7 +394,9 @@ class ToolExecutor:
                 if risk != "low":
                     self._log_event(tool_name, tool_call.arguments, "blocked", reason)
                     return ToolResult(
-                        tool_call_id=tool_call.id, content="", success=False,
+                        tool_call_id=tool_call.id,
+                        content="",
+                        success=False,
                         error=f"Security block ({risk}): {reason}",
                     )
 
@@ -205,27 +404,34 @@ class ToolExecutor:
         try:
             if hasattr(tool, "execute"):
                 result = await asyncio.wait_for(
-                    tool.execute(**tool_call.arguments), timeout=timeout,
+                    tool.execute(**tool_call.arguments),
+                    timeout=timeout,
                 )
                 self._log_event(tool_name, tool_call.arguments, "success")
                 tc_result = ToolResult(tool_call_id=tool_call.id, content=str(result), success=True)
                 self._result_cache[tool_call.id] = tc_result
                 return tc_result
             return ToolResult(
-                tool_call_id=tool_call.id, content="", success=False,
+                tool_call_id=tool_call.id,
+                content="",
+                success=False,
                 error=f"Tool '{tool_name}' has no execute method",
             )
         except asyncio.TimeoutError:
             self._log_event(tool_name, tool_call.arguments, "timeout")
             return ToolResult(
-                tool_call_id=tool_call.id, content="", success=False,
+                tool_call_id=tool_call.id,
+                content="",
+                success=False,
                 error=f"Tool '{tool_name}' timed out after {timeout}s",
             )
         except Exception as e:
             logger.error(f"Tool execution error: {e}")
             self._log_event(tool_name, tool_call.arguments, "error", str(e))
             return ToolResult(
-                tool_call_id=tool_call.id, content="", success=False,
+                tool_call_id=tool_call.id,
+                content="",
+                success=False,
                 error=str(e),
             )
 
@@ -237,13 +443,29 @@ class ToolExecutor:
         return f"{tool_name}({json.dumps(arguments, default=str)[:200]})"
 
     def _log_event(self, tool: str, args: dict, status: str, error: str | None = None) -> None:
-        self._log.append({
-            "tool": tool, "args": args, "status": status, "error": error,
-            "timestamp": time.time(),
-        })
+        self._log.append(
+            {
+                "tool": tool,
+                "args": args,
+                "status": status,
+                "error": error,
+                "timestamp": time.time(),
+            }
+        )
+
 
 class AgentEngine:
+    """
+    Agent engine.
+    """
+
     def __init__(self, config: Any = None) -> None:
+        """
+        Initialise a AgentEngine instance.
+
+        Args:
+            config (Any): configuration object. Defaults to ``None``.
+        """
         self.config = config
         self.providers: dict[str, LLMProvider] = {}
         self.tools: dict[str, Any] = {}
@@ -253,47 +475,98 @@ class AgentEngine:
         self._circuit_breaker: Any = None
         self._budget_manager: Any = None
         self._event_tracker: Any = None
+        # ``None`` means "never write": the agent was configured for a fully
+        # in-memory run.  Declared here rather than reached through getattr in
+        # _persist_trajectory, so the attribute always exists.
+        self._trajectory_dir: str | None = "data/trajectories"
         if CircuitBreaker is not None:
             self._circuit_breaker = CircuitBreaker()
         self._init_approval_system()
 
     def _init_approval_system(self) -> None:
         try:
-            from bahram.security.approval import ApprovalSystem, ApprovalConfig
+            from bahram.security.approval import ApprovalConfig, ApprovalSystem
+
             self._approval_system = ApprovalSystem(ApprovalConfig())
         except Exception as e:
             logger.warning(f"Failed to init approval system: {e}")
             self._approval_system = None
 
     def set_budget_manager(self, budget_manager: Any) -> None:
+        """
+        Set the budget manager.
+
+        Args:
+            budget_manager (Any): budget manager.
+        """
         self._budget_manager = budget_manager
 
     def set_event_tracker(self, event_tracker: Any) -> None:
+        """
+        Set the event tracker.
+
+        Args:
+            event_tracker (Any): event tracker.
+        """
         self._event_tracker = event_tracker
 
-    def set_trajectory_dir(self, trajectory_dir: str) -> None:
+    def set_trajectory_dir(self, trajectory_dir: str | None) -> None:
+        """Set where run trajectories are written.
+
+        Args:
+            trajectory_dir (str | None): directory to write trajectory JSON
+                into, or ``None`` to disable trajectory recording entirely
+                (used for fully in-memory runs).
+        """
         self._trajectory_dir = trajectory_dir
 
     def _persist_trajectory(self, trajectory: Trajectory) -> None:
-        trajectory_dir = getattr(self, '_trajectory_dir', 'data/trajectories')
+        trajectory_dir = self._trajectory_dir
+        # ``None`` means the agent was configured for a fully in-memory run and
+        # must not touch the filesystem.
+        if trajectory_dir is None:
+            return
         try:
             os.makedirs(trajectory_dir, exist_ok=True)
             path = os.path.join(trajectory_dir, f"{trajectory.run_id}.json")
-            with open(path, 'w') as f:
+            with open(path, "w") as f:
                 json.dump(trajectory.to_dict(), f, indent=2)
         except Exception as e:
             logger.warning(f"Failed to persist trajectory: {e}")
 
     def register_provider(self, name: str, provider: LLMProvider) -> None:
+        """
+        Register provider.
+
+        Args:
+            name (str): name of the object.
+            provider (LLMProvider): provider.
+        """
         self.providers[name] = provider
         logger.info(f"Registered provider: {name}")
 
     def register_tool(self, name: str, tool: Any) -> None:
+        """
+        Register tool.
+
+        Args:
+            name (str): name of the object.
+            tool (Any): tool.
+        """
         self.tools[name] = tool
         self._tool_executor = ToolExecutor(self.tools, self._approval_system)
         logger.info(f"Registered tool: {name}")
 
     def get_provider(self, model: str) -> LLMProvider:
+        """
+        Return the provider.
+
+        Args:
+            model (str): model identifier in ``provider/model`` form.
+
+        Returns:
+            LLMProvider: the resulting LLMProvider.
+        """
         provider_name = model.split("/")[0] if "/" in model else "anthropic"
 
         if provider_name in self.providers:
@@ -312,23 +585,50 @@ class AgentEngine:
             return self.providers["__fallback__"]
         if self.providers:
             first = next(iter(self.providers.values()))
-            logger.info(f"No fallback registered, using first available provider")
+            logger.info("No fallback registered, using first available provider")
             return first
         raise ValueError(f"Provider '{failed_provider}' not registered and no fallback available")
 
     def record_provider_success(self, provider_name: str) -> None:
+        """
+        Record provider success.
+
+        Args:
+            provider_name (str): provider name string.
+        """
         if self._circuit_breaker is not None:
             self._circuit_breaker.record_success(provider_name)
 
     def record_provider_failure(self, provider_name: str) -> None:
+        """
+        Record provider failure.
+
+        Args:
+            provider_name (str): provider name string.
+        """
         if self._circuit_breaker is not None:
             self._circuit_breaker.record_failure(provider_name)
-        if self._event_tracker is not None and hasattr(self._event_tracker, 'emit_provider_fallback'):
+        if self._event_tracker is not None and hasattr(
+            self._event_tracker, "emit_provider_fallback"
+        ):
             self._event_tracker.emit_provider_fallback(
-                "", "", {"provider": provider_name, "reason": "circuit_breaker", "message": f"Provider {provider_name} failed"}
+                "",
+                "",
+                {
+                    "provider": provider_name,
+                    "reason": "circuit_breaker",
+                    "message": f"Provider {provider_name} failed",
+                },
             )
 
     def get_tools_schema(self) -> list[dict[str, Any]]:
+        """
+        Return the tools schema.
+
+        Returns:
+            list[dict[str, Any]]: a sequence of dict[str, Any] entries (empty when there is nothing
+                to report).
+        """
         schemas = []
         for name, tool in self.tools.items():
             if hasattr(tool, "schema"):
@@ -336,27 +636,51 @@ class AgentEngine:
         return schemas
 
     def cancel(self) -> None:
+        """
+        Cancel.
+        """
         self._cancel_event.set()
 
     def reset_cancel(self) -> None:
+        """
+        Reset cancel.
+        """
         self._cancel_event.clear()
 
     def _get_run_config(self) -> RunConfig:
-        if self.config and hasattr(self.config, 'agent'):
+        if self.config and hasattr(self.config, "agent"):
             return RunConfig(
-                max_iterations=getattr(self.config.agent, 'max_iterations', 15),
-                max_runtime_seconds=getattr(self.config.agent, 'max_runtime_seconds', 300.0),
-                max_tool_calls=getattr(self.config.agent, 'max_tool_calls', 50),
-                tool_timeout_seconds=getattr(self.config.tools, 'bash_timeout', 120.0),
+                max_iterations=getattr(self.config.agent, "max_iterations", 15),
+                max_runtime_seconds=getattr(self.config.agent, "max_runtime_seconds", 300.0),
+                max_tool_calls=getattr(self.config.agent, "max_tool_calls", 50),
+                tool_timeout_seconds=getattr(self.config.tools, "bash_timeout", 120.0),
             )
         return RunConfig()
 
     async def run(
-        self, messages: list[Message], model: str | None = None,
+        self,
+        messages: list[Message],
+        model: str | None = None,
         session_id: str = "",
     ) -> AgentResponse:
+        """
+        Run.
+
+        Args:
+            messages (list[Message]): chat messages to send to the model.
+            model (str | None): model identifier in ``provider/model`` form. Defaults to ``None``.
+            session_id (str): session identifier. Defaults to ``''``.
+
+        Returns:
+            AgentResponse: the resulting AgentResponse.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         run_cfg = self._get_run_config()
-        model = model or (self.config.agent.model if self.config else "anthropic/claude-sonnet-4-20250514")
+        model = model or (
+            self.config.agent.model if self.config else "anthropic/claude-sonnet-4-20250514"
+        )
         provider_name = model.split("/")[0] if "/" in model else "anthropic"
         provider = self.get_provider(model)
         tools_schema = self.get_tools_schema()
@@ -365,8 +689,11 @@ class AgentEngine:
         self.reset_cancel()
 
         trajectory = Trajectory(
-            run_id=run_id, session_id=session_id, goal="",
-            model=model, provider=provider_name,
+            run_id=run_id,
+            session_id=session_id,
+            goal="",
+            model=model,
+            provider=provider_name,
         )
 
         if messages:
@@ -381,27 +708,42 @@ class AgentEngine:
             if self._cancel_event.is_set():
                 trajectory.status = "cancelled"
                 trajectory.finished_at = time.time()
-                trajectory.total_duration_ms = (trajectory.finished_at - trajectory.started_at) * 1000
+                trajectory.total_duration_ms = (
+                    trajectory.finished_at - trajectory.started_at
+                ) * 1000
                 self._persist_trajectory(trajectory)
                 return AgentResponse(content="Operation cancelled.", state=RunState.CANCELLED)
 
             if time.time() - start_time > run_cfg.max_runtime_seconds:
                 trajectory.status = "timeout"
                 trajectory.finished_at = time.time()
-                trajectory.total_duration_ms = (trajectory.finished_at - trajectory.started_at) * 1000
+                trajectory.total_duration_ms = (
+                    trajectory.finished_at - trajectory.started_at
+                ) * 1000
                 self._persist_trajectory(trajectory)
-                return AgentResponse(content="Operation timed out. Please try a more specific request.", state=RunState.TIMEOUT)
+                return AgentResponse(
+                    content="Operation timed out. Please try a more specific request.",
+                    state=RunState.TIMEOUT,
+                )
 
             if self._budget_manager is not None:
                 budget_result = self._budget_manager.check_budget(run_id)
                 if not budget_result.get("can_continue", True):
-                    reason = "Budget limit exceeded: " + ", ".join(budget_result.get("exceeded", []))
+                    reason = "Budget limit exceeded: " + ", ".join(
+                        budget_result.get("exceeded", [])
+                    )
                     logger.warning(f"Budget exceeded: {reason}")
-                    if self._event_tracker is not None and hasattr(self._event_tracker, 'emit_budget_exceeded'):
-                        self._event_tracker.emit_budget_exceeded(session_id, run_id, {"reason": reason})
+                    if self._event_tracker is not None and hasattr(
+                        self._event_tracker, "emit_budget_exceeded"
+                    ):
+                        self._event_tracker.emit_budget_exceeded(
+                            session_id, run_id, {"reason": reason}
+                        )
                     trajectory.status = "budget_exceeded"
                     trajectory.finished_at = time.time()
-                    trajectory.total_duration_ms = (trajectory.finished_at - trajectory.started_at) * 1000
+                    trajectory.total_duration_ms = (
+                        trajectory.finished_at - trajectory.started_at
+                    ) * 1000
                     self._persist_trajectory(trajectory)
                     return AgentResponse(
                         content=f"Budget limit reached: {reason}",
@@ -421,23 +763,33 @@ class AgentEngine:
                 fallback_provider = self._get_fallback_provider(provider_name)
                 if fallback_provider is not provider:
                     try:
-                        response = await fallback_provider.complete(messages, tools_schema if tools_schema else None)
+                        response = await fallback_provider.complete(
+                            messages, tools_schema if tools_schema else None
+                        )
                     except Exception as e2:
                         logger.error(f"Fallback also failed: {e2}")
                         trajectory.status = "error"
                         trajectory.finished_at = time.time()
                         self._persist_trajectory(trajectory)
-                        return AgentResponse(content=f"I encountered an error communicating with the model: {e2}", state=RunState.FAILED)
+                        return AgentResponse(
+                            content=f"I encountered an error communicating with the model: {e2}",
+                            state=RunState.FAILED,
+                        )
                 else:
                     trajectory.status = "error"
                     trajectory.finished_at = time.time()
                     self._persist_trajectory(trajectory)
-                    return AgentResponse(content=f"I encountered an error communicating with the model: {e}", state=RunState.FAILED)
+                    return AgentResponse(
+                        content=f"I encountered an error communicating with the model: {e}",
+                        state=RunState.FAILED,
+                    )
 
             if self._budget_manager is not None:
                 usage_tokens = len(response.content or "") // 4
                 if response.tool_calls:
-                    usage_tokens += sum(len(json.dumps(tc.arguments)) // 4 for tc in response.tool_calls)
+                    usage_tokens += sum(
+                        len(json.dumps(tc.arguments)) // 4 for tc in response.tool_calls
+                    )
                 self._budget_manager.record_model_call(
                     run_id,
                     input_tokens=usage_tokens // 2,
@@ -448,11 +800,14 @@ class AgentEngine:
             if not response.tool_calls:
                 trajectory.status = "completed"
                 trajectory.finished_at = time.time()
-                trajectory.total_duration_ms = (trajectory.finished_at - trajectory.started_at) * 1000
+                trajectory.total_duration_ms = (
+                    trajectory.finished_at - trajectory.started_at
+                ) * 1000
                 trajectory.final_content = response.content
                 self._persist_trajectory(trajectory)
                 return AgentResponse(
-                    content=response.content, state=RunState.COMPLETED,
+                    content=response.content,
+                    state=RunState.COMPLETED,
                     metadata={"trajectory": trajectory.to_dict()},
                 )
 
@@ -463,51 +818,68 @@ class AgentEngine:
                 if total_tool_calls >= run_cfg.max_tool_calls:
                     trajectory.status = "max_tool_calls"
                     trajectory.finished_at = time.time()
-                    trajectory.total_duration_ms = (trajectory.finished_at - trajectory.started_at) * 1000
+                    trajectory.total_duration_ms = (
+                        trajectory.finished_at - trajectory.started_at
+                    ) * 1000
                     self._persist_trajectory(trajectory)
                     return AgentResponse(
-                        content=f"Reached maximum tool calls ({run_cfg.max_tool_calls}). Here's what I've done so far.",
+                        content=(
+                            f"Reached maximum tool calls ({run_cfg.max_tool_calls}). Here's what "
+                            f"I've done so far."
+                        ),
                         state=RunState.COMPLETED,
                     )
 
                 if self._tool_executor is None:
                     self._tool_executor = ToolExecutor(self.tools, self._approval_system)
-                result = await self._tool_executor.execute(tool_call, timeout=run_cfg.tool_timeout_seconds)
+                result = await self._tool_executor.execute(
+                    tool_call, timeout=run_cfg.tool_timeout_seconds
+                )
                 total_tool_calls += 1
 
                 if self._budget_manager is not None:
-                    self._budget_manager.record_tool_call(run_id, tool_name=tool_call.name)
+                    self._budget_manager.record_tool_call(
+                        run_id, session_id=session_id, tool_name=tool_call.name
+                    )
 
-                tool_results_data.append({
-                    "tool": tool_call.name,
-                    "success": result.success,
-                    "error": result.error,
-                })
-                messages.append(Message(
-                    role=MessageRole.TOOL,
-                    content=result.content if result.success else f"Error: {result.error}",
-                    tool_call_id=result.tool_call_id,
-                ))
+                tool_results_data.append(
+                    {
+                        "tool": tool_call.name,
+                        "success": result.success,
+                        "error": result.error,
+                    }
+                )
+                messages.append(
+                    Message(
+                        role=MessageRole.TOOL,
+                        content=result.content if result.success else f"Error: {result.error}",
+                        tool_call_id=result.tool_call_id,
+                    )
+                )
 
-            messages.append(Message(
-                role=MessageRole.ASSISTANT,
-                content=response.content or "",
-                metadata={"tool_calls": response.tool_calls} if response.tool_calls else {},
-            ))
+            messages.append(
+                Message(
+                    role=MessageRole.ASSISTANT,
+                    content=response.content or "",
+                    metadata={"tool_calls": response.tool_calls} if response.tool_calls else {},
+                )
+            )
 
             step_duration = (time.time() - step_start) * 1000
-            trajectory.steps.append(TrajectoryStep(
-                step_id=step_id,
-                iteration=iteration,
-                provider=trajectory.provider,
-                model=model or "",
-                tool_calls=[{"name": tc.name, "id": tc.id} for tc in response.tool_calls],
-                tool_results=tool_results_data,
-                content_length=len(response.content or ""),
-                duration_ms=step_duration,
-                timestamp=time.time(),
-                state=RunState.TOOL_EXECUTING.value,
-            ))
+            trajectory.steps.append(
+                TrajectoryStep(
+                    step_id=step_id,
+                    iteration=iteration,
+                    provider=trajectory.provider,
+                    model=model or "",
+                    tool_calls=[{"name": tc.name, "id": tc.id} for tc in response.tool_calls],
+                    tool_results=tool_results_data,
+                    content_length=len(response.content or ""),
+                    duration_ms=step_duration,
+                    timestamp=time.time(),
+                    state=RunState.TOOL_EXECUTING.value,
+                )
+            )
             trajectory.total_tool_calls += len(response.tool_calls)
 
         logger.warning(f"Agent reached max iterations ({run_cfg.max_iterations})")
@@ -516,49 +888,60 @@ class AgentEngine:
         trajectory.total_duration_ms = (trajectory.finished_at - trajectory.started_at) * 1000
         self._persist_trajectory(trajectory)
         return AgentResponse(
-            content="I've reached the maximum number of iterations. Let me summarize what I've accomplished so far.",
+            content=(
+                "I've reached the maximum number of iterations. Let me summarize what I've "
+                "accomplished so far."
+            ),
             state=RunState.COMPLETED,
         )
 
     async def run_streaming(
-        self, messages: list[Message], model: str | None = None,
+        self,
+        messages: list[Message],
+        model: str | None = None,
     ) -> AsyncIterator[str]:
-        run_cfg = self._get_run_config()
-        model = model or (self.config.agent.model if self.config else "anthropic/claude-sonnet-4-20250514")
+        """
+        Run streaming.
+
+        Args:
+            messages (list[Message]): chat messages to send to the model.
+            model (str | None): model identifier in ``provider/model`` form. Defaults to ``None``.
+
+        Returns:
+            AsyncIterator[str]: the resulting AsyncIterator[str].
+
+        Note:
+            Coroutine - must be awaited.
+        """
+        model = model or (
+            self.config.agent.model if self.config else "anthropic/claude-sonnet-4-20250514"
+        )
         provider_name = model.split("/")[0] if "/" in model else "anthropic"
         provider = self.get_provider(model)
         tools_schema = self.get_tools_schema()
-        start_time = time.time()
 
-        for iteration in range(run_cfg.max_iterations):
-            if self._cancel_event.is_set():
-                yield "Operation cancelled."
-                return
-            if time.time() - start_time > run_cfg.max_runtime_seconds:
-                yield "Operation timed out."
-                return
+        if self._cancel_event.is_set():
+            yield "Operation cancelled."
+            return
 
-            full_content = ""
+        # A single streaming turn.  The previous version wrapped the same body
+        # in a ``for iteration in range(run_cfg.max_iterations)`` loop, but the
+        # streaming protocol carries no tool calls, so nothing could ever end
+        # the loop early: whenever any tool was registered the provider was
+        # called max_iterations times (15 by default) and the caller received
+        # every reply concatenated.  Callers that need the tool loop use run().
+        try:
+            async for chunk in provider.stream(messages, tools_schema if tools_schema else None):
+                yield chunk
+            self.record_provider_success(provider_name)
+        except Exception:
+            self.record_provider_failure(provider_name)
             try:
-                async for chunk in provider.stream(messages, tools_schema if tools_schema else None):
-                    full_content += chunk
+                provider = self.get_provider(model)
+                async for chunk in provider.stream(
+                    messages, tools_schema if tools_schema else None
+                ):
                     yield chunk
-                self.record_provider_success(provider_name)
-            except Exception:
-                self.record_provider_failure(provider_name)
-                try:
-                    provider = self.get_provider(model)
-                    async for chunk in provider.stream(messages, tools_schema if tools_schema else None):
-                        full_content += chunk
-                        yield chunk
-                except Exception as e2:
-                    yield f"\nError: {e2}"
-                    return
-
-            if not full_content:
+            except Exception as e2:
+                yield f"\nError: {e2}"
                 return
-
-            if not tools_schema:
-                return
-
-            messages.append(Message(role=MessageRole.ASSISTANT, content=full_content))

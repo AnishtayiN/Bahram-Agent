@@ -1,3 +1,9 @@
+"""
+Bash.
+
+Public objects: ``BashTool``.
+"""
+
 from __future__ import annotations
 
 import asyncio
@@ -12,41 +18,91 @@ logger = logging.getLogger(__name__)
 _tirith_scanner = None
 _supply_chain = None
 
+
 def _get_tirith():
     global _tirith_scanner
     if _tirith_scanner is None:
         try:
             from bahram.security.tirith import TirithScanner
+
             _tirith_scanner = TirithScanner()
-        except Exception:
-            pass
+        except Exception as exc:  # pragma: no cover - defensive
+            # Fail loudly: a missing guard must never be invisible.
+            logger.warning(
+                "Security component could not be initialised (%s): %s",
+                "command scanner",
+                exc,
+            )
     return _tirith_scanner
+
 
 def _get_supply_chain():
     global _supply_chain
     if _supply_chain is None:
         try:
             from bahram.security.supply_chain import SupplyChainGuard
+
             _supply_chain = SupplyChainGuard()
-        except Exception:
-            pass
+        except Exception as exc:  # pragma: no cover - defensive
+            # Fail loudly: a missing guard must never be invisible.  This
+            # branch used to fire on every single call, because bash imported
+            # a SupplyChainGuard that supply_chain.py never defined - so the
+            # guard was silently dead from the day it was written.
+            logger.warning(
+                "Security component could not be initialised (%s): %s",
+                "supply-chain guard",
+                exc,
+            )
     return _supply_chain
 
+
 class BashTool(BaseTool):
+    """
+    Bash tool.
+    """
+
     def __init__(self, config: Any = None) -> None:
+        """
+        Initialise a BashTool instance.
+
+        Args:
+            config (Any): configuration object. Defaults to ``None``.
+        """
         self.config = config
         self.timeout = getattr(config, "bash_timeout", 120) if config else 120
 
     @property
     def name(self) -> str:
+        """
+        Return the registry name of the BashTool object.
+
+        Returns the constant string ``'bash'``.
+
+        Returns:
+            str: the rendered string.
+        """
         return "bash"
 
     @property
     def description(self) -> str:
+        """
+        Return the human readable description shown to the model.
+
+        Returns the constant string ``'Execute a bash command and return its output.'``.
+
+        Returns:
+            str: the rendered string.
+        """
         return "Execute a bash command and return its output."
 
     @property
     def parameters(self) -> dict[str, Any]:
+        """
+        Return the JSON schema describing this tool's arguments.
+
+        Returns:
+            dict[str, Any]: a mapping of str, Any.
+        """
         return {
             "type": "object",
             "properties": {
@@ -67,6 +123,18 @@ class BashTool(BaseTool):
         }
 
     async def execute(self, **kwargs: Any) -> str:
+        """
+        Execute the tool and return its textual result.
+
+        Args:
+            **kwargs (Any): keyword arguments forwarded to the implementation.
+
+        Returns:
+            str: the rendered string.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         command = kwargs.get("command", "")
         workdir = kwargs.get("workdir", os.getcwd())
         timeout = kwargs.get("timeout", self.timeout)
@@ -98,12 +166,11 @@ class BashTool(BaseTool):
             )
 
             try:
-                stdout, stderr = await asyncio.wait_for(
-                    process.communicate(), timeout=timeout
-                )
+                stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=timeout)
             except asyncio.TimeoutError:
                 process.kill()
                 await process.communicate()
+                await process.wait()  # reap the child instead of leaving a zombie
                 return f"Error: Command timed out after {timeout} seconds"
 
             stdout_str = stdout.decode("utf-8", errors="replace")

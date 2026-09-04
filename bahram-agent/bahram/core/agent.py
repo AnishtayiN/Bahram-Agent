@@ -1,24 +1,62 @@
+"""
+Agent.
+
+Public objects: ``Session``, ``Agent``.
+"""
+
 from __future__ import annotations
 
-import asyncio
 import logging
 import time
 import uuid
+from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
-from typing import Any, AsyncIterator, Optional
+from typing import TYPE_CHECKING, Any, cast
 
+from bahram.core.compressor import ContextCompressor
 from bahram.core.config import Config
-from bahram.core.context import Context, ContextWindow
-from bahram.core.engine import AgentResponse, AgentEngine, Message, MessageRole, ToolCall
+from bahram.core.context import Context
+from bahram.core.engine import (
+    AgentEngine,
+    AgentResponse,
+    Message,
+    MessageRole,
+    RunState,
+    ToolCall,
+)
 from bahram.core.persistence import SessionStore
 from bahram.core.smart_context import SmartContextManager
-from bahram.core.compressor import ContextCompressor
+
+if TYPE_CHECKING:  # imported inside methods at runtime to keep start-up light
+    from bahram.autonomy.budget import BudgetManager
+    from bahram.autonomy.events import EventTracker
+    from bahram.autonomy.executor import PlanExecutor
+    from bahram.autonomy.jobs import JobEngine
+    from bahram.autonomy.learning import LearningEngine
+    from bahram.autonomy.planner import Planner
+    from bahram.autonomy.recovery import RecoveryManager
+    from bahram.autonomy.replanner import Replanner
+    from bahram.autonomy.skill_lifecycle import SkillLifecycle
+    from bahram.autonomy.subagent import SubagentEngine
+    from bahram.autonomy.verification import VerificationEngine
+    from bahram.memory.semantic import SemanticMemory
+    from bahram.skills.manager import SkillManager
 
 logger = logging.getLogger(__name__)
 
 
 @dataclass
 class Session:
+    """
+    Session.
+
+    Attributes:
+        id (str): id string.
+        created_at (float): numeric value for created at.
+        updated_at (float): numeric value for updated at.
+        metadata (dict[str, Any]): mapping of metadata.
+    """
+
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
     created_at: float = field(default_factory=time.time)
     updated_at: float = field(default_factory=time.time)
@@ -26,7 +64,18 @@ class Session:
 
 
 class Agent:
+    """
+    Agent.
+    """
+
     def __init__(self, config: Config | None = None, config_path: str | None = None) -> None:
+        """
+        Initialise a Agent instance.
+
+        Args:
+            config (Config | None): configuration object. Defaults to ``None``.
+            config_path (str | None): config path string. Defaults to ``None``.
+        """
         if config:
             self.config = config
         elif config_path:
@@ -35,31 +84,38 @@ class Agent:
             self.config = Config.from_file("config/config.yaml")
 
         self.engine = AgentEngine(self.config)
+        # Propagate "run entirely in memory" to the trajectory recorder, which
+        # otherwise always writes JSON files under data/trajectories.
+        if self.config.memory.database == ":memory:":
+            self.engine._trajectory_dir = None
         self.context = Context(max_turns=self.config.memory.max_context_turns)
-        max_ctx_tokens = getattr(self.config.memory, 'max_context_tokens', 8192)
+        max_ctx_tokens = getattr(self.config.memory, "max_context_tokens", 8192)
         self.smart_context = SmartContextManager(max_tokens=max_ctx_tokens)
         self.compressor = ContextCompressor()
         self.sessions: dict[str, Session] = {}
         _memory_db = self.config.memory.database
         _session_db = (
-            ":memory:" if _memory_db == ":memory:" else _memory_db.replace("memory.db", "sessions.db")
+            ":memory:"
+            if _memory_db == ":memory:"
+            else _memory_db.replace("memory.db", "sessions.db")
         )
         self._store = SessionStore(db_path=_session_db)
-        self._memory = None
-        self._skills = None
+        self._memory: SemanticMemory | None = None
+        self._skills: SkillManager | None = None
         self._setup_logging()
 
-        self._planner = None
-        self._verification_engine = None
-        self._replanner = None
-        self._plan_executor = None
-        self._subagent_engine = None
-        self._job_engine = None
-        self._recovery_manager = None
-        self._learning_engine = None
-        self._skill_lifecycle = None
-        self._budget_manager = None
-        self._event_tracker = None
+        self._planner: Planner | None = None
+        self._verification_engine: VerificationEngine | None = None
+        self._replanner: Replanner | None = None
+        self._plan_executor: PlanExecutor | None = None
+        self._subagent_engine: SubagentEngine | None = None
+        self._job_engine: JobEngine | None = None
+        self._recovery_manager: RecoveryManager | None = None
+        self._learning_engine: LearningEngine | None = None
+        self._skill_lifecycle: SkillLifecycle | None = None
+        self._budget_manager: BudgetManager | None = None
+        self._event_tracker: EventTracker | None = None
+        self._mcp_client: Any | None = None
 
         logger.info(f"Bahram Agent v{self.config.agent.version} initialized")
 
@@ -69,8 +125,20 @@ class Agent:
             level=getattr(logging, log_config.level),
             format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
         )
+        # Tool output and provider errors routinely carry API keys.  Scrub
+        # every log record so a key cannot leak into a log file or a crash
+        # report just because something logged the request that failed.
+        from bahram.security.redaction import SecretRedactingFilter
+
+        SecretRedactingFilter.install()
 
     async def start(self) -> None:
+        """
+        Start the component and acquire any resources it needs.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         logger.info("Starting Bahram Agent...")
         await self._init_providers()
         await self._init_tools()
@@ -83,29 +151,35 @@ class Agent:
         logger.info("Bahram Agent started successfully")
 
     def _init_autonomy(self) -> None:
-        from bahram.autonomy.planner import Planner
-        from bahram.autonomy.verification import VerificationEngine
-        from bahram.autonomy.replanner import Replanner
-        from bahram.autonomy.executor import PlanExecutor
-        from bahram.autonomy.subagent import SubagentEngine
-        from bahram.autonomy.jobs import JobEngine
-        from bahram.autonomy.recovery import RecoveryManager
-        from bahram.autonomy.learning import LearningEngine
-        from bahram.autonomy.skill_lifecycle import SkillLifecycle
         from bahram.autonomy.budget import BudgetManager
         from bahram.autonomy.events import EventTracker
+        from bahram.autonomy.executor import PlanExecutor
+        from bahram.autonomy.jobs import JobEngine
+        from bahram.autonomy.learning import LearningEngine
+        from bahram.autonomy.planner import Planner
+        from bahram.autonomy.recovery import RecoveryManager
+        from bahram.autonomy.replanner import Replanner
+        from bahram.autonomy.skill_lifecycle import SkillLifecycle
+        from bahram.autonomy.subagent import SubagentEngine
+        from bahram.autonomy.verification import VerificationEngine
 
-        self._event_tracker = EventTracker()
+        # When the memory database is ":memory:" the whole agent must run
+        # without touching the filesystem, so every autonomy subsystem is put
+        # in ephemeral mode as well.
+        ephemeral = self.config.memory.database == ":memory:"
+
+        def data_dir(name: str) -> str | None:
+            return None if ephemeral else f"data/{name}"
+
+        self._event_tracker = EventTracker(data_dir=data_dir("events"))
         self._budget_manager = BudgetManager()
         self._verification_engine = VerificationEngine()
-        self._recovery_manager = RecoveryManager()
-        self._learning_engine = LearningEngine()
+        self._recovery_manager = RecoveryManager(data_dir=data_dir("recovery"))
+        self._learning_engine = LearningEngine(data_dir=data_dir("learning"))
         self._skill_lifecycle = SkillLifecycle(self._learning_engine)
 
         self._planner = Planner()
-        self._replanner = Replanner(
-            self._planner, self._verification_engine, max_replan_attempts=3
-        )
+        self._replanner = Replanner(self._planner, self._verification_engine, max_replan_attempts=3)
         self._plan_executor = PlanExecutor(
             engine=self.engine,
             planner=self._planner,
@@ -116,7 +190,7 @@ class Agent:
             recovery_manager=self._recovery_manager,
         )
         self._subagent_engine = SubagentEngine(self.engine, event_tracker=self._event_tracker)
-        self._job_engine = JobEngine(event_tracker=self._event_tracker)
+        self._job_engine = JobEngine(data_dir=data_dir("jobs"), event_tracker=self._event_tracker)
 
         self._planner.set_provider(self._get_first_provider())
         logger.info("Autonomy layer initialized")
@@ -125,10 +199,14 @@ class Agent:
         providers = list(self.engine.providers.values())
         if len(providers) >= 2:
             from bahram.providers.fallback import FallbackProvider
-            primary = providers[0]
-            fallbacks = providers[1:]
+
+            primary = cast(Any, providers[0])
+            fallbacks = cast(list, providers[1:])
             fallback_provider = FallbackProvider(primary, fallbacks)
-            self.engine.providers["__fallback__"] = fallback_provider
+            # FallbackProvider satisfies the provider protocol at run time but
+            # is not a subclass of it, hence the cast rather than a real fix in
+            # bahram/providers/fallback.py.
+            self.engine.providers["__fallback__"] = cast(Any, fallback_provider)
             logger.info(
                 f"Provider failover configured: primary={primary.__class__.__name__}, "
                 f"fallbacks={[f.__class__.__name__ for f in fallbacks]}"
@@ -142,58 +220,137 @@ class Agent:
         logger.info("Engine subsystems wired (budget, events, circuit breaker)")
 
     async def _init_mcp_tools(self) -> None:
+        """Connect to the configured MCP servers and expose their tools.
+
+        Three defects used to make this a no-op that looked like it worked:
+        ``client.connect()`` takes a *server name*, not a config dict, so it
+        always logged "Server not found"; ``client.list_tools()`` is
+        synchronous and returns tool *keys*, so ``await``-ing it raised
+        ``TypeError: object list can't be used in 'await' expression`` and the
+        resulting strings have no ``.get``; and the keys are
+        ``"<server>:<tool>"``, so the adapter has to call the client with the
+        qualified name.  Every failure was swallowed by the ``except`` below,
+        so MCP servers never contributed a single tool.
+        """
         try:
             from bahram.mcp.client import MCPClient
-            mcp_config = getattr(self.config, 'mcp', None)
+
+            mcp_config = getattr(self.config, "mcp", None)
             if mcp_config is None:
                 return
-            servers = getattr(mcp_config, 'servers', [])
+            servers = getattr(mcp_config, "servers", [])
             if not servers:
                 return
+
             client = MCPClient()
             for server_cfg in servers:
+                name = server_cfg.get("name") if isinstance(server_cfg, dict) else None
+                if not name:
+                    logger.warning("MCP server entry without a name, skipping")
+                    continue
+
+                command = server_cfg.get("command", []) if isinstance(server_cfg, dict) else []
+                if isinstance(command, str):
+                    command = command.split()
+
+                client.servers[name] = self._build_mcp_server_config(name, server_cfg, command)
                 try:
-                    await client.connect(server_cfg)
-                    tools = await client.list_tools()
-                    for tool_def in tools:
-                        name = f"mcp_{tool_def.get('name', 'unknown')}"
-                        self.engine.register_tool(name, _MCPToolAdapter(client, tool_def))
-                    logger.info(f"Registered {len(tools)} MCP tools from {server_cfg.get('name', 'unknown')}")
+                    connected = await client.connect(name)
                 except Exception as e:
-                    logger.warning(f"MCP server connection failed: {e}")
+                    logger.warning(f"MCP server {name} connection raised: {e}")
+                    continue
+                if not connected:
+                    logger.warning(f"MCP server {name} did not connect")
+                    continue
+
+                registered = 0
+                for key, tool in client.tools.items():
+                    if tool.server_name != name:
+                        continue
+                    self.engine.register_tool(
+                        f"mcp_{tool.name}",
+                        _MCPToolAdapter(
+                            client,
+                            {
+                                "name": tool.name,
+                                "description": tool.description,
+                                "inputSchema": tool.input_schema,
+                            },
+                            call_name=key,
+                        ),
+                    )
+                    registered += 1
+                logger.info(f"Registered {registered} MCP tools from {name}")
+
+            self._mcp_client = client
         except ImportError:
             logger.debug("MCP client not available, skipping MCP tool discovery")
         except Exception as e:
             logger.warning(f"MCP tool initialization failed: {e}")
+
+    @staticmethod
+    def _build_mcp_server_config(name: str, server_cfg: Any, command: list[str]) -> Any:
+        """Turn a raw config mapping into an :class:`MCPServerConfig`."""
+        from bahram.mcp.client import MCPServerConfig
+
+        return MCPServerConfig(
+            name=name,
+            type=server_cfg.get("type", "stdio"),
+            command=command,
+            url=server_cfg.get("url", ""),
+            env=server_cfg.get("env", {}),
+            headers=server_cfg.get("headers", {}),
+            enabled=server_cfg.get("enabled", True),
+            timeout=server_cfg.get("timeout", 30),
+        )
 
     def _get_first_provider(self) -> Any:
         providers = list(self.engine.providers.values())
         return providers[0] if providers else None
 
     async def stop(self) -> None:
+        """
+        Stop the component and release any resources it holds.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         logger.info("Stopping Bahram Agent...")
         logger.info("Bahram Agent stopped")
 
     async def _init_providers(self) -> None:
         from bahram.providers import init_providers
+
         await init_providers(self.engine, self.config)
 
     async def _init_tools(self) -> None:
         from bahram.tools import init_tools
+
         await init_tools(self.engine, self.config)
 
     async def _init_memory(self) -> None:
         if self.config.memory.enabled:
             from bahram.memory.semantic import SemanticMemory
+
             self._memory = SemanticMemory(data_dir=self.config.memory.database)
 
     async def _init_skills(self) -> None:
         if self.config.skills.enabled:
             from bahram.skills.manager import SkillManager
+
             self._skills = SkillManager(self.config.skills)
             await self._skills.load_skills()
 
     def create_session(self, metadata: dict[str, Any] | None = None) -> Session:
+        """
+        Create session.
+
+        Args:
+            metadata (dict[str, Any] | None): mapping of metadata. Defaults to ``None``.
+
+        Returns:
+            Session: the resulting Session.
+        """
         session = Session(metadata=metadata or {})
         self.sessions[session.id] = session
         self.context.create(session.id)
@@ -202,16 +359,33 @@ class Agent:
         return session
 
     def get_session(self, session_id: str) -> Session | None:
+        """
+        Return the session.
+
+        Args:
+            session_id (str): session identifier.
+
+        Returns:
+            Session | None: the resulting object, or ``None`` when it is not available.
+        """
         if session_id in self.sessions:
             return self.sessions[session_id]
         stored = self._store.get_session(session_id)
         if stored:
-            session = Session(id=session_id, created_at=stored["created_at"], updated_at=stored["updated_at"])
+            session = Session(
+                id=session_id, created_at=stored["created_at"], updated_at=stored["updated_at"]
+            )
             self.sessions[session_id] = session
             return session
         return None
 
     def delete_session(self, session_id: str) -> None:
+        """
+        Delete session.
+
+        Args:
+            session_id (str): session identifier.
+        """
         self.sessions.pop(session_id, None)
         self.context.delete(session_id)
         self._store.delete_session(session_id)
@@ -224,6 +398,22 @@ class Agent:
         model: str | None = None,
         use_planning: bool = False,
     ) -> AgentResponse:
+        """
+        Run.
+
+        Args:
+            message (str): message to process.
+            session_id (str | None): session identifier. Defaults to ``None``.
+            model (str | None): model identifier in ``provider/model`` form. Defaults to ``None``.
+            use_planning (bool): when ``True``, enable use planning. Defaults to ``False``.
+
+        Returns:
+            AgentResponse: the resulting AgentResponse.
+
+        Note:
+            Coroutine - must be awaited.
+        """
+        session: Session | None
         if session_id is None:
             session = self.create_session()
             session_id = session.id
@@ -239,7 +429,7 @@ class Agent:
         self.smart_context.set_system_prompt(self._build_system_prompt())
 
         memories = self._retrieve_memories(message)
-        skills_context = self._retrieve_skills(message)
+        skills_context = await self._retrieve_skills(message)
 
         enhanced_message = message
         if memories:
@@ -247,7 +437,9 @@ class Agent:
             self.smart_context.add_context(memories, priority=3, metadata={"source": "memory"})
         if skills_context:
             enhanced_message = f"[Relevant skills]\n{skills_context}\n\n{enhanced_message}"
-            self.smart_context.add_context(skills_context, priority=2, metadata={"source": "skills"})
+            self.smart_context.add_context(
+                skills_context, priority=2, metadata={"source": "skills"}
+            )
 
         user_msg = Message(role=MessageRole.USER, content=enhanced_message)
         ctx.add_message(user_msg)
@@ -258,7 +450,9 @@ class Agent:
         usage = self.smart_context.get_usage()
         if usage["remaining"] < 500:
             logger.warning(f"Smart context nearly full: {usage['remaining']} tokens remaining")
-            if self._event_tracker is not None and hasattr(self._event_tracker, 'emit_budget_warning'):
+            if self._event_tracker is not None and hasattr(
+                self._event_tracker, "emit_budget_warning"
+            ):
                 self._event_tracker.emit_budget_warning(
                     session_id, "", {"message": f"Context window low: {usage['remaining']} tokens"}
                 )
@@ -275,17 +469,23 @@ class Agent:
                 result = await self.compressor.compress(msg_dicts, target_tokens=4000)
                 if result.compressed_tokens < result.original_tokens:
                     import json as _json
+
                     compressed = _json.loads(result.compressed)
                     messages = []
                     for md in compressed:
                         role = MessageRole(md.get("role", "user"))
                         messages.append(Message(role=role, content=md.get("content", "")))
-                    logger.info(f"Context compressed: {result.original_tokens} -> {result.compressed_tokens} tokens")
+                    logger.info(
+                        f"Context compressed: {result.original_tokens} -> "
+                        f"{result.compressed_tokens} tokens"
+                    )
             except Exception as e:
                 logger.warning(f"Context compression failed: {e}")
 
         if use_planning and self._planner:
             run_id = f"run_{uuid.uuid4().hex[:8]}"
+            from bahram.autonomy.plan import PlanStatus
+
             plan = await self._planner.create_plan(
                 goal=message,
                 run_id=run_id,
@@ -293,19 +493,24 @@ class Agent:
                 available_tools=list(self.engine.tools.keys()),
             )
 
+            assert self._plan_executor is not None, "Agent.start() was never called"
             plan = await self._plan_executor.execute_plan(
-                plan, messages, model=model, session_id=session_id, run_id=run_id,
+                plan,
+                messages,
+                model=model,
+                session_id=session_id,
+                run_id=run_id,
             )
 
             if self._learning_engine is not None:
                 try:
                     success = plan.status.value == "completed"
                     trajectory_steps = [
-                        {"step_id": s.step_id, "objective": s.objective, "status": s.status.value}
+                        {"step_id": s.id, "objective": s.objective, "status": s.status.value}
                         for s in plan.steps
                     ]
                     tool_results = [
-                        {"step_id": s.step_id, "success": s.status.value == "completed"}
+                        {"step_id": s.id, "success": s.status.value == "completed"}
                         for s in plan.steps
                     ]
                     await self.analyze_and_learn(
@@ -319,16 +524,18 @@ class Agent:
                     logger.warning(f"Auto-learning failed: {e}")
 
             summary = self._summarize_plan_result(plan)
+            state = RunState.COMPLETED if plan.status == PlanStatus.COMPLETED else RunState.FAILED
             response = AgentResponse(
                 content=summary,
-                state=plan.status.value,
+                state=state,
                 metadata={"plan_id": plan.id, "plan_status": plan.status.value},
             )
         else:
             response = await self.engine.run(messages, model=model, session_id=session_id)
 
         assistant_msg = Message(
-            role=MessageRole.ASSISTANT, content=response.content,
+            role=MessageRole.ASSISTANT,
+            content=response.content,
             metadata={"tool_calls": response.tool_calls} if response.tool_calls else {},
         )
         ctx.add_message(assistant_msg)
@@ -341,8 +548,25 @@ class Agent:
         return response
 
     async def chat(
-        self, message: str, session_id: str | None = None, model: str | None = None,
+        self,
+        message: str,
+        session_id: str | None = None,
+        model: str | None = None,
     ) -> AgentResponse:
+        """
+        Chat.
+
+        Args:
+            message (str): message to process.
+            session_id (str | None): session identifier. Defaults to ``None``.
+            model (str | None): model identifier in ``provider/model`` form. Defaults to ``None``.
+
+        Returns:
+            AgentResponse: the resulting AgentResponse.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         return await self.run(message, session_id, model)
 
     async def run_with_plan(
@@ -351,6 +575,20 @@ class Agent:
         session_id: str | None = None,
         model: str | None = None,
     ) -> AgentResponse:
+        """
+        Run with plan.
+
+        Args:
+            message (str): message to process.
+            session_id (str | None): session identifier. Defaults to ``None``.
+            model (str | None): model identifier in ``provider/model`` form. Defaults to ``None``.
+
+        Returns:
+            AgentResponse: the resulting AgentResponse.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         return await self.run(message, session_id, model, use_planning=True)
 
     async def delegate_to_subagent(
@@ -361,6 +599,25 @@ class Agent:
         context: str = "",
         model: str | None = None,
     ) -> Any:
+        """
+        Delegate to subagent.
+
+        Args:
+            objective (str): objective string.
+            parent_run_id (str): parent run id string. Defaults to ``''``.
+            allowed_tools (list[str] | None): collection of allowed tools. Defaults to ``None``.
+            context (str): context string. Defaults to ``''``.
+            model (str | None): model identifier in ``provider/model`` form. Defaults to ``None``.
+
+        Returns:
+            Any: the resulting Any.
+
+        Raises:
+            RuntimeError: if the operation cannot be completed.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         if not self._subagent_engine:
             raise RuntimeError("Subagent engine not initialized")
 
@@ -378,6 +635,23 @@ class Agent:
         session_id: str,
         payload: dict[str, Any] | None = None,
     ) -> Any:
+        """
+        Create background job.
+
+        Args:
+            job_type (str): job type string.
+            session_id (str): session identifier.
+            payload (dict[str, Any] | None): mapping of payload. Defaults to ``None``.
+
+        Returns:
+            Any: the resulting Any.
+
+        Raises:
+            RuntimeError: if the operation cannot be completed.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         if not self._job_engine:
             raise RuntimeError("Job engine not initialized")
 
@@ -396,6 +670,22 @@ class Agent:
         tool_results: list[dict[str, Any]],
         success: bool,
     ) -> dict[str, Any]:
+        """
+        Analyze and learn.
+
+        Args:
+            run_id (str): run identifier.
+            goal (str): goal string.
+            trajectory_steps (list[dict[str, Any]]): collection of trajectory steps.
+            tool_results (list[dict[str, Any]]): collection of tool results.
+            success (bool): when ``True``, enable success.
+
+        Returns:
+            dict[str, Any]: a mapping of str, Any.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         if not self._learning_engine:
             return {"error": "Learning engine not initialized"}
 
@@ -408,7 +698,7 @@ class Agent:
         )
 
         lessons = analysis.get("lessons_extracted", [])
-        if len(lessons) >= 2:
+        if len(lessons) >= 2 and self._skill_lifecycle is not None:
             skill = await self._skill_lifecycle.generate_from_lessons(lessons, goal)
             if skill:
                 analysis["generated_skill"] = skill.to_dict()
@@ -416,11 +706,27 @@ class Agent:
         return analysis
 
     def checkpoint_run(self, run_id: str, plan: Any, context_summary: str = "") -> Any:
+        """
+        Checkpoint run.
+
+        Args:
+            run_id (str): run identifier.
+            plan (Any): plan.
+            context_summary (str): context summary string. Defaults to ``''``.
+
+        Returns:
+            Any: the resulting Any.
+
+        Raises:
+            RuntimeError: if the operation cannot be completed.
+        """
         if not self._recovery_manager:
             raise RuntimeError("Recovery manager not initialized")
 
         return self._recovery_manager.checkpoint(
-            run_id=run_id, plan=plan, context_summary=context_summary,
+            run_id=run_id,
+            plan=plan,
+            context_summary=context_summary,
         )
 
     def _summarize_plan_result(self, plan: Any) -> str:
@@ -447,8 +753,26 @@ class Agent:
         return "\n".join(lines)
 
     async def chat_streaming(
-        self, message: str, session_id: str | None = None, model: str | None = None,
+        self,
+        message: str,
+        session_id: str | None = None,
+        model: str | None = None,
     ) -> AsyncIterator[str]:
+        """
+        Chat streaming.
+
+        Args:
+            message (str): message to process.
+            session_id (str | None): session identifier. Defaults to ``None``.
+            model (str | None): model identifier in ``provider/model`` form. Defaults to ``None``.
+
+        Returns:
+            AsyncIterator[str]: the resulting AsyncIterator[str].
+
+        Note:
+            Coroutine - must be awaited.
+        """
+        session: Session | None
         if session_id is None:
             session = self.create_session()
             session_id = session.id
@@ -496,7 +820,8 @@ class Agent:
             base_prompt = (
                 "You are Bahram, an advanced AI agent. You are helpful, capable, and autonomous. "
                 "You can use tools to accomplish tasks. When given a goal, you reason about it, "
-                "plan the steps, execute tools, observe results, and continue until the task is complete."
+                "plan the steps, execute tools, observe results, and continue until "
+                "the task is complete."
             )
 
         tools_info = "\n\nAvailable tools:\n"
@@ -525,14 +850,30 @@ class Agent:
         except Exception as e:
             logger.warning(f"Memory storage failed: {e}")
 
-    def _retrieve_skills(self, task: str) -> str:
+    async def _retrieve_skills(self, task: str) -> str:
+        """Return a readable description of the skills relevant to ``task``.
+
+        Args:
+            task (str): the user's request.
+
+        Returns:
+            str: one line per matching skill, or ``''`` when none apply.
+
+        Note:
+            Coroutine - must be awaited.  ``SkillManager.find_skill`` is a
+            coroutine; the previous synchronous version called it without
+            awaiting, so the coroutine was never executed, no skill ever
+            matched, and CPython emitted "coroutine ... was never awaited".
+        """
         skill_descriptions = []
 
         if self._skills is not None:
             try:
-                skill = self._skills.find_skill(task)
+                skill = await self._skills.find_skill(task)
                 if skill and hasattr(skill, "metadata"):
-                    skill_descriptions.append(f"Skill '{skill.metadata.name}': {skill.metadata.description}")
+                    skill_descriptions.append(
+                        f"Skill '{skill.metadata.name}': {skill.metadata.description}"
+                    )
             except Exception as e:
                 logger.warning(f"Skill retrieval failed: {e}")
 
@@ -540,42 +881,100 @@ class Agent:
             try:
                 trusted = self._skill_lifecycle.get_trusted_skills()
                 for ts in trusted[:3]:
-                    if hasattr(ts, 'name') and hasattr(ts, 'instructions'):
-                        skill_descriptions.append(f"Learned skill '{ts.name}': {ts.instructions[:200]}")
+                    if hasattr(ts, "name") and hasattr(ts, "instructions"):
+                        skill_descriptions.append(
+                            f"Learned skill '{ts.name}': {ts.instructions[:200]}"
+                        )
             except Exception as e:
                 logger.warning(f"Skill lifecycle retrieval failed: {e}")
 
         return "\n".join(skill_descriptions) if skill_descriptions else ""
 
     def get_history(self, session_id: str) -> list[Message]:
+        """
+        Return the history.
+
+        Args:
+            session_id (str): session identifier.
+
+        Returns:
+            list[Message]: a sequence of Message entries (empty when there is nothing to report).
+        """
         ctx = self.context.get(session_id)
         if ctx:
             return ctx.get_messages()
         return []
 
     def clear_history(self, session_id: str) -> None:
+        """
+        Clear history.
+
+        Args:
+            session_id (str): session identifier.
+        """
         self.context.clear(session_id)
 
-    async def execute_command(self, command: str, **kwargs: Any) -> Any:
-        logger.info(f"Executing command: {command}")
+    async def execute_command(self, tool_name: str, **kwargs: Any) -> Any:
+        """Invoke one registered tool directly, bypassing the model.
+
+        Args:
+            tool_name (str): name of the tool to run, e.g. ``"bash"``.  The
+                parameter used to be called ``command``, which read as if it
+                took a shell string; it is passed straight through as the
+                ``ToolCall.name``.
+            **kwargs (Any): arguments forwarded to the tool.
+
+        Returns:
+            Any: ``{"content": ..., "success": ..., "error": ...}``.
+
+        Note:
+            Coroutine - must be awaited.
+        """
+        logger.info("Executing tool: %s", tool_name)
         if self.engine._tool_executor is None:
             from bahram.core.engine import ToolExecutor
-            self.engine._tool_executor = ToolExecutor(self.engine.tools, self.engine._approval_system)
+
+            self.engine._tool_executor = ToolExecutor(
+                self.engine.tools, self.engine._approval_system
+            )
         tc = ToolCall(
-            id=f"cmd_{int(time.time() * 1000)}", name=command, arguments=kwargs,
+            id=f"cmd_{int(time.time() * 1000)}",
+            name=tool_name,
+            arguments=kwargs,
         )
         result = await self.engine._tool_executor.execute(tc)
         return {"content": result.content, "success": result.success, "error": result.error}
 
 
 class _MCPToolAdapter:
-    def __init__(self, client: Any, tool_def: dict) -> None:
+    """
+    MCP tool adapter.
+    """
+
+    def __init__(self, client: Any, tool_def: dict, call_name: str | None = None) -> None:
+        """Wrap one remote MCP tool as a local tool.
+
+        Args:
+            client (Any): the connected ``MCPClient``.
+            tool_def (dict): ``name``/``description``/``inputSchema``.
+            call_name (str | None): key to pass to ``client.call_tool``.
+                The client keys its registry ``"<server>:<tool>"``, so this
+                defaults to the bare tool name and is set explicitly by
+                ``Agent._init_mcp_tools``.
+        """
         self._client = client
         self._tool_def = tool_def
         self.name = tool_def.get("name", "unknown")
         self.description = tool_def.get("description", "")
+        self._call_name = call_name or self.name
 
     def schema(self) -> dict:
+        """
+        Return the OpenAI-style function schema for this tool.
+
+        Returns:
+            dict: a mapping of str, Any.
+        """
         return {
             "name": f"mcp_{self.name}",
             "description": self.description,
@@ -583,5 +982,17 @@ class _MCPToolAdapter:
         }
 
     async def execute(self, **kwargs: Any) -> str:
-        result = await self._client.call_tool(self.name, kwargs)
+        """
+        Execute the tool and return its textual result.
+
+        Args:
+            **kwargs (Any): keyword arguments forwarded to the implementation.
+
+        Returns:
+            str: the rendered string.
+
+        Note:
+            Coroutine - must be awaited.
+        """
+        result = await self._client.call_tool(self._call_name, kwargs)
         return str(result)

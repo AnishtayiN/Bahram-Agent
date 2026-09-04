@@ -1,15 +1,18 @@
 from __future__ import annotations
 
-import pytest
-import asyncio
-import time
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
+import pytest
+
+from bahram.core.config import Config
 from bahram.core.engine import (
-    AgentEngine, AgentResponse, Message, MessageRole, ToolCall, ToolResult,
-    ToolExecutor, Trajectory, TrajectoryStep,
+    AgentEngine,
+    Message,
+    MessageRole,
+    ToolCall,
+    ToolExecutor,
+    ToolResult,
 )
-from bahram.core.config import Config, ProviderConfig
 
 
 class TestMessage:
@@ -48,12 +51,14 @@ class TestToolResult:
 class TestSecurityPolicy:
     def test_approval_system_safe(self):
         from bahram.security.approval import ApprovalSystem
+
         system = ApprovalSystem()
         is_dangerous, reason = system.check_command("ls -la")
         assert is_dangerous is False
 
     def test_approval_system_dangerous(self):
         from bahram.security.approval import ApprovalSystem
+
         system = ApprovalSystem()
         is_dangerous, reason = system.check_command("rm -rf /")
         assert is_dangerous is True
@@ -81,14 +86,20 @@ class TestAgentEngine:
     def test_register_tool(self):
         engine = AgentEngine()
         tool = MagicMock()
-        tool.schema.return_value = {"type": "function", "function": {"name": "test", "description": "test tool", "parameters": {}}}
+        tool.schema.return_value = {
+            "type": "function",
+            "function": {"name": "test", "description": "test tool", "parameters": {}},
+        }
         engine.register_tool("test", tool)
         assert "test" in engine.tools
 
     def test_get_tools_schema(self):
         engine = AgentEngine()
         tool = MagicMock()
-        tool.schema.return_value = {"type": "function", "function": {"name": "test", "description": "test", "parameters": {}}}
+        tool.schema.return_value = {
+            "type": "function",
+            "function": {"name": "test", "description": "test", "parameters": {}},
+        }
         engine.register_tool("test", tool)
         schemas = engine.get_tools_schema()
         assert len(schemas) == 1

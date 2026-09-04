@@ -1,4 +1,5 @@
 """Tests for cost accounting integration in BudgetManager."""
+
 from __future__ import annotations
 
 import pytest
@@ -9,7 +10,7 @@ from bahram.autonomy.budget import BudgetConfig, BudgetManager
 class TestCostInRecordModelCall:
     def test_known_model_records_cost(self) -> None:
         mgr = BudgetManager()
-        warnings = mgr.record_model_call(
+        mgr.record_model_call(
             run_id="r1", model="openai/gpt-4o", input_tokens=1000, output_tokens=500
         )
         usage = mgr.get_run_budget("r1")

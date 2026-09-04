@@ -7,19 +7,17 @@ import tempfile
 import time
 import uuid
 from dataclasses import dataclass, field
-from typing import Any
 
 import pytest
 
+from bahram.autonomy.budget import BudgetConfig, BudgetManager
+from bahram.autonomy.events import EventTracker
 from bahram.core.engine import (
     AgentEngine,
     AgentResponse,
     Message,
     MessageRole,
-    ToolCall,
 )
-from bahram.autonomy.budget import BudgetManager, BudgetConfig
-from bahram.autonomy.events import EventTracker
 from bahram.memory.providers import LocalMemoryProvider, MemoryEntry
 
 
@@ -51,7 +49,11 @@ class MockProvider:
 
 class MockTool:
     def schema(self):
-        return {"name": "mock", "description": "mock", "parameters": {"type": "object", "properties": {}}}
+        return {
+            "name": "mock",
+            "description": "mock",
+            "parameters": {"type": "object", "properties": {}},
+        }
 
     async def execute(self, **kwargs):
         await asyncio.sleep(0.001)
@@ -121,10 +123,7 @@ class TestConcurrentEngineRuns:
         engine, provider = _make_engine_with_provider(delay=0.005)
 
         start = time.time()
-        tasks = [
-            _single_engine_run(engine, f"run_{i}")
-            for i in range(concurrency)
-        ]
+        tasks = [_single_engine_run(engine, f"run_{i}") for i in range(concurrency)]
         results = await asyncio.gather(*tasks)
         wall_clock = time.time() - start
 
@@ -166,10 +165,7 @@ class TestConcurrentEngineRuns:
         for concurrency in [5, 15, 30]:
             engine, provider = _make_engine_with_provider(delay=0.002)
             start = time.time()
-            tasks = [
-                _single_engine_run(engine, f"run_{i}")
-                for i in range(concurrency)
-            ]
+            tasks = [_single_engine_run(engine, f"run_{i}") for i in range(concurrency)]
             run_results = await asyncio.gather(*tasks)
             wall_clock = time.time() - start
 
@@ -205,10 +201,7 @@ class TestConcurrentMemoryWrites:
                     await provider.add(entry)
 
             start = time.time()
-            tasks = [
-                _user_writes(f"user_{i}", writes_per_user)
-                for i in range(num_users)
-            ]
+            tasks = [_user_writes(f"user_{i}", writes_per_user) for i in range(num_users)]
             await asyncio.gather(*tasks)
             wall_clock = time.time() - start
 
@@ -252,7 +245,7 @@ class TestConcurrentMemoryWrites:
                 tasks.append(_reader())
                 tasks.append(_writer(f"writer_{i}"))
             await asyncio.gather(*tasks)
-            wall_clock = time.time() - start
+            time.time() - start
 
             count = await provider.count()
             assert count >= 50, f"Pre-existing entries lost: only {count} remain"
@@ -261,12 +254,14 @@ class TestConcurrentMemoryWrites:
 class TestConcurrentBudgetTracking:
     @pytest.mark.asyncio
     async def test_no_lost_updates_budget(self):
-        bm = BudgetManager(BudgetConfig(
-            max_total_tokens=1_000_000,
-            max_model_calls=10_000,
-            max_tool_calls=10_000,
-            max_cost_usd=1000.0,
-        ))
+        bm = BudgetManager(
+            BudgetConfig(
+                max_total_tokens=1_000_000,
+                max_model_calls=10_000,
+                max_tool_calls=10_000,
+                max_cost_usd=1000.0,
+            )
+        )
         num_tasks = 50
         increments_per_task = 20
 
@@ -301,11 +296,13 @@ class TestConcurrentBudgetTracking:
 
     @pytest.mark.asyncio
     async def test_shared_session_budget_concurrent(self):
-        bm = BudgetManager(BudgetConfig(
-            max_total_tokens=100_000,
-            max_cost_usd=50.0,
-            warning_threshold=0.5,
-        ))
+        bm = BudgetManager(
+            BudgetConfig(
+                max_total_tokens=100_000,
+                max_cost_usd=50.0,
+                warning_threshold=0.5,
+            )
+        )
         session_id = "shared_session"
         num_tasks = 30
         tokens_per_call = 100
@@ -322,7 +319,7 @@ class TestConcurrentBudgetTracking:
         start = time.time()
         tasks = [_update_session() for _ in range(num_tasks)]
         await asyncio.gather(*tasks)
-        wall_clock = time.time() - start
+        time.time() - start
 
         session_budget = bm.get_session_budget(session_id)
         expected_tokens = num_tasks * 10 * tokens_per_call * 2
@@ -355,7 +352,9 @@ class TestConcurrentEventEmission:
             await asyncio.gather(*tasks)
             wall_clock = time.time() - start
 
-            all_events = tracker.query_events(event_type="load_test_event", limit=total_expected + 100)
+            all_events = tracker.query_events(
+                event_type="load_test_event", limit=total_expected + 100
+            )
             assert len(all_events) == total_expected, (
                 f"Lost events: expected {total_expected}, got {len(all_events)}"
             )
@@ -411,8 +410,8 @@ class TestConcurrentEventEmission:
 
             start = time.time()
             tasks = [_mixed_emitter(f"t_{i}") for i in range(20)]
-            all_emitted = await asyncio.gather(*tasks)
-            wall_clock = time.time() - start
+            await asyncio.gather(*tasks)
+            time.time() - start
 
             total_expected = 20 * len(event_types)
             all_events = tracker.query_events(limit=total_expected + 100)
@@ -471,10 +470,12 @@ class TestSessionIsolationUnderLoad:
 
         async def _run_in_session(user: str):
             sess = sessions[user]
-            messages = [Message(
-                role=MessageRole.USER,
-                content=f"Hello, I am {user}. My secret is {user}_secret_123.",
-            )]
+            messages = [
+                Message(
+                    role=MessageRole.USER,
+                    content=f"Hello, I am {user}. My secret is {user}_secret_123.",
+                )
+            ]
             resp = await sess["engine"].run(messages, model="test/model")
             return user, resp.content, sess["id"]
 
@@ -490,12 +491,14 @@ class TestSessionIsolationUnderLoad:
 
     @pytest.mark.asyncio
     async def test_concurrent_budget_isolation(self):
-        bm = BudgetManager(BudgetConfig(
-            max_total_tokens=1_000_000,
-            max_model_calls=10_000,
-            max_tool_calls=10_000,
-            max_cost_usd=1000.0,
-        ))
+        bm = BudgetManager(
+            BudgetConfig(
+                max_total_tokens=1_000_000,
+                max_model_calls=10_000,
+                max_tool_calls=10_000,
+                max_cost_usd=1000.0,
+            )
+        )
 
         user_a_runs = [f"run_a_{i}" for i in range(10)]
         user_b_runs = [f"run_b_{i}" for i in range(10)]
@@ -538,7 +541,7 @@ class TestDatabaseContention:
 
             async def _create_session(idx: str):
                 session_id = f"sess_{idx}_{uuid.uuid4().hex[:6]}"
-                result = store.create_session(
+                store.create_session(
                     session_id=session_id,
                     user_id=f"user_{idx}",
                     channel="load_test",
@@ -598,8 +601,8 @@ class TestDatabaseContention:
 
     @pytest.mark.asyncio
     async def test_concurrent_job_creation(self):
-        from bahram.core.persistence import SessionStore
         from bahram.core.engine import Trajectory
+        from bahram.core.persistence import SessionStore
 
         with tempfile.TemporaryDirectory() as tmpdir:
             db_path = os.path.join(tmpdir, "test.db")
@@ -631,9 +634,7 @@ class TestDatabaseContention:
             assert len(set(run_ids)) == num_jobs, "Duplicate run IDs created"
 
             stored_runs = store.get_recent_runs(limit=num_jobs + 10)
-            assert len(stored_runs) == num_jobs, (
-                f"Expected {num_jobs} runs, got {len(stored_runs)}"
-            )
+            assert len(stored_runs) == num_jobs, f"Expected {num_jobs} runs, got {len(stored_runs)}"
             assert wall_clock < 15.0
 
     @pytest.mark.asyncio

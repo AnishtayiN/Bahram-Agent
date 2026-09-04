@@ -1,0 +1,126 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# A new push to the same branch makes older runs irrelevant.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHONUNBUFFERED: "1"
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
+
+jobs:
+  lint:
+    name: Lint (ruff)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: bahram-agent
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: bahram-agent/pyproject.toml
+
+      - name: Install ruff and mypy
+        run: pip install "ruff>=0.1.0" "mypy>=1.0.0"
+
+      - name: ruff check
+        run: ruff check bahram tests scripts --no-cache
+
+      - name: ruff format --check
+        run: ruff format --check bahram tests scripts
+
+      - name: mypy (core and security)
+        run: mypy bahram/core bahram/security
+
+  test:
+    name: Test (python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: bahram-agent
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: bahram-agent/pyproject.toml
+
+      - name: Install the package and test dependencies
+        # The telegram extra is installed so the five tests in
+        # tests/integration/test_telegram_approval.py run instead of skipping
+        # on "python-telegram-bot not installed".
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev,telegram]"
+
+      - name: pytest with coverage
+        run: |
+          pytest tests/ -q \
+            --cov=bahram \
+            --cov-report=term-missing \
+            --cov-report=xml \
+            --cov-fail-under=75
+
+      - name: Upload coverage
+        if: matrix.python-version == '3.12'
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-xml
+          path: bahram-agent/coverage.xml
+          if-no-files-found: ignore
+
+  package:
+    name: Build and smoke-test the wheel
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: bahram-agent
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: bahram-agent/pyproject.toml
+
+      - name: Build the distribution
+        run: |
+          python -m pip install --upgrade pip
+          pip install build
+          python -m build
+
+      - name: Install the wheel into a clean environment
+        run: |
+          python -m venv /tmp/wheeltest
+          /tmp/wheeltest/bin/pip install dist/*.whl
+
+      - name: Import the package
+        run: /tmp/wheeltest/bin/python -c "import bahram; print(bahram.__version__)"
+
+      - name: Run the CLI entry point
+        run: /tmp/wheeltest/bin/bahram --help
+
+      - name: Upload the distribution
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: bahram-agent/dist/
+          if-no-files-found: error

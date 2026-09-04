@@ -1,23 +1,45 @@
+"""
+Smart doc.
+
+Public objects: ``DocSection``, ``SmartDocGenerator``.
+"""
+
 from __future__ import annotations
 
 import logging
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Optional
+from re import error
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class DocSection:
+    """
+    Doc section.
+
+    Attributes:
+        name (str): name of the object.
+        content (str): text content to process.
+        level (int): numeric value for level.
+    """
 
     name: str
     content: str
     level: int = 1
 
+
 class SmartDocGenerator:
+    """
+    Smart doc generator.
+    """
 
     def __init__(self) -> None:
+        """
+        Initialise a SmartDocGenerator instance.
+        """
         self._templates: dict[str, str] = {
             "markdown": "# {title}\n\n{content}\n",
             "rst": "{title}\n{underline}\n\n{content}\n",
@@ -31,6 +53,21 @@ class SmartDocGenerator:
         format: str = "markdown",
         include_examples: bool = True,
     ) -> bool:
+        """
+        Generate.
+
+        Args:
+            source_path (str): source path string.
+            output_path (str): output path string.
+            format (str): format string. Defaults to ``'markdown'``.
+            include_examples (bool): when ``True``, enable include examples. Defaults to ``True``.
+
+        Returns:
+            bool: ``True`` when the operation succeeds, otherwise ``False``.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         try:
             source = Path(source_path)
             if not source.exists():
@@ -59,10 +96,12 @@ class SmartDocGenerator:
         sections = []
 
         docstring = self._extract_module_docstring(content)
-        sections.append(DocSection(
-            name="Overview",
-            content=docstring or f"Documentation for {filename}",
-        ))
+        sections.append(
+            DocSection(
+                name="Overview",
+                content=docstring or f"Documentation for {filename}",
+            )
+        )
 
         classes = self._extract_classes(content)
         if classes:
@@ -70,10 +109,12 @@ class SmartDocGenerator:
             for cls in classes:
                 class_doc = self._document_class(cls)
                 class_content.append(class_doc)
-            sections.append(DocSection(
-                name="Classes",
-                content="\n\n".join(class_content),
-            ))
+            sections.append(
+                DocSection(
+                    name="Classes",
+                    content="\n\n".join(class_content),
+                )
+            )
 
         functions = self._extract_functions(content)
         if functions:
@@ -81,52 +122,79 @@ class SmartDocGenerator:
             for func in functions:
                 func_doc = self._document_function(func)
                 func_content.append(func_doc)
-            sections.append(DocSection(
-                name="Functions",
-                content="\n\n".join(func_content),
-            ))
+            sections.append(
+                DocSection(
+                    name="Functions",
+                    content="\n\n".join(func_content),
+                )
+            )
 
         if include_examples:
             examples = self._generate_examples(classes, functions)
             if examples:
-                sections.append(DocSection(
-                    name="Examples",
-                    content=examples,
-                ))
+                sections.append(
+                    DocSection(
+                        name="Examples",
+                        content=examples,
+                    )
+                )
 
         return sections
 
+    #: Captures a triple-quoted string, accepting either quote style.  The
+    #: earlier patterns were bare ``""`` / ``''`` literals with no capture
+    #: group, so every ``match.group(1)`` raised ``IndexError``.
+    _DOCSTRING = r'(?:"{3}(.*?)"{3}|\'{3}(.*?)\'{3})'
+
+    @classmethod
+    def _group(cls, match: re.Match, *indexes: int) -> str:
+        """Return the first non-empty capture group among ``indexes``."""
+        for index in indexes:
+            try:
+                value = match.group(index)
+            except (IndexError, error):
+                value = None
+            if value:
+                return value.strip()
+        return ""
+
     def _extract_module_docstring(self, content: str) -> str:
-        match = re.search(r'""', content, re.DOTALL)
+        match = re.search(self._DOCSTRING, content, re.DOTALL)
         if match:
-            return match.group(1).strip()
-        match = re.search(r"''", content, re.DOTALL)
-        if match:
-            return match.group(1).strip()
+            return self._group(match, 1, 2)
         return ""
 
     def _extract_classes(self, content: str) -> list[dict]:
         classes = []
-        pattern = r'class\s+(\w+)\s*(?:\(([^)]*)\))?:\s*\n(?:\s+"")?'
+        # The docstring is optional - a symbol without one is still listed,
+        # it just gets an empty ``docstring`` value.
+        pattern = r"class\s+(\w+)\s*(?:\(([^)]*)\))?:[ \t]*\n(?:[ \t]*" + self._DOCSTRING + r")?"
         for match in re.finditer(pattern, content, re.DOTALL):
-            classes.append({
-                "name": match.group(1),
-                "parent": match.group(2),
-                "docstring": match.group(3) or "",
-            })
+            classes.append(
+                {
+                    "name": match.group(1),
+                    "parent": match.group(2),
+                    "docstring": self._group(match, 3, 4),
+                }
+            )
         return classes
 
     def _extract_functions(self, content: str) -> list[dict]:
         functions = []
-        pattern = r'def\s+(\w+)\s*\(([^)]*)\)(?:\s*->\s*(\w+))?:\s*\n(?:\s+"")?'
+        pattern = (
+            r"def\s+(\w+)\s*\(([^)]*)\)(?:\s*->\s*([\w\[\], |]+?))?:[ \t]*\n"
+            r"(?:[ \t]*" + self._DOCSTRING + r")?"
+        )
         for match in re.finditer(pattern, content, re.DOTALL):
             if not match.group(1).startswith("_"):
-                functions.append({
-                    "name": match.group(1),
-                    "args": match.group(2),
-                    "return_type": match.group(3),
-                    "docstring": match.group(4) or "",
-                })
+                functions.append(
+                    {
+                        "name": match.group(1),
+                        "args": match.group(2),
+                        "return_type": match.group(3),
+                        "docstring": self._group(match, 4, 5),
+                    }
+                )
         return functions
 
     def _document_class(self, cls: dict) -> str:

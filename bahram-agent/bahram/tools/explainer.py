@@ -1,14 +1,30 @@
+"""
+Explainer.
+
+Public objects: ``CodeExplanation``, ``CodeExplainer``.
+"""
+
 from __future__ import annotations
 
 import logging
 import re
 from dataclasses import dataclass, field
-from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class CodeExplanation:
+    """
+    Code explanation.
+
+    Attributes:
+        line (int): numeric value for line.
+        code (str): source code to execute.
+        explanation (str): explanation string.
+        complexity (str): complexity string.
+        concepts (list[str]): collection of concepts.
+    """
 
     line: int
     code: str
@@ -16,28 +32,73 @@ class CodeExplanation:
     complexity: str
     concepts: list[str] = field(default_factory=list)
 
+
 class CodeExplainer:
+    """
+    Code explainer.
+    """
 
     def __init__(self) -> None:
-        self._patterns: dict[str, str] = {
-            r"def\s+(\w+)\s*\(([^)]*)\)": "Function definition named '{name}' with parameters: {params}",
-            r"class\s+(\w+)\s*(?:\(([^)]*)\))?": "Class definition named '{name}'{parent}",
-            r"if\s+(.+):": "Conditional check: {condition}",
-            r"for\s+(\w+)\s+in\s+(.+)": "Loop iterating over {iterable} with variable {var}",
-            r"while\s+(.+):": "While loop with condition: {condition}",
-            r"try:": "Try block for error handling",
-            r"except\s+(\w+)": "Exception handler for {exception}",
-            r"return\s+(.+)": "Returns value: {value}",
-            r"import\s+(\w+)": "Imports module: {module}",
-            r"from\s+(\w+)\s+import\s+(\w+)": "Imports {item} from {module}",
-            r"lambda\s+([^:]+):\s*(.+)": "Anonymous function with parameter {param}",
-            r"\[(.+)\s+for\s+(\w+)\s+in\s+(.+)\]": "List comprehension creating {item} from {iterable}",
-            r"\{(.+):\s*(.+)\s+for\s+(\w+)\s+in\s+(.+)\}": "Dictionary comprehension",
-            r"async\s+def\s+(\w+)": "Asynchronous function definition: {name}",
-            r"await\s+(.+)": "Awaiting async operation: {operation}",
+        """
+        Initialise a CodeExplainer instance.
+        """
+        # pattern -> (message template, names of the capture groups in order).
+        # Order matters: "from X import Y" is listed before the generic
+        # "import Y" rule, which would otherwise match the tail of a
+        # from-import and swallow the more specific explanation.
+        self._patterns: dict[str, tuple[str, tuple[str, ...]]] = {
+            r"def\s+(\w+)\s*\(([^)]*)\)": (
+                "Function definition named '{name}' with parameters: {params}",
+                ("name", "params"),
+            ),
+            r"class\s+(\w+)\s*(?:\(([^)]*)\))?": (
+                "Class definition named '{name}'{parent}",
+                ("name", "parent"),
+            ),
+            r"if\s+(.+):": ("Conditional check: {condition}", ("condition",)),
+            r"for\s+(\w+)\s+in\s+(.+)": (
+                "Loop iterating over {iterable} with variable {var}",
+                ("var", "iterable"),
+            ),
+            r"while\s+(.+):": ("While loop with condition: {condition}", ("condition",)),
+            r"try:": ("Try block for error handling", ()),
+            r"except\s+(\w+)": ("Exception handler for {exception}", ("exception",)),
+            r"return\s+(.+)": ("Returns value: {value}", ("value",)),
+            r"from\s+(\w+)\s+import\s+(\w+)": (
+                "Imports {item} from {module}",
+                ("module", "item"),
+            ),
+            r"import\s+(\w+)": ("Imports module: {module}", ("module",)),
+            r"lambda\s+([^:]+):\s*(.+)": (
+                "Anonymous function with parameter {param}",
+                ("param", "body"),
+            ),
+            r"\[(.+)\s+for\s+(\w+)\s+in\s+(.+)\]": (
+                "List comprehension creating {item} from {iterable}",
+                ("item", "var", "iterable"),
+            ),
+            r"\{(.+):\s*(.+)\s+for\s+(\w+)\s+in\s+(.+)\}": (
+                "Dictionary comprehension building {key}: {value} pairs",
+                ("key", "value", "var", "iterable"),
+            ),
+            r"async\s+def\s+(\w+)": ("Asynchronous function definition: {name}", ("name",)),
+            r"await\s+(.+)": ("Awaiting async operation: {operation}", ("operation",)),
         }
 
     async def explain(self, code: str) -> list[CodeExplanation]:
+        """
+        Explain.
+
+        Args:
+            code (str): source code to execute.
+
+        Returns:
+            list[CodeExplanation]: a sequence of CodeExplanation entries (empty when there is
+                nothing to report).
+
+        Note:
+            Coroutine - must be awaited.
+        """
         explanations = []
         lines = code.split("\n")
 
@@ -48,15 +109,20 @@ class CodeExplainer:
 
         return explanations
 
-    async def _explain_line(self, line: str) -> Optional[CodeExplanation]:
+    async def _explain_line(self, line: str) -> CodeExplanation | None:
         if not line or line.startswith("#"):
             return None
 
-        for pattern, template in self._patterns.items():
+        for pattern, (template, group_names) in self._patterns.items():
             match = re.search(pattern, line)
             if match:
-
-                explanation = template
+                fields = dict(zip(group_names, match.groups()))
+                # Optional groups are None when they did not participate.
+                if fields.get("parent"):
+                    fields["parent"] = f" (inherits from {fields['parent']})"
+                else:
+                    fields["parent"] = ""
+                explanation = template.format(**fields)
                 concepts = self._extract_concepts(line)
 
                 return CodeExplanation(
@@ -116,6 +182,15 @@ class CodeExplainer:
         return "simple"
 
     def format_explanations(self, explanations: list[CodeExplanation]) -> str:
+        """
+        Format explanations.
+
+        Args:
+            explanations (list[CodeExplanation]): collection of explanations.
+
+        Returns:
+            str: the rendered string.
+        """
         if not explanations:
             return "No code to explain!"
 
@@ -126,7 +201,9 @@ class CodeExplainer:
             lines.append(f"### Line {exp.line}")
             lines.append(f"```{exp.code}```")
             lines.append(f"**Explanation:** {exp.explanation}")
-            lines.append(f"**Complexity:** {complexity_emoji.get(exp.complexity, '⚪')} {exp.complexity}")
+            lines.append(
+                f"**Complexity:** {complexity_emoji.get(exp.complexity, '⚪')} {exp.complexity}"
+            )
             if exp.concepts:
                 lines.append(f"**Concepts:** {', '.join(exp.concepts)}")
             lines.append("")

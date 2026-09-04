@@ -1,14 +1,31 @@
+"""
+Code review.
+
+Public objects: ``CodeIssue``, ``CodeReviewTool``.
+"""
+
 from __future__ import annotations
 
 import logging
 import re
-from dataclasses import dataclass, field
-from typing import Any, Optional
+from dataclasses import dataclass
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class CodeIssue:
+    """
+    Code issue.
+
+    Attributes:
+        file (str): file string.
+        line (int): numeric value for line.
+        severity (str): severity string.
+        category (str): category string.
+        message (str): message to process.
+        suggestion (str): suggestion string.
+    """
 
     file: str
     line: int
@@ -17,11 +34,17 @@ class CodeIssue:
     message: str
     suggestion: str = ""
 
+
 class CodeReviewTool:
+    """
+    Code review tool.
+    """
 
     def __init__(self) -> None:
+        """
+        Initialise a CodeReviewTool instance.
+        """
         self._rules: list[tuple[str, str, str, str]] = [
-
             (r"print\(", "info", "style", "Consider using logging instead of print"),
             (r"except:", "warning", "error", "Bare except clause - specify exception type"),
             (r"TODO", "info", "todo", "TODO comment found"),
@@ -35,14 +58,32 @@ class CodeReviewTool:
             (r"is True", "info", "style", "Use 'if x:' instead of 'if x is True:'"),
             (r"is False", "info", "style", "Use 'if not x:' instead of 'if x is False:'"),
             (r"if .+ is not None", "info", "style", "Consider using 'if x:' pattern"),
-            (r"raise NotImplementedError", "info", "design", "Abstract method - ensure implementation"),
+            (
+                r"raise NotImplementedError",
+                "info",
+                "design",
+                "Abstract method - ensure implementation",
+            ),
             (r"global ", "warning", "style", "Global variable usage - consider alternatives"),
             (r"lambda .+=", "warning", "style", "Lambda assignment - use def instead"),
         ]
 
     async def review_file(self, file_path: str) -> list[CodeIssue]:
+        """
+        Review file.
+
+        Args:
+            file_path (str): path of the file to operate on.
+
+        Returns:
+            list[CodeIssue]: a sequence of CodeIssue entries (empty when there is nothing to
+                report).
+
+        Note:
+            Coroutine - must be awaited.
+        """
         try:
-            with open(file_path, "r", encoding="utf-8", errors="replace") as f:
+            with open(file_path, encoding="utf-8", errors="replace") as f:
                 content = f.read()
                 lines = content.split("\n")
 
@@ -50,14 +91,16 @@ class CodeReviewTool:
             for i, line in enumerate(lines, 1):
                 for pattern, severity, category, message in self._rules:
                     if re.search(pattern, line):
-                        issues.append(CodeIssue(
-                            file=file_path,
-                            line=i,
-                            severity=severity,
-                            category=category,
-                            message=message,
-                            suggestion=self._get_suggestion(category, line),
-                        ))
+                        issues.append(
+                            CodeIssue(
+                                file=file_path,
+                                line=i,
+                                severity=severity,
+                                category=category,
+                                message=message,
+                                suggestion=self._get_suggestion(category, line),
+                            )
+                        )
 
             return issues
 
@@ -66,20 +109,36 @@ class CodeReviewTool:
             return []
 
     async def review_code(self, code: str, language: str = "python") -> list[CodeIssue]:
+        """
+        Review code.
+
+        Args:
+            code (str): source code to execute.
+            language (str): language string. Defaults to ``'python'``.
+
+        Returns:
+            list[CodeIssue]: a sequence of CodeIssue entries (empty when there is nothing to
+                report).
+
+        Note:
+            Coroutine - must be awaited.
+        """
         issues = []
         lines = code.split("\n")
 
         for i, line in enumerate(lines, 1):
             for pattern, severity, category, message in self._rules:
                 if re.search(pattern, line):
-                    issues.append(CodeIssue(
-                        file="<code>",
-                        line=i,
-                        severity=severity,
-                        category=category,
-                        message=message,
-                        suggestion=self._get_suggestion(category, line),
-                    ))
+                    issues.append(
+                        CodeIssue(
+                            file="<code>",
+                            line=i,
+                            severity=severity,
+                            category=category,
+                            message=message,
+                            suggestion=self._get_suggestion(category, line),
+                        )
+                    )
 
         return issues
 
@@ -94,23 +153,46 @@ class CodeReviewTool:
         return suggestions.get(category, "")
 
     def get_summary(self, issues: list[CodeIssue]) -> dict[str, int]:
+        """
+        Return the summary.
+
+        Args:
+            issues (list[CodeIssue]): collection of issues.
+
+        Returns:
+            dict[str, int]: a mapping of str, int.
+        """
         summary = {"error": 0, "warning": 0, "info": 0}
         for issue in issues:
             summary[issue.severity] = summary.get(issue.severity, 0) + 1
         return summary
 
     def format_report(self, issues: list[CodeIssue]) -> str:
+        """
+        Format report.
+
+        Args:
+            issues (list[CodeIssue]): collection of issues.
+
+        Returns:
+            str: the rendered string.
+        """
         if not issues:
             return "No issues found!"
 
         lines = ["## Code Review Report", ""]
         summary = self.get_summary(issues)
-        lines.append(f"Errors: {summary['error']} | Warnings: {summary['warning']} | Info: {summary['info']}")
+        lines.append(
+            f"Errors: {summary['error']} | Warnings: {summary['warning']} | Info: {summary['info']}"
+        )
         lines.append("")
 
         for issue in sorted(issues, key=lambda x: (x.severity, x.file, x.line)):
             severity_emoji = {"error": "🔴", "warning": "🟡", "info": "🔵"}
-            lines.append(f"{severity_emoji.get(issue.severity, '⚪')} {issue.file}:{issue.line} - {issue.message}")
+            lines.append(
+                f"{severity_emoji.get(issue.severity, '⚪')} {issue.file}:{issue.line} - "
+                f"{issue.message}"
+            )
             if issue.suggestion:
                 lines.append(f"   💡 {issue.suggestion}")
 

@@ -3,15 +3,14 @@
 Tests that the system handles resource exhaustion gracefully:
 repeated model calls, tool calls, huge outputs, recursive subagents.
 """
+
 from __future__ import annotations
 
 import asyncio
 from unittest.mock import MagicMock
 
-import pytest
-
-from bahram.autonomy.budget import BudgetManager, BudgetConfig
-from bahram.core.engine import AgentEngine, ToolCall, AgentResponse, RunState
+from bahram.autonomy.budget import BudgetConfig, BudgetManager
+from bahram.core.engine import AgentEngine, AgentResponse, RunState, ToolCall
 
 
 class FakeProvider:
@@ -178,9 +177,7 @@ class TestResourceExhaustion:
         msg.role.value = "user"
         msg.content = "test"
 
-        result = asyncio.run(
-            engine.run([msg], model="test/model")
-        )
+        asyncio.run(engine.run([msg], model="test/model"))
 
         assert provider.call_count <= 4
 
@@ -205,9 +202,7 @@ class TestResourceExhaustion:
         msg.role.value = "user"
         msg.content = "test"
 
-        result = asyncio.run(
-            engine.run([msg], model="test/model")
-        )
+        asyncio.run(engine.run([msg], model="test/model"))
 
         assert tool.call_count <= 4
 
@@ -250,15 +245,14 @@ class TestResourceExhaustion:
 
         def cancel_soon():
             import time
+
             time.sleep(0.2)
             engine._cancel_event.set()
 
         t = threading.Thread(target=cancel_soon)
         t.start()
 
-        result = asyncio.run(
-            engine.run([msg], model="test/model")
-        )
+        result = asyncio.run(engine.run([msg], model="test/model"))
 
         t.join(timeout=1)
 

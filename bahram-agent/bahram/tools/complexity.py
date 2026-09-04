@@ -1,14 +1,31 @@
+"""
+Complexity.
+
+Public objects: ``ComplexityMetric``, ``ComplexityAnalyzer``.
+"""
+
 from __future__ import annotations
 
 import logging
 import re
-from dataclasses import dataclass, field
-from typing import Any, Optional
+from dataclasses import dataclass
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class ComplexityMetric:
+    """
+    Complexity metric.
+
+    Attributes:
+        name (str): name of the object.
+        value (float): numeric value for value.
+        threshold (float): numeric value for threshold.
+        status (str): status string.
+        description (str): human readable description.
+    """
 
     name: str
     value: float
@@ -16,9 +33,16 @@ class ComplexityMetric:
     status: str
     description: str = ""
 
+
 class ComplexityAnalyzer:
+    """
+    Complexity analyzer.
+    """
 
     def __init__(self) -> None:
+        """
+        Initialise a ComplexityAnalyzer instance.
+        """
         self._thresholds = {
             "cyclomatic": {"good": 10, "warning": 20, "critical": 30},
             "cognitive": {"good": 15, "warning": 25, "critical": 50},
@@ -28,8 +52,20 @@ class ComplexityAnalyzer:
         }
 
     async def analyze(self, file_path: str) -> dict[str, Any]:
+        """
+        Analyze.
+
+        Args:
+            file_path (str): path of the file to operate on.
+
+        Returns:
+            dict[str, Any]: a mapping of str, Any.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         try:
-            with open(file_path, "r", encoding="utf-8", errors="replace") as f:
+            with open(file_path, encoding="utf-8", errors="replace") as f:
                 content = f.read()
 
             metrics = {
@@ -56,7 +92,13 @@ class ComplexityAnalyzer:
                 "file": file_path,
                 "metrics": metrics,
                 "overall_score": overall_score,
-                "rating": "A" if overall_score >= 90 else "B" if overall_score >= 70 else "C" if overall_score >= 50 else "D",
+                "rating": "A"
+                if overall_score >= 90
+                else "B"
+                if overall_score >= 70
+                else "C"
+                if overall_score >= 50
+                else "D",
             }
 
         except Exception as e:
@@ -66,10 +108,15 @@ class ComplexityAnalyzer:
     def _cyclomatic_complexity(self, code: str) -> int:
 
         patterns = [
-            r"\bif\b", r"\belif\b", r"\belse\b",
-            r"\bfor\b", r"\bwhile\b",
-            r"\band\b", r"\bor\b",
-            r"\bexcept\b", r"\btry\b",
+            r"\bif\b",
+            r"\belif\b",
+            r"\belse\b",
+            r"\bfor\b",
+            r"\bwhile\b",
+            r"\band\b",
+            r"\bor\b",
+            r"\bexcept\b",
+            r"\btry\b",
         ]
         complexity = 1
         for pattern in patterns:
@@ -81,7 +128,10 @@ class ComplexityAnalyzer:
         nesting = 0
         for line in code.split("\n"):
             stripped = line.strip()
-            if any(stripped.startswith(kw) for kw in ["if", "elif", "else", "for", "while", "try", "except"]):
+            if any(
+                stripped.startswith(kw)
+                for kw in ["if", "elif", "else", "for", "while", "try", "except"]
+            ):
                 complexity += 1 + nesting
                 nesting += 1
             elif stripped.startswith("return") or stripped.startswith("break"):
@@ -111,7 +161,10 @@ class ComplexityAnalyzer:
         current_depth = 0
         for line in code.split("\n"):
             stripped = line.strip()
-            if any(stripped.startswith(kw) for kw in ["if", "elif", "else", "for", "while", "try", "except", "with"]):
+            if any(
+                stripped.startswith(kw)
+                for kw in ["if", "elif", "else", "for", "while", "try", "except", "with"]
+            ):
                 current_depth += 1
                 max_depth = max(max_depth, current_depth)
             elif stripped and not stripped.startswith(" ") and not stripped.startswith("#"):
@@ -119,6 +172,15 @@ class ComplexityAnalyzer:
         return max_depth
 
     def get_report(self, analysis: dict) -> str:
+        """
+        Return the report.
+
+        Args:
+            analysis (dict): mapping of analysis.
+
+        Returns:
+            str: the rendered string.
+        """
         if "error" in analysis:
             return f"Error: {analysis['error']}"
 

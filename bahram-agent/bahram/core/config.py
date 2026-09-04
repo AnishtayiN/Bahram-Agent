@@ -1,21 +1,51 @@
+"""
+Config.
+
+Public objects: ``ProviderConfig``, ``MemoryConfig``, ``SkillsConfig``, ``ToolsConfig``,
+    ``PlatformConfig``, ``SchedulerConfig``, ``SecurityConfig``, ``LoggingConfig`` (+3 more).
+"""
+
 from __future__ import annotations
 
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
+
 
 @dataclass
 class ProviderConfig:
+    """
+    Provider config.
+
+    Attributes:
+        api_key (str): api key string.
+        base_url (str | None): base url string.
+        models (list[str]): collection of models.
+        temperature (float): numeric value for temperature.
+        max_tokens (int): numeric value for max tokens.
+    """
 
     api_key: str = ""
-    base_url: Optional[str] = None
+    base_url: str | None = None
     models: list[str] = field(default_factory=list)
     temperature: float = 0.7
     max_tokens: int = 4096
 
+
 @dataclass
 class MemoryConfig:
+    """
+    Memory config.
+
+    Attributes:
+        enabled (bool): when ``True`` the object is active.
+        database (str): database string.
+        embedding_model (str): embedding model string.
+        max_context_turns (int): numeric value for max context turns.
+        auto_summarize (bool): when ``True``, enable auto summarize.
+        summary_threshold (int): numeric value for summary threshold.
+    """
 
     enabled: bool = True
     database: str = "data/memory.db"
@@ -24,16 +54,38 @@ class MemoryConfig:
     auto_summarize: bool = True
     summary_threshold: int = 50
 
+
 @dataclass
 class SkillsConfig:
+    """
+    Skills config.
+
+    Attributes:
+        enabled (bool): when ``True`` the object is active.
+        directory (str): directory string.
+        auto_create (bool): when ``True``, enable auto create.
+        auto_improve (bool): when ``True``, enable auto improve.
+    """
 
     enabled: bool = True
     directory: str = "skills"
     auto_create: bool = True
     auto_improve: bool = True
 
+
 @dataclass
 class ToolsConfig:
+    """
+    Tools config.
+
+    Attributes:
+        enabled (list[str]): when ``True`` the object is active.
+        disabled (list[str]): collection of disabled.
+        bash_timeout (int): numeric value for bash timeout.
+        bash_sandbox (bool): when ``True``, enable bash sandbox.
+        webfetch_timeout (int): numeric value for webfetch timeout.
+        webfetch_max_size (int): numeric value for webfetch max size.
+    """
 
     enabled: list[str] = field(
         default_factory=lambda: ["bash", "read", "write", "edit", "glob", "grep"]
@@ -44,8 +96,19 @@ class ToolsConfig:
     webfetch_timeout: int = 30
     webfetch_max_size: int = 1048576
 
+
 @dataclass
 class PlatformConfig:
+    """
+    Platform config.
+
+    Attributes:
+        enabled (bool): when ``True`` the object is active.
+        token (str): token string.
+        allowed_users (list[str]): collection of allowed users.
+        guild_id (str): guild id string.
+        app_token (str): app token string.
+    """
 
     enabled: bool = False
     token: str = ""
@@ -53,39 +116,95 @@ class PlatformConfig:
     guild_id: str = ""
     app_token: str = ""
 
+
 @dataclass
 class SchedulerConfig:
+    """
+    Scheduler config.
+
+    Attributes:
+        enabled (bool): when ``True`` the object is active.
+        max_concurrent (int): numeric value for max concurrent.
+        check_interval (int): numeric value for check interval.
+    """
 
     enabled: bool = True
     max_concurrent: int = 5
     check_interval: int = 60
 
+
 @dataclass
 class SecurityConfig:
+    """
+    Security config.
+
+    Attributes:
+        sandbox_mode (bool): when ``True``, enable sandbox mode.
+        allowed_commands (list[str]): collection of allowed commands.
+        blocked_commands (list[str]): collection of blocked commands.
+        require_approval (list[str]): collection of require approval.
+    """
 
     sandbox_mode: bool = False
     allowed_commands: list[str] = field(default_factory=list)
     blocked_commands: list[str] = field(default_factory=list)
     require_approval: list[str] = field(default_factory=lambda: ["bash", "write", "edit"])
 
+
 @dataclass
 class LoggingConfig:
+    """
+    Logging config.
+
+    Attributes:
+        level (str): level string.
+        file (str): file string.
+        max_size (str): max size string.
+        backup_count (int): numeric value for backup count.
+    """
 
     level: str = "INFO"
     file: str = "logs/bahram.log"
     max_size: str = "10MB"
     backup_count: int = 5
 
+
 @dataclass
 class ServerConfig:
+    """
+    Server config.
+
+    Attributes:
+        enabled (bool): when ``True`` the object is active.
+        host (str): host string.
+        port (int): numeric value for port.
+        auth_token (str): auth token string.
+    """
 
     enabled: bool = False
     host: str = "0.0.0.0"
     port: int = 8000
     auth_token: str = ""
 
+
 @dataclass
 class AgentConfig:
+    """
+    Agent config.
+
+    Attributes:
+        name (str): name of the object.
+        version (str): version string.
+        description (str): human readable description.
+        model (str): model identifier in ``provider/model`` form.
+        small_model (str): small model string.
+        system_prompt (str): system prompt string.
+        max_iterations (int): numeric value for max iterations.
+        max_runtime_seconds (float): numeric value for max runtime seconds.
+        max_tool_calls (int): numeric value for max tool calls.
+        max_retries (int): numeric value for max retries.
+    """
+
     name: str = "Bahram"
     version: str = "1.0.0"
     description: str = "Advanced self-improving AI agent"
@@ -97,8 +216,24 @@ class AgentConfig:
     max_tool_calls: int = 50
     max_retries: int = 3
 
+
 @dataclass
 class Config:
+    """
+    Config.
+
+    Attributes:
+        agent (AgentConfig): agent.
+        providers (dict[str, ProviderConfig]): mapping of providers.
+        memory (MemoryConfig): memory.
+        skills (SkillsConfig): skills.
+        tools (ToolsConfig): tools.
+        platforms (dict[str, PlatformConfig]): mapping of platforms.
+        scheduler (SchedulerConfig): scheduler.
+        security (SecurityConfig): security.
+        logging (LoggingConfig): logging.
+        server (ServerConfig): server.
+    """
 
     agent: AgentConfig = field(default_factory=AgentConfig)
     providers: dict[str, ProviderConfig] = field(default_factory=dict)
@@ -113,17 +248,27 @@ class Config:
 
     @classmethod
     def from_file(cls, path: str | Path) -> Config:
+        """
+        Build an instance from file.
+
+        Args:
+            path (str | Path): filesystem path to operate on.
+
+        Returns:
+            Config: the resulting Config.
+        """
         path = Path(path)
         if not path.exists():
             return cls()
 
         try:
             import yaml
+
             with open(path) as f:
                 data = yaml.safe_load(f)
         except ImportError:
-
             import json
+
             with open(path) as f:
                 data = json.load(f)
         except Exception as e:
@@ -139,38 +284,64 @@ class Config:
         config = cls()
 
         if "agent" in data:
-            config.agent = AgentConfig(**data["agent"])
+            config.agent = cls._build(AgentConfig, data["agent"], "agent")
 
         if "providers" in data:
             for name, provider_data in data["providers"].items():
-                config.providers[name] = ProviderConfig(**provider_data)
+                config.providers[name] = cls._build(
+                    ProviderConfig, provider_data, f"providers.{name}"
+                )
 
         if "memory" in data:
-            config.memory = MemoryConfig(**data["memory"])
+            config.memory = cls._build(MemoryConfig, data["memory"], "memory")
 
         if "skills" in data:
-            config.skills = SkillsConfig(**data["skills"])
+            config.skills = cls._build(SkillsConfig, data["skills"], "skills")
 
         if "tools" in data:
-            config.tools = ToolsConfig(**data["tools"])
+            config.tools = cls._build(ToolsConfig, data["tools"], "tools")
 
         if "platforms" in data:
             for name, platform_data in data["platforms"].items():
-                config.platforms[name] = PlatformConfig(**platform_data)
+                config.platforms[name] = cls._build(
+                    PlatformConfig, platform_data, f"platforms.{name}"
+                )
 
         if "scheduler" in data:
-            config.scheduler = SchedulerConfig(**data["scheduler"])
+            config.scheduler = cls._build(SchedulerConfig, data["scheduler"], "scheduler")
 
         if "security" in data:
-            config.security = SecurityConfig(**data["security"])
+            config.security = cls._build(SecurityConfig, data["security"], "security")
 
         if "logging" in data:
-            config.logging = LoggingConfig(**data["logging"])
+            config.logging = cls._build(LoggingConfig, data["logging"], "logging")
 
         if "server" in data:
-            config.server = ServerConfig(**data["server"])
+            config.server = cls._build(ServerConfig, data["server"], "server")
 
         return config
+
+    @staticmethod
+    def _build(section_cls: Any, values: Any, label: str) -> Any:
+        """Build one config section, skipping keys the section does not declare.
+
+        A stray or renamed key used to raise ``TypeError: __init__() got an
+        unexpected keyword argument`` and abort start-up with no hint about
+        which file or key was wrong.  Unknown keys are now ignored with a
+        warning; a typo costs one setting, not the whole process.
+        """
+        if not isinstance(values, dict):
+            raise TypeError(
+                f"config section '{label}' must be a mapping, got {type(values).__name__}"
+            )
+        known = set(section_cls.__dataclass_fields__)
+        unknown = sorted(set(values) - known)
+        if unknown:
+            print(
+                f"Warning: ignoring unknown key(s) in config section '{label}': "
+                f"{', '.join(unknown)}"
+            )
+        return section_cls(**{k: v for k, v in values.items() if k in known})
 
     @classmethod
     def _expand_env_vars(cls, obj: Any) -> Any:
@@ -186,10 +357,32 @@ class Config:
         return obj
 
     def get_provider(self, name: str) -> ProviderConfig:
+        """
+        Return the provider.
+
+        Args:
+            name (str): name of the object.
+
+        Returns:
+            ProviderConfig: the resulting ProviderConfig.
+
+        Raises:
+            ValueError: if the operation cannot be completed.
+        """
         if name not in self.providers:
             raise ValueError(f"Provider '{name}' not configured")
         return self.providers[name]
 
     def get_model_provider(self, model: str) -> tuple[str, ProviderConfig]:
+        """
+        Return the model provider.
+
+        Args:
+            model (str): model identifier in ``provider/model`` form.
+
+        Returns:
+            tuple[str, ProviderConfig]: a sequence of str, ProviderConfig entries (empty when there
+                is nothing to report).
+        """
         provider_name = model.split("/")[0] if "/" in model else "anthropic"
         return provider_name, self.get_provider(provider_name)

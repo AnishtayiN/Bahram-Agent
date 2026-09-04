@@ -1,14 +1,30 @@
+"""
+Formatter.
+
+Public objects: ``FormatRule``, ``SmartFormatter``.
+"""
+
 from __future__ import annotations
 
 import logging
 import re
-from dataclasses import dataclass, field
-from typing import Any, Optional
+from dataclasses import dataclass
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class FormatRule:
+    """
+    Format rule.
+
+    Attributes:
+        name (str): name of the object.
+        language (str): language string.
+        pattern (str): pattern string.
+        replacement (str): replacement string.
+        description (str): human readable description.
+    """
 
     name: str
     language: str
@@ -16,24 +32,37 @@ class FormatRule:
     replacement: str
     description: str = ""
 
+
 class SmartFormatter:
+    """
+    Smart formatter.
+    """
 
     def __init__(self) -> None:
+        """
+        Initialise a SmartFormatter instance.
+        """
         self._rules: dict[str, list[FormatRule]] = {
             "python": [
-                FormatRule("trailing_whitespace", "python", r"[ \t]+$", "", "Remove trailing whitespace"),
+                FormatRule(
+                    "trailing_whitespace", "python", r"[ \t]+$", "", "Remove trailing whitespace"
+                ),
                 FormatRule("blank_lines", "python", r"\n{3,}", "\n\n", "Max 2 blank lines"),
                 FormatRule("import_order", "python", r"^(import|from)", "", "Import ordering"),
                 FormatRule("line_length", "python", r".{80,}", "", "Line length check"),
             ],
             "javascript": [
                 FormatRule("semicolons", "javascript", r"([^;])\s*$", r"\1;", "Add semicolons"),
-                FormatRule("single_quotes", "javascript", r'"([^"]*)"', r"'\1'", "Use single quotes"),
+                FormatRule(
+                    "single_quotes", "javascript", r'"([^"]*)"', r"'\1'", "Use single quotes"
+                ),
                 FormatRule("trailing_comma", "javascript", r",\s*}", "}", "Remove trailing commas"),
             ],
             "typescript": [
                 FormatRule("semicolons", "typescript", r"([^;])\s*$", r"\1;", "Add semicolons"),
-                FormatRule("single_quotes", "typescript", r'"([^"]*)"', r"'\1'", "Use single quotes"),
+                FormatRule(
+                    "single_quotes", "typescript", r'"([^"]*)"', r"'\1'", "Use single quotes"
+                ),
                 FormatRule("type_annotations", "typescript", r":\s*(any)", "", "Avoid 'any' type"),
             ],
         }
@@ -44,6 +73,21 @@ class SmartFormatter:
         language: str,
         rules: list[str] = None,
     ) -> tuple[str, list[dict]]:
+        """
+        Format.
+
+        Args:
+            code (str): source code to execute.
+            language (str): language string.
+            rules (list[str]): collection of rules. Defaults to ``None``.
+
+        Returns:
+            tuple[str, list[dict]]: a sequence of str, list[dict] entries (empty when there is
+                nothing to report).
+
+        Note:
+            Coroutine - must be awaited.
+        """
         rules_list = self._rules.get(language, [])
         if rules:
             rules_list = [r for r in rules_list if r.name in rules]
@@ -54,31 +98,57 @@ class SmartFormatter:
         for rule in rules_list:
             new_formatted = re.sub(rule.pattern, rule.replacement, formatted, flags=re.MULTILINE)
             if new_formatted != formatted:
-                changes.append({
-                    "rule": rule.name,
-                    "description": rule.description,
-                    "count": len(re.findall(rule.pattern, formatted)),
-                })
+                changes.append(
+                    {
+                        "rule": rule.name,
+                        "description": rule.description,
+                        "count": len(re.findall(rule.pattern, formatted)),
+                    }
+                )
                 formatted = new_formatted
 
         return formatted, changes
 
     async def check_style(self, code: str, language: str) -> list[dict]:
+        """
+        Check style.
+
+        Args:
+            code (str): source code to execute.
+            language (str): language string.
+
+        Returns:
+            list[dict]: a sequence of dict entries (empty when there is nothing to report).
+
+        Note:
+            Coroutine - must be awaited.
+        """
         rules_list = self._rules.get(language, [])
         issues = []
 
         for rule in rules_list:
             matches = re.findall(rule.pattern, code, re.MULTILINE)
             if matches:
-                issues.append({
-                    "rule": rule.name,
-                    "description": rule.description,
-                    "count": len(matches),
-                })
+                issues.append(
+                    {
+                        "rule": rule.name,
+                        "description": rule.description,
+                        "count": len(matches),
+                    }
+                )
 
         return issues
 
     def get_rules(self, language: str) -> list[dict]:
+        """
+        Return the rules.
+
+        Args:
+            language (str): language string.
+
+        Returns:
+            list[dict]: a sequence of dict entries (empty when there is nothing to report).
+        """
         rules = self._rules.get(language, [])
         return [
             {
@@ -90,6 +160,12 @@ class SmartFormatter:
         ]
 
     def add_rule(self, rule: FormatRule) -> None:
+        """
+        Add rule.
+
+        Args:
+            rule (FormatRule): rule.
+        """
         if rule.language not in self._rules:
             self._rules[rule.language] = []
         self._rules[rule.language].append(rule)

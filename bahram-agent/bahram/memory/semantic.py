@@ -1,3 +1,9 @@
+"""
+Semantic.
+
+Public objects: ``MemoryResult``, ``SemanticMemory``.
+"""
+
 from __future__ import annotations
 
 import logging
@@ -7,12 +13,26 @@ import time
 import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class MemoryResult:
+    """
+    Memory result.
+
+    Attributes:
+        id (str): id string.
+        content (str): text content to process.
+        score (float): numeric value for score.
+        source (str): source string.
+        timestamp (float): numeric value for timestamp.
+        metadata (dict): mapping of metadata.
+        scope (str): scope string.
+    """
+
     id: str
     content: str
     score: float
@@ -23,9 +43,19 @@ class MemoryResult:
 
 
 class SemanticMemory:
+    """
+    Semantic memory.
+    """
+
     def __init__(self, data_dir: str = "data/memory") -> None:
         # The literal ":memory:" is the documented opt-in for in-memory storage;
         # never treat it as a filesystem directory.
+        """
+        Initialise a SemanticMemory instance.
+
+        Args:
+            data_dir (str): directory that holds the on-disk state. Defaults to ``'data/memory'``.
+        """
         self._memory_only = str(data_dir) == ":memory:"
         self.data_dir = Path(data_dir) if not self._memory_only else Path("data/memory")
         if not self._memory_only:
@@ -80,8 +110,9 @@ class SemanticMemory:
         """)
         try:
             self._conn.execute("CREATE INDEX IF NOT EXISTS idx_memories_scope ON memories(scope)")
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.warning("Could not create the scope index: %s", exc)
+            logger.debug("Scope index not created: %s", exc)
         try:
             self._conn.executescript("""
                 CREATE VIRTUAL TABLE IF NOT EXISTS memories_fts USING fts5(
@@ -110,7 +141,9 @@ class SemanticMemory:
 
     def _migrate(self) -> None:
         try:
-            cursor = self._conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='memories'")
+            cursor = self._conn.execute(
+                "SELECT name FROM sqlite_master WHERE type='table' AND name='memories'"
+            )
             if not cursor.fetchone():
                 return
             cursor = self._conn.execute("PRAGMA table_info(memories)")
@@ -125,26 +158,70 @@ class SemanticMemory:
                 self._conn.execute("ALTER TABLE memories ADD COLUMN access_count INTEGER DEFAULT 0")
             self._conn.commit()
         except Exception as e:
-            logger.debug(f"Migration skipped: {e}")
+            logger.warning("Schema migration skipped: %s", e)
 
     def add(
-        self, content: str, source: str = "", metadata: dict = None,
-        scope: str = "global", importance: float = 0.5, confidence: float = 1.0,
+        self,
+        content: str,
+        source: str = "",
+        metadata: dict = None,
+        scope: str = "global",
+        importance: float = 0.5,
+        confidence: float = 1.0,
     ) -> str:
+        """
+        Add.
+
+        Args:
+            content (str): text content to process.
+            source (str): source string. Defaults to ``''``.
+            metadata (dict): mapping of metadata. Defaults to ``None``.
+            scope (str): scope string. Defaults to ``'global'``.
+            importance (float): numeric value for importance. Defaults to ``0.5``.
+            confidence (float): numeric value for confidence. Defaults to ``1.0``.
+
+        Returns:
+            str: the rendered string.
+        """
         memory_id = str(uuid.uuid4())[:12]
         self._conn.execute(
-            "INSERT INTO memories (id, content, source, timestamp, metadata, scope, importance, confidence) "
+            "INSERT INTO memories (id, content, source, timestamp, metadata, "
+            "scope, importance, confidence) "
             "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-            (memory_id, content, source, time.time(), "{}" if not metadata else str(metadata),
-             scope, importance, confidence),
+            (
+                memory_id,
+                content,
+                source,
+                time.time(),
+                "{}" if not metadata else str(metadata),
+                scope,
+                importance,
+                confidence,
+            ),
         )
         self._conn.commit()
         return memory_id
 
     def search(
-        self, query: str, limit: int = 10, min_score: float = 0.0,
+        self,
+        query: str,
+        limit: int = 10,
+        min_score: float = 0.0,
         scope: str | None = None,
     ) -> list[MemoryResult]:
+        """
+        Search.
+
+        Args:
+            query (str): search query.
+            limit (int): maximum number of items to return. Defaults to ``10``.
+            min_score (float): numeric value for min score. Defaults to ``0.0``.
+            scope (str | None): scope string. Defaults to ``None``.
+
+        Returns:
+            list[MemoryResult]: a sequence of MemoryResult entries (empty when there is nothing to
+                report).
+        """
         results = []
         if not query:
             return results
@@ -165,11 +242,18 @@ class SemanticMemory:
                 # metadata(4) scope(5) rank(6)
                 score = abs(row[6]) if row[6] is not None else 0.0
                 if score >= min_score:
-                    results.append(MemoryResult(
-                        id=row[0], content=row[1], score=score,
-                        source=row[2], timestamp=row[3], scope=row[5],
-                    ))
-        except Exception:
+                    results.append(
+                        MemoryResult(
+                            id=row[0],
+                            content=row[1],
+                            score=score,
+                            source=row[2],
+                            timestamp=row[3],
+                            scope=row[5],
+                        )
+                    )
+        except Exception as e:
+            logger.warning("FTS query failed, using LIKE fallback: %s", e)
             # FTS unavailable or query unsupported: tokenized LIKE fallback
             # that ANDs every search term across content/source.
             tokens = [t for t in re.split(r"[\W_]+", query.lower()) if t]
@@ -181,39 +265,99 @@ class SemanticMemory:
             sql += scope_clause + " ORDER BY timestamp DESC LIMIT ?"
             rows = self._conn.execute(sql, (*params, *scope_params, limit)).fetchall()
             for row in rows:
-                results.append(MemoryResult(
-                    id=row[0], content=row[1], score=0.5,
-                    source=row[2], timestamp=row[3], scope=row[5] if len(row) > 5 else "global",
-                ))
+                results.append(
+                    MemoryResult(
+                        id=row[0],
+                        content=row[1],
+                        score=0.5,
+                        source=row[2],
+                        timestamp=row[3],
+                        scope=row[5] if len(row) > 5 else "global",
+                    )
+                )
         return results
 
-    def get(self, memory_id: str) -> Optional[dict]:
+    def get(self, memory_id: str) -> dict | None:
+        """
+        Get.
+
+        Args:
+            memory_id (str): memory id string.
+
+        Returns:
+            dict | None: a mapping of str, Any.
+        """
         row = self._conn.execute(
             "SELECT id, content, source, timestamp, metadata FROM memories WHERE id = ?",
             (memory_id,),
         ).fetchone()
         if row:
-            return {"id": row[0], "content": row[1], "source": row[2], "timestamp": row[3], "metadata": row[4]}
+            return {
+                "id": row[0],
+                "content": row[1],
+                "source": row[2],
+                "timestamp": row[3],
+                "metadata": row[4],
+            }
         return None
 
     def delete(self, memory_id: str) -> bool:
+        """
+        Delete.
+
+        Args:
+            memory_id (str): memory id string.
+
+        Returns:
+            bool: ``True`` when the operation succeeds, otherwise ``False``.
+        """
         cur = self._conn.execute("DELETE FROM memories WHERE id = ?", (memory_id,))
         self._conn.commit()
         return cur.rowcount > 0
 
     def get_context(self, query: str, max_memories: int = 5) -> str:
+        """
+        Return the context.
+
+        Args:
+            query (str): search query.
+            max_memories (int): numeric value for max memories. Defaults to ``5``.
+
+        Returns:
+            str: the rendered string.
+        """
         results = self.search(query, limit=max_memories)
         if not results:
             return ""
         return "\n".join(f"[{r.source}] {r.content[:200]}" for r in results)
 
     def get_statistics(self) -> dict[str, Any]:
+        """
+        Return the statistics.
+
+        Returns:
+            dict[str, Any]: a mapping of str, Any.
+        """
         count = self._conn.execute("SELECT COUNT(*) FROM memories").fetchone()[0]
-        sources = [r[0] for r in self._conn.execute("SELECT DISTINCT source FROM memories").fetchall()]
-        scopes = [r[0] for r in self._conn.execute("SELECT DISTINCT scope FROM memories").fetchall()]
+        sources = [
+            r[0] for r in self._conn.execute("SELECT DISTINCT source FROM memories").fetchall()
+        ]
+        scopes = [
+            r[0] for r in self._conn.execute("SELECT DISTINCT scope FROM memories").fetchall()
+        ]
         return {"total_memories": count, "sources": sources, "scopes": scopes}
 
     def consolidate(self, max_age_hours: int = 168, min_confidence: float = 0.1) -> int:
+        """
+        Consolidate.
+
+        Args:
+            max_age_hours (int): numeric value for max age hours. Defaults to ``168``.
+            min_confidence (float): numeric value for min confidence. Defaults to ``0.1``.
+
+        Returns:
+            int: the computed numeric value.
+        """
         cutoff = time.time() - (max_age_hours * 3600)
         cur = self._conn.execute(
             "DELETE FROM memories WHERE timestamp < ? AND confidence < ?",
@@ -223,6 +367,15 @@ class SemanticMemory:
         return cur.rowcount
 
     def decay(self, decay_rate: float = 0.99) -> int:
+        """
+        Decay.
+
+        Args:
+            decay_rate (float): numeric value for decay rate. Defaults to ``0.99``.
+
+        Returns:
+            int: the computed numeric value.
+        """
         cur = self._conn.execute(
             "UPDATE memories SET confidence = confidence * ? WHERE confidence > 0.1",
             (decay_rate,),
@@ -231,6 +384,15 @@ class SemanticMemory:
         return cur.rowcount
 
     def get_user_profile(self, user_id: str) -> dict[str, Any]:
+        """
+        Return the user profile.
+
+        Args:
+            user_id (str): user identifier.
+
+        Returns:
+            dict[str, Any]: a mapping of str, Any.
+        """
         rows = self.search(query=user_id, limit=20, scope="user")
         profile = {"user_id": user_id, "preferences": [], "conventions": [], "facts": []}
         for r in rows:
@@ -243,6 +405,17 @@ class SemanticMemory:
         return profile
 
     def store_user_profile(self, user_id: str, key: str, value: str) -> str:
+        """
+        Store user profile.
+
+        Args:
+            user_id (str): user identifier.
+            key (str): key string.
+            value (str): value string.
+
+        Returns:
+            str: the rendered string.
+        """
         return self.add(
             content=f"{key}: {value}",
             source=f"user_profile_{user_id}",
@@ -251,5 +424,8 @@ class SemanticMemory:
         )
 
     def close(self) -> None:
+        """
+        Release resources held by this object.
+        """
         if self._conn:
             self._conn.close()

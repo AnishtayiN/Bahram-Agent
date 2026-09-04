@@ -1,17 +1,36 @@
+"""
+Client.
+
+Public objects: ``MCPServerConfig``, ``MCPTool``, ``MCPClient``.
+"""
+
 from __future__ import annotations
 
 import asyncio
 import json
 import logging
-import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class MCPServerConfig:
+    """
+    MCP server config.
+
+    Attributes:
+        name (str): name of the object.
+        type (str): type string.
+        command (list[str]): shell command to execute.
+        url (str): url string.
+        env (dict[str, str]): mapping of env.
+        headers (dict[str, str]): mapping of headers.
+        enabled (bool): when ``True`` the object is active.
+        timeout (int): timeout in seconds.
+    """
 
     name: str
     type: str = "stdio"
@@ -22,28 +41,52 @@ class MCPServerConfig:
     enabled: bool = True
     timeout: int = 30
 
+
 @dataclass
 class MCPTool:
+    """
+    MCP tool.
+
+    Attributes:
+        name (str): name of the object.
+        description (str): human readable description.
+        input_schema (dict[str, Any]): mapping of input schema.
+        server_name (str): server name string.
+    """
 
     name: str
     description: str
     input_schema: dict[str, Any]
     server_name: str
 
+
 class MCPClient:
+    """
+    MCP client.
+    """
 
     def __init__(self) -> None:
+        """
+        Initialise a MCPClient instance.
+        """
         self.servers: dict[str, MCPServerConfig] = {}
         self.tools: dict[str, MCPTool] = {}
         self._connections: dict[str, Any] = {}
 
     def load_config(self, config_path: str) -> None:
+        """
+        Load config.
+
+        Args:
+            config_path (str): config path string.
+        """
         path = Path(config_path)
         if not path.exists():
             return
 
         try:
             import yaml
+
             with open(path) as f:
                 data = yaml.safe_load(f)
         except ImportError:
@@ -64,6 +107,18 @@ class MCPClient:
                 )
 
     async def connect(self, server_name: str) -> bool:
+        """
+        Connect.
+
+        Args:
+            server_name (str): server name string.
+
+        Returns:
+            bool: ``True`` when the operation succeeds, otherwise ``False``.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         config = self.servers.get(server_name)
         if not config:
             logger.error(f"Server not found: {server_name}")
@@ -122,7 +177,6 @@ class MCPClient:
             response = await self._receive_message(config.name)
 
             if response and "result" in response:
-
                 tools_request = {
                     "jsonrpc": "2.0",
                     "id": 2,
@@ -225,7 +279,7 @@ class MCPClient:
             process.stdin.write(data.encode())
             await process.stdin.drain()
 
-    async def _receive_message(self, server_name: str) -> Optional[dict]:
+    async def _receive_message(self, server_name: str) -> dict | None:
         conn = self._connections.get(server_name)
         if not conn:
             return None
@@ -233,9 +287,7 @@ class MCPClient:
         if conn["type"] == "stdio":
             process = conn["process"]
             try:
-                line = await asyncio.wait_for(
-                    process.stdout.readline(), timeout=30
-                )
+                line = await asyncio.wait_for(process.stdout.readline(), timeout=30)
                 if line:
                     return json.loads(line.decode())
             except asyncio.TimeoutError:
@@ -244,6 +296,19 @@ class MCPClient:
         return None
 
     async def call_tool(self, tool_name: str, arguments: dict[str, Any]) -> str:
+        """
+        Call tool.
+
+        Args:
+            tool_name (str): tool name string.
+            arguments (dict[str, Any]): mapping of arguments.
+
+        Returns:
+            str: the rendered string.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         tool = self.tools.get(tool_name)
         if not tool:
             return f"Tool not found: {tool_name}"
@@ -279,6 +344,15 @@ class MCPClient:
             return f"Error calling tool: {e}"
 
     async def disconnect(self, server_name: str) -> None:
+        """
+        Disconnect.
+
+        Args:
+            server_name (str): server name string.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         conn = self._connections.pop(server_name, None)
         if conn and conn["type"] == "stdio":
             process = conn.get("process")
@@ -289,24 +363,51 @@ class MCPClient:
         self.tools = {k: v for k, v in self.tools.items() if v.server_name != server_name}
 
     async def disconnect_all(self) -> None:
+        """
+        Disconnect all.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         for server_name in list(self._connections.keys()):
             await self.disconnect(server_name)
 
     def get_tools_schema(self) -> list[dict[str, Any]]:
+        """
+        Return the tools schema.
+
+        Returns:
+            list[dict[str, Any]]: a sequence of dict[str, Any] entries (empty when there is nothing
+                to report).
+        """
         schemas = []
         for name, tool in self.tools.items():
-            schemas.append({
-                "type": "function",
-                "function": {
-                    "name": name,
-                    "description": tool.description,
-                    "parameters": tool.input_schema,
-                },
-            })
+            schemas.append(
+                {
+                    "type": "function",
+                    "function": {
+                        "name": name,
+                        "description": tool.description,
+                        "parameters": tool.input_schema,
+                    },
+                }
+            )
         return schemas
 
     def list_servers(self) -> list[str]:
+        """
+        List servers.
+
+        Returns:
+            list[str]: a sequence of str entries (empty when there is nothing to report).
+        """
         return list(self.servers.keys())
 
     def list_tools(self) -> list[str]:
+        """
+        List tools.
+
+        Returns:
+            list[str]: a sequence of str entries (empty when there is nothing to report).
+        """
         return list(self.tools.keys())

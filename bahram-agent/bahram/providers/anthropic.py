@@ -1,19 +1,39 @@
+"""
+Anthropic.
+
+Public objects: ``AnthropicProvider``.
+"""
+
 from __future__ import annotations
 
 import json
 import logging
 import time
-from typing import Any, AsyncIterator
+from collections.abc import AsyncIterator
+from typing import Any
 
-from bahram.providers.base import BaseProvider
 from bahram.core.engine import AgentResponse, ToolCall
+from bahram.providers.base import BaseProvider
 
 logger = logging.getLogger(__name__)
 
+
 class AnthropicProvider(BaseProvider):
+    """
+    Anthropic provider.
+    """
+
     BASE_URL = "https://api.anthropic.com/v1"
 
     def __init__(self, api_key: str = "", model: str = "", **kwargs: Any) -> None:
+        """
+        Initialise a AnthropicProvider instance.
+
+        Args:
+            api_key (str): api key string. Defaults to ``''``.
+            model (str): model identifier in ``provider/model`` form. Defaults to ``''``.
+            **kwargs (Any): keyword arguments forwarded to the implementation.
+        """
         super().__init__(api_key=api_key, model=model or "claude-sonnet-4-20250514", **kwargs)
         self.temperature = kwargs.get("temperature", 0.7)
         self.max_tokens = kwargs.get("max_tokens", 4096)
@@ -116,14 +136,18 @@ class AnthropicProvider(BaseProvider):
         for msg in messages:
             role = msg.get("role", "user")
             if role == "tool":
-                anthropic_msgs.append({
-                    "role": "user",
-                    "content": [{
-                        "type": "tool_result",
-                        "tool_use_id": msg.get("tool_call_id", ""),
-                        "content": msg.get("content", ""),
-                    }],
-                })
+                anthropic_msgs.append(
+                    {
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "tool_result",
+                                "tool_use_id": msg.get("tool_call_id", ""),
+                                "content": msg.get("content", ""),
+                            }
+                        ],
+                    }
+                )
             elif role == "assistant":
                 content_parts = []
                 if msg.get("content"):
@@ -134,13 +158,20 @@ class AnthropicProvider(BaseProvider):
                         args = json.loads(func.get("arguments", "{}"))
                     except json.JSONDecodeError:
                         args = {}
-                    content_parts.append({
-                        "type": "tool_use",
-                        "id": tc.get("id", ""),
-                        "name": func.get("name", ""),
-                        "input": args,
-                    })
-                anthropic_msgs.append({"role": "assistant", "content": content_parts if content_parts else msg.get("content", "")})
+                    content_parts.append(
+                        {
+                            "type": "tool_use",
+                            "id": tc.get("id", ""),
+                            "name": func.get("name", ""),
+                            "input": args,
+                        }
+                    )
+                anthropic_msgs.append(
+                    {
+                        "role": "assistant",
+                        "content": content_parts if content_parts else msg.get("content", ""),
+                    }
+                )
             else:
                 anthropic_msgs.append({"role": role, "content": msg.get("content", "")})
         return anthropic_msgs
@@ -149,11 +180,13 @@ class AnthropicProvider(BaseProvider):
         converted = []
         for t in tools:
             func = t.get("function", t)
-            converted.append({
-                "name": func.get("name", ""),
-                "description": func.get("description", ""),
-                "input_schema": func.get("parameters", {}),
-            })
+            converted.append(
+                {
+                    "name": func.get("name", ""),
+                    "description": func.get("description", ""),
+                    "input_schema": func.get("parameters", {}),
+                }
+            )
         return converted
 
     def _parse_anthropic_response(self, data: dict) -> AgentResponse:
@@ -164,14 +197,22 @@ class AnthropicProvider(BaseProvider):
             if part.get("type") == "text":
                 text_parts.append(part.get("text", ""))
             elif part.get("type") == "tool_use":
-                tool_calls.append(ToolCall(
-                    id=part.get("id", f"call_{int(time.time() * 1000)}"),
-                    name=part.get("name", ""),
-                    arguments=part.get("input", {}),
-                ))
+                tool_calls.append(
+                    ToolCall(
+                        id=part.get("id", f"call_{int(time.time() * 1000)}"),
+                        name=part.get("name", ""),
+                        arguments=part.get("input", {}),
+                    )
+                )
         return AgentResponse(content="\n".join(text_parts), tool_calls=tool_calls)
 
     def get_models(self) -> list[str]:
+        """
+        Return the models.
+
+        Returns:
+            list[str]: a sequence of str entries (empty when there is nothing to report).
+        """
         return [
             "claude-sonnet-4-20250514",
             "claude-3-5-sonnet-20241022",
@@ -180,4 +221,10 @@ class AnthropicProvider(BaseProvider):
         ]
 
     def get_provider_info(self) -> dict[str, Any]:
+        """
+        Return the provider info.
+
+        Returns:
+            dict[str, Any]: a mapping of str, Any.
+        """
         return {"name": "anthropic", "configured": bool(self.api_key), "model": self.model}

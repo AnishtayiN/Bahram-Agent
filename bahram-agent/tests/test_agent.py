@@ -1,12 +1,14 @@
 from __future__ import annotations
 
+from unittest.mock import AsyncMock, MagicMock
+
 import pytest
-import asyncio
-from unittest.mock import AsyncMock, MagicMock, patch
 
 from bahram.core.agent import Agent
-from bahram.core.config import Config, ProviderConfig, AgentConfig, MemoryConfig, ToolsConfig, SecurityConfig
-from bahram.core.engine import AgentResponse, Message, MessageRole, ToolCall
+from bahram.core.config import (
+    Config,
+)
+from bahram.core.engine import AgentResponse, ToolCall
 
 
 class MockProvider:
@@ -84,10 +86,12 @@ class TestAgentChat:
         config = _make_config()
         agent = Agent(config=config)
         tool = AsyncMock()
-        tool.schema = MagicMock(return_value={
-            "type": "function",
-            "function": {"name": "echo", "description": "Echo tool", "parameters": {}},
-        })
+        tool.schema = MagicMock(
+            return_value={
+                "type": "function",
+                "function": {"name": "echo", "description": "Echo tool", "parameters": {}},
+            }
+        )
         tool.execute = AsyncMock(return_value="Tool output")
         agent.engine.register_tool("echo", tool)
 
@@ -107,7 +111,7 @@ class TestAgentChat:
         agent.engine.register_provider("test", mock_provider)
         agent.engine.providers = {"test": mock_provider, "anthropic": mock_provider}
 
-        response = await agent.chat("Hi", model="test")
+        await agent.chat("Hi", model="test")
         assert len(agent.sessions) == 1
 
 
@@ -129,21 +133,22 @@ class TestAgentMemory:
 
 
 class TestAgentSkills:
-    def test_skills_retrieval(self):
+    async def test_skills_retrieval(self):
         config = _make_config()
         agent = Agent(config=config)
         agent._skills = MagicMock()
         mock_skill = MagicMock()
         mock_skill.metadata.name = "test_skill"
         mock_skill.metadata.description = "A test skill"
-        agent._skills.find_skill.return_value = mock_skill
-        result = agent._retrieve_skills("do something")
+        # SkillManager.find_skill is a coroutine, so the double must be too.
+        agent._skills.find_skill = AsyncMock(return_value=mock_skill)
+        result = await agent._retrieve_skills("do something")
         assert "test_skill" in result
 
-    def test_no_skills(self):
+    async def test_no_skills(self):
         config = _make_config()
         agent = Agent(config=config)
-        result = agent._retrieve_skills("do something")
+        result = await agent._retrieve_skills("do something")
         assert result == ""
 
 

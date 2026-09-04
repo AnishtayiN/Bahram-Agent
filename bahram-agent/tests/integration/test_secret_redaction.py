@@ -1,4 +1,5 @@
 """Tests for secret redaction in monitoring and logging."""
+
 from __future__ import annotations
 
 from bahram.monitoring.status import redact_secrets
@@ -41,6 +42,7 @@ class TestRedactTelegramTokens:
 class TestRedactEnvironmentSecrets:
     def test_env_var_redacted(self) -> None:
         import os
+
         old_val = os.environ.get("TEST_SECRET_XYZ_98765")
         try:
             os.environ["TEST_SECRET_XYZ_98765"] = "supersecretvalue999"
@@ -56,6 +58,7 @@ class TestRedactEnvironmentSecrets:
 
     def test_short_env_var_not_redacted(self) -> None:
         import os
+
         old_val = os.environ.get("TEST_SHORT_98765")
         try:
             os.environ["TEST_SHORT_98765"] = "abc"
@@ -77,7 +80,7 @@ class TestRedactToolOutput:
         assert "REDACTED" in result
 
     def test_tool_result_with_token_is_redacted(self) -> None:
-        tool_output = 'Bot token: 9876543210:ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefgh'
+        tool_output = "Bot token: 9876543210:ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefgh"
         result = redact_secrets(tool_output)
         assert "9876543210:ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefgh" not in result
         assert "REDACTED" in result
@@ -91,7 +94,10 @@ class TestRedactToolOutput:
         assert redact_secrets("") == ""
 
     def test_jwt_redacted(self) -> None:
-        jwt = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dozjgNryP4J3jVmNHl0w5N_XgL0n3I9PlFUP0THsR8U"
+        jwt = (
+            "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dozjgNryP4J3jVmNHl0w5"
+            "N_XgL0n3I9PlFUP0THsR8U"
+        )
         result = redact_secrets(jwt)
         assert jwt not in result
         assert "REDACTED" in result

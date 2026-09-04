@@ -1,3 +1,9 @@
+"""
+Gateway service.
+
+Public objects: ``GatewayService``.
+"""
+
 from __future__ import annotations
 
 import logging
@@ -6,7 +12,6 @@ import platform
 import subprocess
 import sys
 from pathlib import Path
-from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -17,12 +22,31 @@ PLIST_FILE = Path.home() / "Library" / "LaunchAgents" / "com.bahram.agent.plist"
 
 
 class GatewayService:
+    """
+    Gateway service.
+    """
+
     def __init__(self, work_dir: str | None = None) -> None:
+        """
+        Initialise a GatewayService instance.
+
+        Args:
+            work_dir (str | None): work dir string. Defaults to ``None``.
+        """
         self._platform = platform.system().lower()
         self._work_dir = work_dir or os.getcwd()
         self._python_path = sys.executable
 
     def install_service(self, system: bool = False) -> dict:
+        """
+        Install service.
+
+        Args:
+            system (bool): when ``True``, enable system. Defaults to ``False``.
+
+        Returns:
+            dict: a mapping of str, Any.
+        """
         if self._platform == "linux":
             return self._install_systemd(system)
         elif self._platform == "darwin":
@@ -30,6 +54,12 @@ class GatewayService:
         return {"error": f"Unsupported platform: {self._platform}"}
 
     def uninstall_service(self) -> dict:
+        """
+        Uninstall service.
+
+        Returns:
+            dict: a mapping of str, Any.
+        """
         if self._platform == "linux":
             return self._uninstall_systemd()
         elif self._platform == "darwin":
@@ -37,6 +67,12 @@ class GatewayService:
         return {"error": f"Unsupported platform: {self._platform}"}
 
     def start_service(self) -> dict:
+        """
+        Start service.
+
+        Returns:
+            dict: a mapping of str, Any.
+        """
         if self._platform == "linux":
             return self._systemctl("start")
         elif self._platform == "darwin":
@@ -44,6 +80,12 @@ class GatewayService:
         return {"error": f"Unsupported platform: {self._platform}"}
 
     def stop_service(self) -> dict:
+        """
+        Stop service.
+
+        Returns:
+            dict: a mapping of str, Any.
+        """
         if self._platform == "linux":
             return self._systemctl("stop")
         elif self._platform == "darwin":
@@ -51,17 +93,23 @@ class GatewayService:
         return {"error": f"Unsupported platform: {self._platform}"}
 
     def get_status(self) -> dict:
+        """
+        Return the status.
+
+        Returns:
+            dict: a mapping of str, Any.
+        """
         if self._platform == "linux":
             return self._systemctl("is-active")
         elif self._platform == "darwin":
-            return self._launchctl_list()
+            return self._launchctl("list")
         return {"status": "unknown", "platform": self._platform}
 
     def _generate_systemd_unit(self, system: bool) -> str:
         user_section = ""
         exec_start = f"{self._python_path} -m bahram gateway"
         if not system:
-            user_section = "User=%s\n" % os.getenv("USER", "bahram")
+            user_section = f"User={os.getenv('USER', 'bahram')}\n"
             target_dir = CONFIG_DIR
         else:
             target_dir = Path("/opt/bahram")
@@ -82,30 +130,45 @@ StandardError=journal
 Environment=BAHRAM_CONFIG={target_dir}/config.yaml
 
 [Install]
-WantedBy={'default.target' if not system else 'multi-user.target'}
+WantedBy={"default.target" if not system else "multi-user.target"}
 """
 
     def _install_systemd(self, system: bool) -> dict:
         try:
             unit_content = self._generate_systemd_unit(system)
-            target = UNIT_FILE if system else Path.home() / ".config" / "systemd" / "user" / f"{SERVICE_NAME}.service"
+            target = (
+                UNIT_FILE
+                if system
+                else Path.home() / ".config" / "systemd" / "user" / f"{SERVICE_NAME}.service"
+            )
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_text(unit_content)
             logger.info(f"Systemd unit written to {target}")
 
             if system:
-                result = subprocess.run(["systemctl", "daemon-reload"], capture_output=True, text=True)
+                result = subprocess.run(
+                    ["systemctl", "daemon-reload"], capture_output=True, text=True
+                )
                 if result.returncode != 0:
                     return {"status": "error", "error": result.stderr.strip()}
-                result = subprocess.run(["systemctl", "enable", SERVICE_NAME], capture_output=True, text=True)
+                result = subprocess.run(
+                    ["systemctl", "enable", SERVICE_NAME], capture_output=True, text=True
+                )
                 if result.returncode != 0:
                     return {"status": "error", "error": result.stderr.strip()}
             else:
-                result = subprocess.run(["systemctl", "--user", "daemon-reload"], capture_output=True, text=True)
+                result = subprocess.run(
+                    ["systemctl", "--user", "daemon-reload"], capture_output=True, text=True
+                )
                 if result.returncode != 0:
                     return {"status": "error", "error": result.stderr.strip()}
 
-            return {"status": "installed", "type": "systemd", "unit_path": str(target), "system": system}
+            return {
+                "status": "installed",
+                "type": "systemd",
+                "unit_path": str(target),
+                "system": system,
+            }
         except Exception as e:
             logger.error(f"Failed to install systemd service: {e}")
             return {"status": "error", "error": str(e)}
@@ -130,7 +193,9 @@ WantedBy={'default.target' if not system else 'multi-user.target'}
                 for flag in [[], ["--user"]]:
                     result = subprocess.run(
                         ["systemctl"] + flag + [action, SERVICE_NAME],
-                        capture_output=True, text=True, timeout=10,
+                        capture_output=True,
+                        text=True,
+                        timeout=10,
                     )
                     active = result.stdout.strip() == "active"
                     return {"status": "active" if active else "inactive", "action": action}
@@ -139,7 +204,9 @@ WantedBy={'default.target' if not system else 'multi-user.target'}
             for flag in [[], ["--user"]]:
                 result = subprocess.run(
                     ["systemctl"] + flag + [action, SERVICE_NAME],
-                    capture_output=True, text=True, timeout=30,
+                    capture_output=True,
+                    text=True,
+                    timeout=30,
                 )
                 if result.returncode == 0:
                     return {"status": "ok", "action": action}
@@ -203,14 +270,18 @@ WantedBy={'default.target' if not system else 'multi-user.target'}
             if action == "list":
                 result = subprocess.run(
                     ["launchctl", "list", "com.bahram.agent"],
-                    capture_output=True, text=True, timeout=10,
+                    capture_output=True,
+                    text=True,
+                    timeout=10,
                 )
                 running = result.returncode == 0
                 return {"status": "active" if running else "inactive", "action": action}
 
             result = subprocess.run(
                 ["launchctl", action, str(PLIST_FILE)],
-                capture_output=True, text=True, timeout=30,
+                capture_output=True,
+                text=True,
+                timeout=30,
             )
             return {"status": "ok" if result.returncode == 0 else "error", "action": action}
         except FileNotFoundError:

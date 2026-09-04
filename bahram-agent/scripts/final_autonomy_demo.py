@@ -6,6 +6,7 @@ printing safe operational milestones as each stage completes.
 
 Usage: python3 scripts/final_autonomy_demo.py
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -21,20 +22,21 @@ from bahram.autonomy.budget import BudgetManager
 from bahram.autonomy.cost import estimate_cost
 from bahram.autonomy.events import EventTracker
 from bahram.autonomy.learning import LearningEngine
-from bahram.autonomy.plan import Plan, PlanStep, PlanStatus, StepStatus
+from bahram.autonomy.plan import Plan, PlanStatus, PlanStep, StepStatus
 from bahram.autonomy.recovery import RecoveryManager
 from bahram.autonomy.skill_lifecycle import SkillLifecycle
 from bahram.autonomy.subagent import SubagentEngine
 from bahram.core.engine import (
-    AgentEngine, AgentResponse, Message, MessageRole, RunConfig, RunState,
-    ToolCall, ToolExecutor, ToolResult,
+    AgentEngine,
+    AgentResponse,
+    RunState,
+    ToolCall,
+    ToolExecutor,
 )
 from bahram.core.smart_context import SmartContextManager
 from bahram.memory.semantic import SemanticMemory
-from bahram.monitoring.status import RuntimeStatus, status_report, doctor_check, redact_secrets
+from bahram.monitoring.status import doctor_check, redact_secrets, status_report
 from bahram.platforms.circuit_breaker import CircuitBreaker
-from bahram.security.approval import ApprovalSystem, ApprovalConfig, ApprovalMode
-
 
 MILESTONES = [
     "SESSION_CREATED",
@@ -107,7 +109,7 @@ async def main() -> None:
         # 3. SKILLS RETRIEVED
         le = LearningEngine(data_dir=f"{tmpdir}/learning")
         sl = SkillLifecycle(le)
-        candidates = sl.get_candidates()
+        sl.get_candidates()
         emit("SKILLS_RETRIEVED", start)
 
         # 4. SMART CONTEXT BUILT
@@ -144,9 +146,11 @@ async def main() -> None:
         emit("TOOL_EXECUTED", start)
 
         # 8. SUBAGENT STARTED
-        provider = DeterministicProvider([
-            AgentResponse(content="Subagent analysis complete"),
-        ])
+        provider = DeterministicProvider(
+            [
+                AgentResponse(content="Subagent analysis complete"),
+            ]
+        )
         engine = AgentEngine()
         engine.providers["demo"] = provider
         se = SubagentEngine(engine)
@@ -173,7 +177,7 @@ async def main() -> None:
 
         # 11. RECOVERY COMPLETE
         rm = RecoveryManager(data_dir=f"{tmpdir}/recovery")
-        cp = rm.checkpoint(run_id=run_id, plan=plan, context_summary="Demo complete")
+        rm.checkpoint(run_id=run_id, plan=plan, context_summary="Demo complete")
         loaded = rm.load_checkpoint(run_id)
         assert loaded is not None
         emit("RECOVERY_COMPLETE", start)
@@ -219,7 +223,7 @@ async def main() -> None:
         # 17. SKILL UPDATED
         lessons = le.get_lessons()
         if lessons:
-            lesson_ids = [l.id for l in lessons[:2]]
+            lesson_ids = [lesson.id for lesson in lessons[:2]]
             skill = await sl.generate_from_lessons(lesson_ids, "inspect and report")
             if skill:
                 emit("SKILL_UPDATED", start)
@@ -232,8 +236,8 @@ async def main() -> None:
         mem2 = SemanticMemory(data_dir=f"{tmpdir}/memory")
         le2 = LearningEngine(data_dir=f"{tmpdir}/learning")
         sl2 = SkillLifecycle(le2)
-        rm2 = RecoveryManager(data_dir=f"{tmpdir}/recovery")
-        et2 = EventTracker(data_dir=f"{tmpdir}/events")
+        RecoveryManager(data_dir=f"{tmpdir}/recovery")
+        EventTracker(data_dir=f"{tmpdir}/events")
         results2 = mem2.search("indentation")
         assert len(results2) >= 1
         emit("RESTART_COMPLETED", start)
@@ -260,13 +264,18 @@ async def main() -> None:
 
         # BUDGET + COST CHECK
         bm = BudgetManager()
-        bm.record_model_call(run_id, session_id=session_id, input_tokens=500, output_tokens=200,
-                             model="anthropic/claude-sonnet-4-20250514")
+        bm.record_model_call(
+            run_id,
+            session_id=session_id,
+            input_tokens=500,
+            output_tokens=200,
+            model="anthropic/claude-sonnet-4-20250514",
+        )
         cost = estimate_cost("anthropic/claude-sonnet-4-20250514", 500, 200)
         budget = bm.check_budget(run_id)
 
         # MONITORING
-        status = status_report()
+        status_report()
         health = doctor_check()
         redacted = redact_secrets("API key: sk-abcdefghijklmnopqrstuvwxyz123456")
         assert "[REDACTED_OPENAI_KEY]" in redacted
@@ -275,7 +284,7 @@ async def main() -> None:
         cb = CircuitBreaker()
         cb.record_failure("demo_provider")
         cb.record_failure("demo_provider")
-        cb_status = cb.get_status()
+        cb.get_status()
 
         print()
         print("=" * 60)
@@ -289,7 +298,10 @@ async def main() -> None:
         print(f"  Data dir:   {tmpdir}")
         print(f"  Cost:       ${cost:.6f}")
         print(f"  Budget OK:  {budget['can_continue']}")
-        print(f"  Health:     {len([h for h in health if h['healthy']])}/{len(health)} components healthy")
+        print(
+            f"  Health:     {len([h for h in health if h['healthy']])}/{len(health)} "
+            "components healthy"
+        )
         print(f"  Lessons:    {stats['total_lessons']}")
         print(f"  Events:     {len(trace)}")
         print(f"  Checkpoint: {len(loaded.completed_steps)} steps")

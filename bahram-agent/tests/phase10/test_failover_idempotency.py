@@ -3,19 +3,23 @@
 Tests that when a provider fails mid-execution and fallback takes over,
 already-completed tool calls are not duplicated.
 """
+
 from __future__ import annotations
 
-import asyncio
 import json
-from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+from bahram.autonomy.events import EventTracker
 from bahram.core.engine import (
-    AgentEngine, AgentResponse, Message, MessageRole, ToolCall, ToolResult, RunState,
+    AgentEngine,
+    AgentResponse,
+    Message,
+    MessageRole,
+    RunState,
+    ToolCall,
 )
 from bahram.providers.fallback import FallbackProvider
-from bahram.autonomy.events import EventTracker
 
 
 class FakeProvider:
@@ -74,9 +78,12 @@ class TestFailoverIdempotency:
         """If provider fails after requesting tool call, fallback should not re-execute."""
         tool_call = ToolCall(id="tc_1", name="recording_tool", arguments={"action": "write"})
 
-        primary = FakeProvider(responses=[
-            AgentResponse(content="Let me use the tool", tool_calls=[tool_call]),
-        ], should_fail=True)
+        primary = FakeProvider(
+            responses=[
+                AgentResponse(content="Let me use the tool", tool_calls=[tool_call]),
+            ],
+            should_fail=True,
+        )
 
         fallback_response = AgentResponse(content="Fallback completed", state=RunState.COMPLETED)
         fallback = FakeProvider(responses=[fallback_response])
@@ -84,6 +91,7 @@ class TestFailoverIdempotency:
         fb = FallbackProvider(primary, [fallback])
 
         from bahram.core.engine import ToolExecutor
+
         executor = ToolExecutor({"recording_tool": self.tool})
 
         result = await executor.execute(tool_call)
@@ -97,19 +105,30 @@ class TestFailoverIdempotency:
         """Fallback should receive the full message history including tool results."""
         tool_call = ToolCall(id="tc_1", name="recording_tool", arguments={"action": "read"})
 
-        primary = FakeProvider(responses=[
-            AgentResponse(content="Using tool", tool_calls=[tool_call]),
-        ], should_fail=True)
+        primary = FakeProvider(
+            responses=[
+                AgentResponse(content="Using tool", tool_calls=[tool_call]),
+            ],
+            should_fail=True,
+        )
 
-        fallback = FakeProvider(responses=[
-            AgentResponse(content="Continuing from where we left off", state=RunState.COMPLETED),
-        ])
+        fallback = FakeProvider(
+            responses=[
+                AgentResponse(
+                    content="Continuing from where we left off", state=RunState.COMPLETED
+                ),
+            ]
+        )
 
         fb = FallbackProvider(primary, [fallback])
 
         messages = [
             Message(role=MessageRole.USER, content="Do something"),
-            Message(role=MessageRole.ASSISTANT, content="Using tool", metadata={"tool_calls": [tool_call]}),
+            Message(
+                role=MessageRole.ASSISTANT,
+                content="Using tool",
+                metadata={"tool_calls": [tool_call]},
+            ),
             Message(role=MessageRole.TOOL, content="result of tool", tool_call_id="tc_1"),
         ]
 
@@ -150,9 +169,9 @@ class TestFailoverIdempotency:
         """FallbackProvider should try providers in order."""
         primary = FakeProvider(should_fail=True)
         fb1 = FakeProvider(should_fail=True)
-        fb2 = FakeProvider(responses=[
-            AgentResponse(content="FB2 success", state=RunState.COMPLETED)
-        ])
+        fb2 = FakeProvider(
+            responses=[AgentResponse(content="FB2 success", state=RunState.COMPLETED)]
+        )
 
         fb = FallbackProvider(primary, [fb1, fb2])
 
@@ -163,9 +182,9 @@ class TestFailoverIdempotency:
     @pytest.mark.asyncio
     async def test_primary_success_skips_fallback(self):
         """If primary succeeds, no fallback should be tried."""
-        primary = FakeProvider(responses=[
-            AgentResponse(content="Primary success", state=RunState.COMPLETED)
-        ])
+        primary = FakeProvider(
+            responses=[AgentResponse(content="Primary success", state=RunState.COMPLETED)]
+        )
         fallback = FakeProvider()
 
         fb = FallbackProvider(primary, [fallback])

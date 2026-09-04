@@ -3,11 +3,10 @@
 Tests that approval tokens cannot be replayed, reused after expiry,
 or applied to wrong users/runs/tools/arguments.
 """
+
 from __future__ import annotations
 
-import pytest
-
-from bahram.security.approval import ApprovalSystem, ApprovalConfig, ApprovalMode
+from bahram.security.approval import ApprovalConfig, ApprovalMode, ApprovalSystem
 
 
 class TestApprovalReplayDefense:
