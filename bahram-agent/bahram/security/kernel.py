@@ -189,7 +189,7 @@ class SecurityKernel:
         now = time.time()
         caps = self._capabilities.get(request.identity, [])
         for cap in caps:
-            if cap.expires_at and now > cap.expires_at:
+            if cap.expires_at is not None and now > cap.expires_at:
                 continue
             if cap.name == request.capability:
                 risk_order = {"low": 0, "medium": 1, "high": 2, "critical": 3}

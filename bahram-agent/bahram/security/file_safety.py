@@ -22,14 +22,20 @@ class FileWriteSafety:
         """
         Initialise a FileWriteSafety instance.
         """
+        # Directories, not just individual files: /etc/nginx/nginx.conf and
+        # /etc/cron.d/payload are every bit as dangerous as /etc/passwd, and
+        # enumerating files one by one can never keep up.
         self._protected_paths: list[str] = [
-            "/etc/passwd",
-            "/etc/shadow",
-            "/etc/sudoers",
+            "/etc",
             "/boot",
             "/sys",
             "/proc",
-            "/root/.ssh",
+            "/dev",
+            "/bin",
+            "/sbin",
+            "/usr/bin",
+            "/usr/sbin",
+            "/root",
         ]
         self._safe_root: str = ""
         self._max_file_size: int = 100 * 1024 * 1024
@@ -57,18 +63,23 @@ class FileWriteSafety:
         path_str = str(path)
         has_parent_ref = ".." in Path(path_str).parts
         real_path = os.path.realpath(path_str)
+        absolute_path = os.path.abspath(path_str)
 
         # Safe-root sandbox: every path must stay inside the configured root.
         if self._safe_root:
             root = os.path.realpath(self._safe_root)
             if real_path != root and not real_path.startswith(root + os.sep):
                 return False, f"Path is outside safe root: {self._safe_root}"
-        # Without a configured root, parent-directory traversal is only
-        # allowed when the resolved destination still stays inside the
-        # current working directory.
-        elif has_parent_ref:
+        # Without a configured root, the destination must still land inside the
+        # current working directory whenever anything redirects it there: an
+        # explicit "..", or a symlink.  A symlink is the quieter of the two -
+        # the path can contain no ".." at all and still resolve somewhere else
+        # entirely, which is why resolving the path is not optional here.
+        else:
             cwd = os.path.realpath(os.getcwd())
-            if real_path != cwd and not real_path.startswith(cwd + os.sep):
+            inside_cwd = real_path == cwd or real_path.startswith(cwd + os.sep)
+            redirected = has_parent_ref or real_path != absolute_path
+            if redirected and not inside_cwd:
                 return False, "Path traversal escapes working directory"
 
         for protected in self._protected_paths:

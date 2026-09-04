@@ -135,6 +135,22 @@ class SecretsManager:
         entry = self._secrets.get(name)
         return entry.value if entry else None
 
+    def redact(self, text: str) -> str:
+        """Return ``text`` with every stored secret value removed.
+
+        Args:
+            text (str): text that must not carry a secret - a log line, tool
+                output, or an error message about to reach the model.
+
+        Returns:
+            str: the scrubbed text.  Uses the shared redaction patterns plus
+                the exact values held here, so a secret that does not look
+                like one (a short internal token, say) is still removed.
+        """
+        from bahram.security.redaction import redact
+
+        return redact(text, extra_values=(s.value for s in self._secrets.values()))
+
     def get_secret_info(self, name: str) -> dict | None:
         """
         Return the secret info.

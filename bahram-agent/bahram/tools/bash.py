@@ -44,7 +44,10 @@ def _get_supply_chain():
 
             _supply_chain = SupplyChainGuard()
         except Exception as exc:  # pragma: no cover - defensive
-            # Fail loudly: a missing guard must never be invisible.
+            # Fail loudly: a missing guard must never be invisible.  This
+            # branch used to fire on every single call, because bash imported
+            # a SupplyChainGuard that supply_chain.py never defined - so the
+            # guard was silently dead from the day it was written.
             logger.warning(
                 "Security component could not be initialised (%s): %s",
                 "supply-chain guard",

@@ -102,6 +102,12 @@ class Agent:
             level=getattr(logging, log_config.level),
             format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
         )
+        # Tool output and provider errors routinely carry API keys.  Scrub
+        # every log record so a key cannot leak into a log file or a crash
+        # report just because something logged the request that failed.
+        from bahram.security.redaction import SecretRedactingFilter
+
+        SecretRedactingFilter.install()
 
     async def start(self) -> None:
         """
