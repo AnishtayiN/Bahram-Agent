@@ -11,14 +11,36 @@ import time
 import uuid
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
-from typing import Any
+from typing import TYPE_CHECKING, Any, cast
 
 from bahram.core.compressor import ContextCompressor
 from bahram.core.config import Config
 from bahram.core.context import Context
-from bahram.core.engine import AgentEngine, AgentResponse, Message, MessageRole, ToolCall
+from bahram.core.engine import (
+    AgentEngine,
+    AgentResponse,
+    Message,
+    MessageRole,
+    RunState,
+    ToolCall,
+)
 from bahram.core.persistence import SessionStore
 from bahram.core.smart_context import SmartContextManager
+
+if TYPE_CHECKING:  # imported inside methods at runtime to keep start-up light
+    from bahram.autonomy.budget import BudgetManager
+    from bahram.autonomy.events import EventTracker
+    from bahram.autonomy.executor import PlanExecutor
+    from bahram.autonomy.jobs import JobEngine
+    from bahram.autonomy.learning import LearningEngine
+    from bahram.autonomy.planner import Planner
+    from bahram.autonomy.recovery import RecoveryManager
+    from bahram.autonomy.replanner import Replanner
+    from bahram.autonomy.skill_lifecycle import SkillLifecycle
+    from bahram.autonomy.subagent import SubagentEngine
+    from bahram.autonomy.verification import VerificationEngine
+    from bahram.memory.semantic import SemanticMemory
+    from bahram.skills.manager import SkillManager
 
 logger = logging.getLogger(__name__)
 
@@ -78,21 +100,22 @@ class Agent:
             else _memory_db.replace("memory.db", "sessions.db")
         )
         self._store = SessionStore(db_path=_session_db)
-        self._memory = None
-        self._skills = None
+        self._memory: SemanticMemory | None = None
+        self._skills: SkillManager | None = None
         self._setup_logging()
 
-        self._planner = None
-        self._verification_engine = None
-        self._replanner = None
-        self._plan_executor = None
-        self._subagent_engine = None
-        self._job_engine = None
-        self._recovery_manager = None
-        self._learning_engine = None
-        self._skill_lifecycle = None
-        self._budget_manager = None
-        self._event_tracker = None
+        self._planner: Planner | None = None
+        self._verification_engine: VerificationEngine | None = None
+        self._replanner: Replanner | None = None
+        self._plan_executor: PlanExecutor | None = None
+        self._subagent_engine: SubagentEngine | None = None
+        self._job_engine: JobEngine | None = None
+        self._recovery_manager: RecoveryManager | None = None
+        self._learning_engine: LearningEngine | None = None
+        self._skill_lifecycle: SkillLifecycle | None = None
+        self._budget_manager: BudgetManager | None = None
+        self._event_tracker: EventTracker | None = None
+        self._mcp_client: Any | None = None
 
         logger.info(f"Bahram Agent v{self.config.agent.version} initialized")
 
@@ -177,10 +200,13 @@ class Agent:
         if len(providers) >= 2:
             from bahram.providers.fallback import FallbackProvider
 
-            primary = providers[0]
-            fallbacks = providers[1:]
+            primary = cast(Any, providers[0])
+            fallbacks = cast(list, providers[1:])
             fallback_provider = FallbackProvider(primary, fallbacks)
-            self.engine.providers["__fallback__"] = fallback_provider
+            # FallbackProvider satisfies the provider protocol at run time but
+            # is not a subclass of it, hence the cast rather than a real fix in
+            # bahram/providers/fallback.py.
+            self.engine.providers["__fallback__"] = cast(Any, fallback_provider)
             logger.info(
                 f"Provider failover configured: primary={primary.__class__.__name__}, "
                 f"fallbacks={[f.__class__.__name__ for f in fallbacks]}"
@@ -194,6 +220,18 @@ class Agent:
         logger.info("Engine subsystems wired (budget, events, circuit breaker)")
 
     async def _init_mcp_tools(self) -> None:
+        """Connect to the configured MCP servers and expose their tools.
+
+        Three defects used to make this a no-op that looked like it worked:
+        ``client.connect()`` takes a *server name*, not a config dict, so it
+        always logged "Server not found"; ``client.list_tools()`` is
+        synchronous and returns tool *keys*, so ``await``-ing it raised
+        ``TypeError: object list can't be used in 'await' expression`` and the
+        resulting strings have no ``.get``; and the keys are
+        ``"<server>:<tool>"``, so the adapter has to call the client with the
+        qualified name.  Every failure was swallowed by the ``except`` below,
+        so MCP servers never contributed a single tool.
+        """
         try:
             from bahram.mcp.client import MCPClient
 
@@ -203,24 +241,68 @@ class Agent:
             servers = getattr(mcp_config, "servers", [])
             if not servers:
                 return
+
             client = MCPClient()
             for server_cfg in servers:
+                name = server_cfg.get("name") if isinstance(server_cfg, dict) else None
+                if not name:
+                    logger.warning("MCP server entry without a name, skipping")
+                    continue
+
+                command = server_cfg.get("command", []) if isinstance(server_cfg, dict) else []
+                if isinstance(command, str):
+                    command = command.split()
+
+                client.servers[name] = self._build_mcp_server_config(name, server_cfg, command)
                 try:
-                    await client.connect(server_cfg)
-                    tools = await client.list_tools()
-                    for tool_def in tools:
-                        name = f"mcp_{tool_def.get('name', 'unknown')}"
-                        self.engine.register_tool(name, _MCPToolAdapter(client, tool_def))
-                    logger.info(
-                        f"Registered {len(tools)} MCP tools from "
-                        f"{server_cfg.get('name', 'unknown')}"
-                    )
+                    connected = await client.connect(name)
                 except Exception as e:
-                    logger.warning(f"MCP server connection failed: {e}")
+                    logger.warning(f"MCP server {name} connection raised: {e}")
+                    continue
+                if not connected:
+                    logger.warning(f"MCP server {name} did not connect")
+                    continue
+
+                registered = 0
+                for key, tool in client.tools.items():
+                    if tool.server_name != name:
+                        continue
+                    self.engine.register_tool(
+                        f"mcp_{tool.name}",
+                        _MCPToolAdapter(
+                            client,
+                            {
+                                "name": tool.name,
+                                "description": tool.description,
+                                "inputSchema": tool.input_schema,
+                            },
+                            call_name=key,
+                        ),
+                    )
+                    registered += 1
+                logger.info(f"Registered {registered} MCP tools from {name}")
+
+            self._mcp_client = client
         except ImportError:
             logger.debug("MCP client not available, skipping MCP tool discovery")
         except Exception as e:
             logger.warning(f"MCP tool initialization failed: {e}")
+
+    @staticmethod
+    def _build_mcp_server_config(name: str, server_cfg: Any, command: list[str]) -> Any:
+        """Turn a raw config mapping into an :class:`MCPServerConfig`."""
+        from bahram.mcp.client import MCPServerConfig
+
+        return MCPServerConfig(
+            name=name,
+            type=server_cfg.get("type", "stdio"),
+            command=command,
+            url=server_cfg.get("url", ""),
+            env=server_cfg.get("env", {}),
+            headers=server_cfg.get("headers", {}),
+            enabled=server_cfg.get("enabled", True),
+            timeout=server_cfg.get("timeout", 30),
+        )
 
     def _get_first_provider(self) -> Any:
         providers = list(self.engine.providers.values())
@@ -331,6 +413,7 @@ class Agent:
         Note:
             Coroutine - must be awaited.
         """
+        session: Session | None
         if session_id is None:
             session = self.create_session()
             session_id = session.id
@@ -401,6 +484,8 @@ class Agent:
 
         if use_planning and self._planner:
             run_id = f"run_{uuid.uuid4().hex[:8]}"
+            from bahram.autonomy.plan import PlanStatus
+
             plan = await self._planner.create_plan(
                 goal=message,
                 run_id=run_id,
@@ -408,6 +493,7 @@ class Agent:
                 available_tools=list(self.engine.tools.keys()),
             )
 
+            assert self._plan_executor is not None, "Agent.start() was never called"
             plan = await self._plan_executor.execute_plan(
                 plan,
                 messages,
@@ -420,11 +506,11 @@ class Agent:
                 try:
                     success = plan.status.value == "completed"
                     trajectory_steps = [
-                        {"step_id": s.step_id, "objective": s.objective, "status": s.status.value}
+                        {"step_id": s.id, "objective": s.objective, "status": s.status.value}
                         for s in plan.steps
                     ]
                     tool_results = [
-                        {"step_id": s.step_id, "success": s.status.value == "completed"}
+                        {"step_id": s.id, "success": s.status.value == "completed"}
                         for s in plan.steps
                     ]
                     await self.analyze_and_learn(
@@ -438,9 +524,10 @@ class Agent:
                     logger.warning(f"Auto-learning failed: {e}")
 
             summary = self._summarize_plan_result(plan)
+            state = RunState.COMPLETED if plan.status == PlanStatus.COMPLETED else RunState.FAILED
             response = AgentResponse(
                 content=summary,
-                state=plan.status.value,
+                state=state,
                 metadata={"plan_id": plan.id, "plan_status": plan.status.value},
             )
         else:
@@ -611,7 +698,7 @@ class Agent:
         )
 
         lessons = analysis.get("lessons_extracted", [])
-        if len(lessons) >= 2:
+        if len(lessons) >= 2 and self._skill_lifecycle is not None:
             skill = await self._skill_lifecycle.generate_from_lessons(lessons, goal)
             if skill:
                 analysis["generated_skill"] = skill.to_dict()
@@ -685,6 +772,7 @@ class Agent:
         Note:
             Coroutine - must be awaited.
         """
+        session: Session | None
         if session_id is None:
             session = self.create_session()
             session_id = session.id
@@ -863,18 +951,22 @@ class _MCPToolAdapter:
     MCP tool adapter.
     """
 
-    def __init__(self, client: Any, tool_def: dict) -> None:
-        """
-        Initialise a _MCPToolAdapter instance.
+    def __init__(self, client: Any, tool_def: dict, call_name: str | None = None) -> None:
+        """Wrap one remote MCP tool as a local tool.
 
         Args:
-            client (Any): client.
-            tool_def (dict): mapping of tool def.
+            client (Any): the connected ``MCPClient``.
+            tool_def (dict): ``name``/``description``/``inputSchema``.
+            call_name (str | None): key to pass to ``client.call_tool``.
+                The client keys its registry ``"<server>:<tool>"``, so this
+                defaults to the bare tool name and is set explicitly by
+                ``Agent._init_mcp_tools``.
         """
         self._client = client
         self._tool_def = tool_def
         self.name = tool_def.get("name", "unknown")
         self.description = tool_def.get("description", "")
+        self._call_name = call_name or self.name
 
     def schema(self) -> dict:
         """
@@ -902,5 +994,5 @@ class _MCPToolAdapter:
         Note:
             Coroutine - must be awaited.
         """
-        result = await self._client.call_tool(self.name, kwargs)
+        result = await self._client.call_tool(self._call_name, kwargs)
         return str(result)

@@ -102,7 +102,7 @@ class GatewayService:
         if self._platform == "linux":
             return self._systemctl("is-active")
         elif self._platform == "darwin":
-            return self._launchctl_list()
+            return self._launchctl("list")
         return {"status": "unknown", "platform": self._platform}
 
     def _generate_systemd_unit(self, system: bool) -> str:

@@ -61,7 +61,7 @@ class SmartContextManager:
         self,
         content: str,
         priority: int = 0,
-        metadata: dict = None,
+        metadata: dict[str, Any] | None = None,
     ) -> None:
         """
         Add context.

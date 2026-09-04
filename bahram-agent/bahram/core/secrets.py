@@ -187,7 +187,7 @@ class SecretsManager:
             return True
         return False
 
-    def list_secrets(self, category: str = None) -> list[dict]:
+    def list_secrets(self, category: str | None = None) -> list[dict]:
         """
         List secrets.
 

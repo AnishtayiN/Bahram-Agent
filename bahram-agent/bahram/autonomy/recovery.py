@@ -51,12 +51,13 @@ class RecoveryManager:
     Recovery manager.
     """
 
-    def __init__(self, data_dir: str = "data/recovery") -> None:
+    def __init__(self, data_dir: str | None = "data/recovery") -> None:
         """
         Initialise a RecoveryManager instance.
 
         Args:
-            data_dir (str): directory that holds the on-disk state. Defaults to ``'data/recovery'``.
+            data_dir (str): directory that holds the on-disk state, or ``None`` for ephemeral
+                in-memory operation. Defaults to ``'data/recovery'``.
         """
         self._data_dir = Path(data_dir) if data_dir else None
         if self._data_dir is not None:

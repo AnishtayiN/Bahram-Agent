@@ -254,7 +254,7 @@ class SecurityManager:
     Security manager.
     """
 
-    def __init__(self, config: dict = None) -> None:
+    def __init__(self, config: dict[str, Any] | None = None) -> None:
         """
         Initialise a SecurityManager instance.
 

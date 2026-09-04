@@ -143,7 +143,7 @@ class JobEngine:
     """
 
     def __init__(
-        self, data_dir: str = "data/jobs", max_concurrent: int = 3, event_tracker: Any = None
+        self, data_dir: str | None = "data/jobs", max_concurrent: int = 3, event_tracker: Any = None
     ) -> None:
         """
         Initialise a JobEngine instance.

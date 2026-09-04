@@ -10,6 +10,7 @@ import json
 import logging
 from collections.abc import Callable
 from dataclasses import dataclass
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +48,7 @@ class ContextCompressor:
     async def compress(
         self,
         messages: list[dict],
-        model_fn: Callable = None,
+        model_fn: Callable[..., Any] | None = None,
         target_tokens: int = 4000,
     ) -> CompressionResult:
         """
@@ -83,7 +84,7 @@ class ContextCompressor:
                 ratio=1.0,
             )
 
-        if model_fn:
+        if model_fn is not None:
             compressed = await self._model_compress(messages, model_fn, target_tokens)
         else:
             compressed = self._heuristic_compress(messages, target_tokens)

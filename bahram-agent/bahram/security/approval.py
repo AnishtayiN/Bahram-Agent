@@ -119,7 +119,7 @@ class ApprovalSystem:
     Approval system.
     """
 
-    def __init__(self, config: ApprovalConfig = None) -> None:
+    def __init__(self, config: ApprovalConfig | None = None) -> None:
         """
         Initialise a ApprovalSystem instance.
 

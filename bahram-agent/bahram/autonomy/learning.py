@@ -168,12 +168,13 @@ class LearningEngine:
     Learning engine.
     """
 
-    def __init__(self, data_dir: str = "data/learning") -> None:
+    def __init__(self, data_dir: str | None = "data/learning") -> None:
         """
         Initialise a LearningEngine instance.
 
         Args:
-            data_dir (str): directory that holds the on-disk state. Defaults to ``'data/learning'``.
+            data_dir (str): directory that holds the on-disk state, or ``None`` for ephemeral
+                in-memory operation. Defaults to ``'data/learning'``.
         """
         self._data_dir = Path(data_dir) if data_dir else None
         if self._data_dir is not None:

@@ -167,13 +167,19 @@ class LLMProvider(Protocol):
         """
         ...
 
-    async def stream(
+    def stream(
         self,
         messages: list[Message],
         tools: list[dict[str, Any]] | None = None,
         **kwargs: Any,
     ) -> AsyncIterator[str]:
         """Stream a chat completion token by token.
+
+        Declared as a plain ``def`` returning an async iterator, because every
+        implementation is an *async generator* (``async def`` + ``yield``).
+        Annotating it ``async def ... -> AsyncIterator[str]`` made mypy treat
+        the result as a coroutine and reject ``async for chunk in
+        provider.stream(...)`` - which is how it is actually called.
 
         Args:
             messages (list[Message]): conversation history to send.
@@ -185,7 +191,7 @@ class LLMProvider(Protocol):
             AsyncIterator[str]: async iterator yielding text deltas.
 
         Note:
-            Coroutine - must be awaited; iterate the result with ``async for``.
+            Iterate the result with ``async for``; do not await it.
         """
         ...
 
@@ -469,6 +475,10 @@ class AgentEngine:
         self._circuit_breaker: Any = None
         self._budget_manager: Any = None
         self._event_tracker: Any = None
+        # ``None`` means "never write": the agent was configured for a fully
+        # in-memory run.  Declared here rather than reached through getattr in
+        # _persist_trajectory, so the attribute always exists.
+        self._trajectory_dir: str | None = "data/trajectories"
         if CircuitBreaker is not None:
             self._circuit_breaker = CircuitBreaker()
         self._init_approval_system()
@@ -500,17 +510,18 @@ class AgentEngine:
         """
         self._event_tracker = event_tracker
 
-    def set_trajectory_dir(self, trajectory_dir: str) -> None:
-        """
-        Set the trajectory dir.
+    def set_trajectory_dir(self, trajectory_dir: str | None) -> None:
+        """Set where run trajectories are written.
 
         Args:
-            trajectory_dir (str): trajectory dir string.
+            trajectory_dir (str | None): directory to write trajectory JSON
+                into, or ``None`` to disable trajectory recording entirely
+                (used for fully in-memory runs).
         """
         self._trajectory_dir = trajectory_dir
 
     def _persist_trajectory(self, trajectory: Trajectory) -> None:
-        trajectory_dir = getattr(self, "_trajectory_dir", "data/trajectories")
+        trajectory_dir = self._trajectory_dir
         # ``None`` means the agent was configured for a fully in-memory run and
         # must not touch the filesystem.
         if trajectory_dir is None:
