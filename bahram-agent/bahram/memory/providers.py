@@ -41,7 +41,7 @@ class MemoryProvider:
     async def delete(self, entry_id: str) -> bool:
         raise NotImplementedError
 
-    async def get(self, entry_id: str) -> Optional[MemoryEntry]:
+    async def get(self, entry_id: str) -> MemoryEntry | None:
         raise NotImplementedError
 
     async def count(self) -> int:
@@ -108,7 +108,7 @@ class LocalMemoryProvider(MemoryProvider):
             return True
         return False
 
-    async def get(self, entry_id: str) -> Optional[MemoryEntry]:
+    async def get(self, entry_id: str) -> MemoryEntry | None:
         return self._entries.get(entry_id)
 
     async def count(self) -> int:

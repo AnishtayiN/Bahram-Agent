@@ -3,12 +3,20 @@ from __future__ import annotations
 import asyncio
 import tempfile
 import time
-import pytest
 from unittest.mock import AsyncMock, MagicMock
 
+import pytest
+
 from bahram.core.engine import (
-    AgentEngine, AgentResponse, Message, MessageRole,
-    RunState, ToolCall, ToolResult, ToolExecutor, Trajectory,
+    AgentEngine,
+    AgentResponse,
+    Message,
+    MessageRole,
+    RunState,
+    ToolCall,
+    ToolExecutor,
+    ToolResult,
+    Trajectory,
 )
 from bahram.core.persistence import SessionStore
 from bahram.memory.semantic import SemanticMemory

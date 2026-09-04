@@ -8,6 +8,8 @@ import uuid
 
 import pytest
 
+from bahram.autonomy.budget import BudgetConfig, BudgetManager
+from bahram.autonomy.subagent import SubagentEngine, SubagentTask
 from bahram.core.engine import (
     AgentEngine,
     AgentResponse,
@@ -18,11 +20,8 @@ from bahram.core.engine import (
     ToolExecutor,
     ToolResult,
 )
-from bahram.autonomy.budget import BudgetConfig, BudgetManager
-from bahram.autonomy.subagent import SubagentEngine, SubagentTask
-from bahram.platforms.circuit_breaker import CircuitBreaker
 from bahram.core.smart_context import SmartContextManager
-
+from bahram.platforms.circuit_breaker import CircuitBreaker
 
 # ---------------------------------------------------------------------------
 # Helpers – real components, not mocks of the system under test

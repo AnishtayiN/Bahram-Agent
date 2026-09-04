@@ -31,8 +31,8 @@ class TaskPlanner:
         self._step_counter = 0
 
     async def create_plan(self, goal: str, context: dict = None) -> TaskPlan:
-        import uuid
         import time
+        import uuid
 
         plan_id = str(uuid.uuid4())[:8]
         plan = TaskPlan(
@@ -118,7 +118,7 @@ class TaskPlanner:
                     return True
         return False
 
-    def get_plan(self, plan_id: str) -> Optional[dict]:
+    def get_plan(self, plan_id: str) -> dict | None:
         plan = self._plans.get(plan_id)
         if plan:
             return {
@@ -137,7 +137,7 @@ class TaskPlanner:
             }
         return None
 
-    def get_next_step(self, plan_id: str) -> Optional[TaskStep]:
+    def get_next_step(self, plan_id: str) -> TaskStep | None:
         plan = self._plans.get(plan_id)
         if plan:
             for step in plan.steps:

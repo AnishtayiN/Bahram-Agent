@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import Any, Callable, Optional
+from collections.abc import Callable
+from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -12,7 +13,7 @@ class WhatsAppAdapter:
         self.phone_number_id = phone_number_id
         self.access_token = access_token
         self.verify_token = verify_token
-        self._message_fn: Optional[Callable] = None
+        self._message_fn: Callable | None = None
 
     def set_message_function(self, fn: Callable) -> None:
         self._message_fn = fn

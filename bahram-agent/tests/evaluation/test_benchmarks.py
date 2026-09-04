@@ -4,21 +4,22 @@ import asyncio
 import json
 import os
 import time
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from bahram.autonomy.plan import Plan, PlanStep, PlanStatus, StepStatus
-from bahram.autonomy.planner import Planner
-from bahram.autonomy.verification import VerificationEngine, VerificationResult
-from bahram.autonomy.replanner import Replanner
-from bahram.autonomy.subagent import SubagentEngine, SubagentResult
-from bahram.autonomy.jobs import JobEngine, Job, JobStatus, JobPriority
-from bahram.autonomy.recovery import RecoveryManager
-from bahram.autonomy.learning import LearningEngine, Lesson, SkillCandidate
-from bahram.autonomy.skill_lifecycle import SkillLifecycle
-from bahram.autonomy.budget import BudgetManager, BudgetConfig
+import pytest
+
+from bahram.autonomy.budget import BudgetConfig, BudgetManager
 from bahram.autonomy.events import EventTracker
 from bahram.autonomy.executor import PlanExecutor
+from bahram.autonomy.jobs import Job, JobEngine, JobPriority, JobStatus
+from bahram.autonomy.learning import LearningEngine, Lesson, SkillCandidate
+from bahram.autonomy.plan import Plan, PlanStatus, PlanStep, StepStatus
+from bahram.autonomy.planner import Planner
+from bahram.autonomy.recovery import RecoveryManager
+from bahram.autonomy.replanner import Replanner
+from bahram.autonomy.skill_lifecycle import SkillLifecycle
+from bahram.autonomy.subagent import SubagentEngine, SubagentResult
+from bahram.autonomy.verification import VerificationEngine, VerificationResult
 
 
 def make_mock_provider(responses=None):
@@ -475,9 +476,9 @@ class TestAUTO15_SkillReuse:
 class TestAUTO16_ProviderFallback:
     @pytest.mark.asyncio
     async def test_fallback_provider_tries_chain(self):
+        from bahram.core.engine import AgentResponse
         from bahram.providers.base import BaseProvider
         from bahram.providers.fallback import FallbackProvider
-        from bahram.core.engine import AgentResponse
 
         class MockProvider(BaseProvider):
             def __init__(self, response=None, error=None):

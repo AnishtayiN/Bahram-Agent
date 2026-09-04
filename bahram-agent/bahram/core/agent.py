@@ -4,15 +4,16 @@ import asyncio
 import logging
 import time
 import uuid
+from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
-from typing import Any, AsyncIterator, Optional
+from typing import Any, Optional
 
+from bahram.core.compressor import ContextCompressor
 from bahram.core.config import Config
 from bahram.core.context import Context, ContextWindow
-from bahram.core.engine import AgentResponse, AgentEngine, Message, MessageRole, ToolCall
+from bahram.core.engine import AgentEngine, AgentResponse, Message, MessageRole, ToolCall
 from bahram.core.persistence import SessionStore
 from bahram.core.smart_context import SmartContextManager
-from bahram.core.compressor import ContextCompressor
 
 logger = logging.getLogger(__name__)
 
@@ -83,17 +84,17 @@ class Agent:
         logger.info("Bahram Agent started successfully")
 
     def _init_autonomy(self) -> None:
-        from bahram.autonomy.planner import Planner
-        from bahram.autonomy.verification import VerificationEngine
-        from bahram.autonomy.replanner import Replanner
-        from bahram.autonomy.executor import PlanExecutor
-        from bahram.autonomy.subagent import SubagentEngine
-        from bahram.autonomy.jobs import JobEngine
-        from bahram.autonomy.recovery import RecoveryManager
-        from bahram.autonomy.learning import LearningEngine
-        from bahram.autonomy.skill_lifecycle import SkillLifecycle
         from bahram.autonomy.budget import BudgetManager
         from bahram.autonomy.events import EventTracker
+        from bahram.autonomy.executor import PlanExecutor
+        from bahram.autonomy.jobs import JobEngine
+        from bahram.autonomy.learning import LearningEngine
+        from bahram.autonomy.planner import Planner
+        from bahram.autonomy.recovery import RecoveryManager
+        from bahram.autonomy.replanner import Replanner
+        from bahram.autonomy.skill_lifecycle import SkillLifecycle
+        from bahram.autonomy.subagent import SubagentEngine
+        from bahram.autonomy.verification import VerificationEngine
 
         self._event_tracker = EventTracker()
         self._budget_manager = BudgetManager()

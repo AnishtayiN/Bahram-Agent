@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import asyncio
 import time
-import pytest
 from typing import Any
+
+import pytest
 
 from bahram.core.engine import AgentEngine, AgentResponse, Message, MessageRole
 
@@ -155,10 +156,11 @@ class TestEventTracking:
 
 class TestRecoveryCheckpoint:
     def test_checkpoint_latency(self):
-        from bahram.autonomy.recovery import RecoveryManager
-        from bahram.autonomy.plan import Plan, PlanStep, StepStatus
         import tempfile
         import uuid
+
+        from bahram.autonomy.plan import Plan, PlanStep, StepStatus
+        from bahram.autonomy.recovery import RecoveryManager
 
         with tempfile.TemporaryDirectory() as tmpdir:
             rm = RecoveryManager(data_dir=tmpdir)

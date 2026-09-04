@@ -9,11 +9,11 @@ import uuid
 import pytest
 
 from bahram.autonomy.tool_gateway import ToolGateway, ToolRoute, ToolSearchResult
-from bahram.security.kernel import SecurityKernel, Capability, AuthorizationRequest
-from bahram.core.context_architecture import ContextArchitecture, ContextElement, ContextCategory
+from bahram.core.context_architecture import ContextArchitecture, ContextCategory, ContextElement
+from bahram.core.engine import AgentEngine, AgentResponse, Message, MessageRole, RunConfig, ToolCall
 from bahram.core.observability import Observability, ObservabilityEvent
 from bahram.memory.semantic import SemanticMemory
-from bahram.core.engine import AgentEngine, AgentResponse, Message, MessageRole, RunConfig, ToolCall
+from bahram.security.kernel import AuthorizationRequest, Capability, SecurityKernel
 
 
 class FakeTool:

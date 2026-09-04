@@ -10,8 +10,8 @@ Runs as a stdio MCP server using JSON-RPC protocol.
 from __future__ import annotations
 
 import json
-import sys
 import logging
+import sys
 
 logger = logging.getLogger(__name__)
 

@@ -15,7 +15,7 @@ class VoiceTranscriber:
         self.method = method
         self._whisper_model = None
 
-    async def transcribe(self, audio_path: str) -> Optional[str]:
+    async def transcribe(self, audio_path: str) -> str | None:
         try:
             if self.method == "whisper":
                 return await self._transcribe_whisper(audio_path)
@@ -28,7 +28,7 @@ class VoiceTranscriber:
             logger.error(f"Transcription failed: {e}")
             return None
 
-    async def _transcribe_whisper(self, audio_path: str) -> Optional[str]:
+    async def _transcribe_whisper(self, audio_path: str) -> str | None:
         try:
             import whisper
 
@@ -45,7 +45,7 @@ class VoiceTranscriber:
             logger.error(f"Whisper transcription failed: {e}")
             return None
 
-    async def _transcribe_command(self, audio_path: str) -> Optional[str]:
+    async def _transcribe_command(self, audio_path: str) -> str | None:
         import os
 
         command = os.environ.get("BAHRAM_STT_COMMAND")

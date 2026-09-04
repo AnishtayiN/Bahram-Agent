@@ -3,7 +3,8 @@ from __future__ import annotations
 import json
 import logging
 import re
-from typing import Any, Callable, Optional
+from collections.abc import Callable
+from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -13,7 +14,7 @@ class SlackAdapter:
         self.token = token
         self.signing_secret = signing_secret
         self._app = None
-        self._message_fn: Optional[Callable] = None
+        self._message_fn: Callable | None = None
 
     def set_message_function(self, fn: Callable) -> None:
         self._message_fn = fn
@@ -24,8 +25,8 @@ class SlackAdapter:
             return
 
         try:
-            from slack_bolt.async_app import AsyncApp
             from slack_bolt.adapter.socket_mode.async_handler import AsyncSocketModeHandler
+            from slack_bolt.async_app import AsyncApp
 
             self._app = AsyncApp(token=self.token)
 

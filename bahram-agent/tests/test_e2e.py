@@ -1,20 +1,28 @@
 from __future__ import annotations
 
-import pytest
 import asyncio
 import time
-from unittest.mock import AsyncMock, MagicMock, patch
 from typing import Any
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 from bahram.core.agent import Agent
-from bahram.core.config import Config, ProviderConfig, AgentConfig, MemoryConfig, ToolsConfig
-from bahram.core.engine import (
-    AgentEngine, AgentResponse, Message, MessageRole, ToolCall, ToolResult,
-    ToolExecutor, Trajectory, TrajectoryStep,
-)
+from bahram.core.config import AgentConfig, Config, MemoryConfig, ProviderConfig, ToolsConfig
 from bahram.core.context import Context, ContextWindow
+from bahram.core.engine import (
+    AgentEngine,
+    AgentResponse,
+    Message,
+    MessageRole,
+    ToolCall,
+    ToolExecutor,
+    ToolResult,
+    Trajectory,
+    TrajectoryStep,
+)
 from bahram.core.persistence import SessionStore
-from bahram.security.approval import ApprovalSystem, ApprovalConfig
+from bahram.security.approval import ApprovalConfig, ApprovalSystem
 
 
 class MockProvider:
@@ -233,9 +241,9 @@ class TestScenarioG_ToolRegistry:
         engine = AgentEngine()
 
         from bahram.tools.bash import BashTool
-        from bahram.tools.file import ReadTool, WriteTool, EditTool
-        from bahram.tools.web import WebFetchTool, WebSearchTool
         from bahram.tools.execute_code import ExecuteCodeTool
+        from bahram.tools.file import EditTool, ReadTool, WriteTool
+        from bahram.tools.web import WebFetchTool, WebSearchTool
 
         tools = [BashTool(), ReadTool(), WriteTool(), EditTool(), WebFetchTool(), WebSearchTool(), ExecuteCodeTool()]
         for tool in tools:

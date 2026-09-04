@@ -96,7 +96,7 @@ class ProcessListTool(BaseTool):
 
         if pid:
             try:
-                with open(f"/proc/{pid}/status", "r") as f:
+                with open(f"/proc/{pid}/status") as f:
                     return f.read()[:2000]
             except FileNotFoundError:
                 return f"Error: Process {pid} not found"
@@ -221,7 +221,7 @@ class DocumentReadTool(BaseTool):
 
         try:
             if ext in (".txt", ".md", ".py", ".js", ".ts", ".json", ".yaml", ".yml", ".toml", ".cfg", ".ini", ".csv", ".log"):
-                with open(file_path, "r", encoding="utf-8", errors="replace") as f:
+                with open(file_path, encoding="utf-8", errors="replace") as f:
                     content = f.read(50000)
                 return content
 
@@ -267,7 +267,7 @@ class DocumentReadTool(BaseTool):
 
             else:
                 try:
-                    with open(file_path, "r", encoding="utf-8", errors="replace") as f:
+                    with open(file_path, encoding="utf-8", errors="replace") as f:
                         return f.read(50000)
                 except Exception as e:
                     return f"Error reading file: {e}"

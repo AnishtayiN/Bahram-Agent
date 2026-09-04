@@ -57,7 +57,7 @@ class AutoComplete:
             if pattern.lower().startswith(text.lower()):
                 completions.append(Completion(
                     text=pattern,
-                    description=f"Keyword",
+                    description="Keyword",
                     priority=1,
                     category="keyword",
                 ))

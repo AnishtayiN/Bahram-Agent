@@ -65,7 +65,7 @@ class ContextRefs:
         self._save()
         return ref
 
-    def get_ref(self, ref_id: str) -> Optional[ContextRef]:
+    def get_ref(self, ref_id: str) -> ContextRef | None:
         return self._refs.get(ref_id)
 
     def search_refs(self, query: str) -> list[ContextRef]:

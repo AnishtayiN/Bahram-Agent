@@ -6,13 +6,13 @@ from __future__ import annotations
 
 import asyncio
 import json
-import sys
 import os
+import sys
 from pathlib import Path
 
 import pytest
 
-from tests.fixtures.mcp.server import handle_request, TOOLS
+from tests.fixtures.mcp.server import TOOLS, handle_request
 
 
 class TestMCPServerProtocol:
@@ -232,7 +232,7 @@ class TestMCPWithAgentEngine:
     async def test_mcp_tool_security_blocked(self):
         """MCP tools with dangerous names should be blocked by security."""
         from bahram.core.engine import AgentEngine, ToolCall, ToolExecutor
-        from bahram.security.approval import ApprovalSystem, ApprovalConfig, ApprovalMode
+        from bahram.security.approval import ApprovalConfig, ApprovalMode, ApprovalSystem
 
         config = ApprovalConfig(mode=ApprovalMode.SMART)
         approval = ApprovalSystem(config)

@@ -11,7 +11,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from bahram.core.engine import AgentEngine, ToolExecutor, ToolCall, ToolResult
+from bahram.core.engine import AgentEngine, ToolCall, ToolExecutor, ToolResult
 
 
 class FakeMCPTool:
@@ -94,7 +94,7 @@ class TestMCPIntegration:
     @pytest.mark.asyncio
     async def test_mcp_tool_security_applies(self):
         """Security pipeline should apply to MCP tools."""
-        from bahram.security.approval import ApprovalSystem, ApprovalConfig, ApprovalMode
+        from bahram.security.approval import ApprovalConfig, ApprovalMode, ApprovalSystem
 
         config = ApprovalConfig(mode=ApprovalMode.SMART)
         approval = ApprovalSystem(config)

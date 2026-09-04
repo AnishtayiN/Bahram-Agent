@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 import asyncio
+import fcntl
 import logging
 import os
 import pty
 import select
 import struct
-import fcntl
 import termios
 from dataclasses import dataclass, field
 from typing import Any, Optional
@@ -125,7 +125,7 @@ class PTYManager:
 class SudoManager:
 
     def __init__(self) -> None:
-        self._cached_password: Optional[str] = None
+        self._cached_password: str | None = None
         self._cache_ttl: int = 300
         self._last_auth: float = 0
 
@@ -134,7 +134,7 @@ class SudoManager:
         self._cached_password = password
         self._last_auth = time.time()
 
-    def get_password(self) -> Optional[str]:
+    def get_password(self) -> str | None:
         import time
         if self._cached_password and (time.time() - self._last_auth < self._cache_ttl):
             return self._cached_password
@@ -155,7 +155,7 @@ class ShellInitHandler:
 
     @staticmethod
     def get_safe_bashrc_content() -> str:
-        return f""
+        return ""
 
     @staticmethod
     def get_env_passthrough_vars() -> list[str]:

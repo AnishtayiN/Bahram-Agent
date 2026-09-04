@@ -4,9 +4,10 @@ import asyncio
 import json
 import tempfile
 import time
-import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
 from typing import Any
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 from bahram.core.engine import AgentEngine, AgentResponse, Message, MessageRole, RunConfig
 from bahram.providers.fallback import FallbackProvider
@@ -98,7 +99,7 @@ class TestBudgetWiring:
 
     @pytest.mark.asyncio
     async def test_budget_check_stops_execution(self):
-        from bahram.autonomy.budget import BudgetManager, BudgetConfig
+        from bahram.autonomy.budget import BudgetConfig, BudgetManager
         engine = AgentEngine()
         bm = BudgetManager(BudgetConfig(max_model_calls=0))
         engine.set_budget_manager(bm)
@@ -146,6 +147,7 @@ class TestSmartContextIntegration:
 class TestCompressorFix:
     def test_compressor_has_real_prompt(self):
         import inspect
+
         from bahram.core.compressor import ContextCompressor
         cc = ContextCompressor()
         source = inspect.getsource(cc._model_compress)
@@ -184,8 +186,8 @@ class TestGatewayService:
 
 class TestSubagentEventWiring:
     def test_subagent_engine_accepts_event_tracker(self):
-        from bahram.autonomy.subagent import SubagentEngine
         from bahram.autonomy.events import EventTracker
+        from bahram.autonomy.subagent import SubagentEngine
         engine = AgentEngine()
         et = EventTracker()
         se = SubagentEngine(engine, event_tracker=et)
@@ -194,8 +196,8 @@ class TestSubagentEventWiring:
 
 class TestJobEventWiring:
     def test_job_engine_accepts_event_tracker(self):
-        from bahram.autonomy.jobs import JobEngine
         from bahram.autonomy.events import EventTracker
+        from bahram.autonomy.jobs import JobEngine
         et = EventTracker()
         with tempfile.TemporaryDirectory() as tmpdir:
             je = JobEngine(data_dir=tmpdir, event_tracker=et)

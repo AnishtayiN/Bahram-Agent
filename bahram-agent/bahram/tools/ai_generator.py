@@ -102,13 +102,13 @@ class AICodeGenerator:
         return ""
 
     def _generate_fastapi_main(self, description: str) -> str:
-        return f''
+        return ''
 
     def _generate_cli_main(self, description: str) -> str:
-        return f''
+        return ''
 
     def _generate_react_app(self, description: str) -> str:
-        return f''
+        return ''
 
     def _generate_requirements(self, framework: str) -> str:
         requirements = {
@@ -118,7 +118,7 @@ class AICodeGenerator:
         return requirements.get(framework, "")
 
     def _generate_package_json(self, description: str) -> str:
-        return f''
+        return ''
 
     def _generate_dockerfile(self, framework: str) -> str:
         if framework == "fastapi":
@@ -126,4 +126,4 @@ class AICodeGenerator:
         return ""
 
     def _generate_readme(self, description: str, framework: str) -> str:
-        return f""
+        return ""

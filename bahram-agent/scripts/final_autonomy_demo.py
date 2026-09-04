@@ -21,20 +21,26 @@ from bahram.autonomy.budget import BudgetManager
 from bahram.autonomy.cost import estimate_cost
 from bahram.autonomy.events import EventTracker
 from bahram.autonomy.learning import LearningEngine
-from bahram.autonomy.plan import Plan, PlanStep, PlanStatus, StepStatus
+from bahram.autonomy.plan import Plan, PlanStatus, PlanStep, StepStatus
 from bahram.autonomy.recovery import RecoveryManager
 from bahram.autonomy.skill_lifecycle import SkillLifecycle
 from bahram.autonomy.subagent import SubagentEngine
 from bahram.core.engine import (
-    AgentEngine, AgentResponse, Message, MessageRole, RunConfig, RunState,
-    ToolCall, ToolExecutor, ToolResult,
+    AgentEngine,
+    AgentResponse,
+    Message,
+    MessageRole,
+    RunConfig,
+    RunState,
+    ToolCall,
+    ToolExecutor,
+    ToolResult,
 )
 from bahram.core.smart_context import SmartContextManager
 from bahram.memory.semantic import SemanticMemory
-from bahram.monitoring.status import RuntimeStatus, status_report, doctor_check, redact_secrets
+from bahram.monitoring.status import RuntimeStatus, doctor_check, redact_secrets, status_report
 from bahram.platforms.circuit_breaker import CircuitBreaker
-from bahram.security.approval import ApprovalSystem, ApprovalConfig, ApprovalMode
-
+from bahram.security.approval import ApprovalConfig, ApprovalMode, ApprovalSystem
 
 MILESTONES = [
     "SESSION_CREATED",

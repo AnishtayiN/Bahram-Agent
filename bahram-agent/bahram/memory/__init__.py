@@ -13,6 +13,6 @@ if TYPE_CHECKING:
     from bahram.core.config import Config
 
 
-async def init_memory(config: "Config") -> None:
+async def init_memory(config: Config) -> None:
 
     pass

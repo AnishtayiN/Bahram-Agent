@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any, Callable, Optional
+from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -105,7 +106,7 @@ class WorkflowAutomation:
 
         return {"status": "completed", "results": results}
 
-    def get_workflow(self, workflow_id: str) -> Optional[dict]:
+    def get_workflow(self, workflow_id: str) -> dict | None:
         workflow = self._workflows.get(workflow_id)
         if workflow:
             return {

@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import TYPE_CHECKING, Any, Callable, Optional
+from collections.abc import Callable
+from typing import TYPE_CHECKING, Any, Optional
 
 if TYPE_CHECKING:
     from telegram import Update
@@ -31,12 +32,12 @@ class TelegramPlatform(BasePlatform):
 
     async def start(self) -> None:
         try:
-            from telegram import Update, BotCommand
+            from telegram import BotCommand, Update
             from telegram.ext import (
                 ApplicationBuilder,
+                CommandHandler,
                 ContextTypes,
                 MessageHandler,
-                CommandHandler,
                 filters,
             )
 

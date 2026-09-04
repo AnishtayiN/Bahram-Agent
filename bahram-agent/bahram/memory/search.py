@@ -66,7 +66,7 @@ class SessionSearch:
         results.sort(key=lambda x: x["match_count"], reverse=True)
         return results[:limit]
 
-    def get_session(self, session_id: str) -> Optional[dict]:
+    def get_session(self, session_id: str) -> dict | None:
         index_file = self.data_dir / f"{session_id}.json"
         if index_file.exists():
             with open(index_file) as f:

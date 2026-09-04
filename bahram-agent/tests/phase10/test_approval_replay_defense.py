@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import pytest
 
-from bahram.security.approval import ApprovalSystem, ApprovalConfig, ApprovalMode
+from bahram.security.approval import ApprovalConfig, ApprovalMode, ApprovalSystem
 
 
 class TestApprovalReplayDefense:

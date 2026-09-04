@@ -3,8 +3,9 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any, Callable, Optional
+from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +26,7 @@ class BackgroundNotifier:
 
     def __init__(self) -> None:
         self._tasks: dict[str, BackgroundTask] = {}
-        self._notify_fn: Optional[Callable] = None
+        self._notify_fn: Callable | None = None
 
     def set_notify_function(self, fn: Callable) -> None:
         self._notify_fn = fn
@@ -88,7 +89,7 @@ class BackgroundNotifier:
             if t.status in ("pending", "running")
         ]
 
-    def get_task(self, task_id: str) -> Optional[dict]:
+    def get_task(self, task_id: str) -> dict | None:
         task = self._tasks.get(task_id)
         if task:
             return {

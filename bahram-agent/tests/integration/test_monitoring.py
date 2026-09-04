@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import pytest
 
-from bahram.monitoring.status import status_report, doctor_check, RuntimeStatus
+from bahram.monitoring.status import RuntimeStatus, doctor_check, status_report
 
 
 class TestStatusReportReturnsDict:

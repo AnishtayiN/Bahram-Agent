@@ -42,7 +42,7 @@ class CodeReviewTool:
 
     async def review_file(self, file_path: str) -> list[CodeIssue]:
         try:
-            with open(file_path, "r", encoding="utf-8", errors="replace") as f:
+            with open(file_path, encoding="utf-8", errors="replace") as f:
                 content = f.read()
                 lines = content.split("\n")
 

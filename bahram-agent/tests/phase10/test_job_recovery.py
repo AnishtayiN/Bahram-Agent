@@ -10,7 +10,7 @@ from pathlib import Path
 
 import pytest
 
-from bahram.autonomy.jobs import JobEngine, Job, JobStatus, JobPriority
+from bahram.autonomy.jobs import Job, JobEngine, JobPriority, JobStatus
 
 
 class TestJobRecovery:

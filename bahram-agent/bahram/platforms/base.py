@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any, Callable, Optional
+from typing import Any, Optional
+
 
 @dataclass
 class PlatformMessage:
@@ -14,13 +16,13 @@ class PlatformMessage:
     chat_id: str
     message_id: str
     timestamp: float
-    reply_to: Optional[str] = None
+    reply_to: str | None = None
 
 class BasePlatform(ABC):
 
     def __init__(self, config: Any) -> None:
         self.config = config
-        self._message_handler: Optional[Callable] = None
+        self._message_handler: Callable | None = None
 
     @property
     @abstractmethod

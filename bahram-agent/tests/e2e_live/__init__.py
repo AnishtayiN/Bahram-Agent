@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import os
-import pytest
 from typing import Any
+
+import pytest
 
 
 def _has_live_credentials() -> bool:

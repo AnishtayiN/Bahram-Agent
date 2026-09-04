@@ -68,7 +68,7 @@ class ReadTool(BaseTool):
             return f"Error: Not a file: {file_path}"
 
         try:
-            with open(path, "r", encoding="utf-8", errors="replace") as f:
+            with open(path, encoding="utf-8", errors="replace") as f:
                 lines = f.readlines()
 
             lines = lines[offset : offset + limit]
@@ -196,7 +196,7 @@ class EditTool(BaseTool):
             return f"Error: File not found: {file_path}"
 
         try:
-            with open(path, "r", encoding="utf-8") as f:
+            with open(path, encoding="utf-8") as f:
                 content = f.read()
 
             if old_string not in content:

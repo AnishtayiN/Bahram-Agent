@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
-from typing import Any, Callable, Optional
+from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -16,8 +17,8 @@ class ScheduledTask:
     command: str
     schedule: str
     enabled: bool = True
-    last_run: Optional[datetime] = None
-    next_run: Optional[datetime] = None
+    last_run: datetime | None = None
+    next_run: datetime | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
 
 class Scheduler:
@@ -47,7 +48,7 @@ class Scheduler:
         self.tasks.pop(task_id, None)
         logger.info(f"Removed task: {task_id}")
 
-    def get_task(self, task_id: str) -> Optional[ScheduledTask]:
+    def get_task(self, task_id: str) -> ScheduledTask | None:
         return self.tasks.get(task_id)
 
     def list_tasks(self) -> list[ScheduledTask]:

@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import importlib.util
 import logging
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable, Optional
+from typing import Any, Optional
 
 from bahram.plugins.base import BasePlugin
 
@@ -57,7 +58,7 @@ class PluginManager:
                 logger.info(f"Loaded plugin: {plugin.metadata.name}")
                 break
 
-    def get_plugin(self, name: str) -> Optional[BasePlugin]:
+    def get_plugin(self, name: str) -> BasePlugin | None:
         return self.plugins.get(name)
 
     def list_plugins(self) -> list[str]:
@@ -85,7 +86,7 @@ class PluginManager:
             except Exception as e:
                 logger.error(f"Plugin shutdown error: {e}")
 
-    async def on_message(self, message: Any) -> Optional[Any]:
+    async def on_message(self, message: Any) -> Any | None:
         for plugin in self.plugins.values():
             try:
                 result = await plugin.on_message(message)
@@ -95,7 +96,7 @@ class PluginManager:
                 logger.error(f"Plugin message error: {e}")
         return None
 
-    async def on_tool_call(self, tool_name: str, arguments: dict) -> Optional[dict]:
+    async def on_tool_call(self, tool_name: str, arguments: dict) -> dict | None:
         for plugin in self.plugins.values():
             try:
                 result = await plugin.on_tool_call(tool_name, arguments)
@@ -105,7 +106,7 @@ class PluginManager:
                 logger.error(f"Plugin tool_call error: {e}")
         return None
 
-    async def on_tool_result(self, tool_name: str, result: Any) -> Optional[Any]:
+    async def on_tool_result(self, tool_name: str, result: Any) -> Any | None:
         for plugin in self.plugins.values():
             try:
                 new_result = await plugin.on_tool_result(tool_name, result)

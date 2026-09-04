@@ -13,7 +13,7 @@ from pathlib import Path
 
 import pytest
 
-from bahram.autonomy.jobs import JobEngine, JobStatus, JobPriority
+from bahram.autonomy.jobs import JobEngine, JobPriority, JobStatus
 from bahram.core.persistence import SessionStore
 
 

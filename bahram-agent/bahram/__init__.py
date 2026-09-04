@@ -5,7 +5,7 @@ __author__ = "Bahram Agent Team"
 __license__ = "MIT"
 
 from bahram.core.agent import Agent
-from bahram.core.engine import AgentEngine
 from bahram.core.config import Config
+from bahram.core.engine import AgentEngine
 
 __all__ = ["Agent", "AgentEngine", "Config"]

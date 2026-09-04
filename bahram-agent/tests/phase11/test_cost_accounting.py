@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import pytest
 
-from bahram.autonomy.cost import estimate_cost, get_pricing_info, MODEL_PRICING
+from bahram.autonomy.cost import MODEL_PRICING, estimate_cost, get_pricing_info
 
 
 class TestCostAccounting:

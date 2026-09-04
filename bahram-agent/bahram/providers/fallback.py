@@ -3,8 +3,8 @@ from __future__ import annotations
 import logging
 from typing import Any, Optional
 
-from bahram.providers.base import BaseProvider
 from bahram.core.engine import AgentResponse, Message
+from bahram.providers.base import BaseProvider
 
 logger = logging.getLogger(__name__)
 

@@ -127,7 +127,7 @@ class ErrorHandler:
             steps=["Check the traceback", "Review the code", "Search for similar errors"],
         )
 
-    def get_solution(self, error_type: str) -> Optional[ErrorSolution]:
+    def get_solution(self, error_type: str) -> ErrorSolution | None:
         solutions = self._solutions.get(error_type, [])
         return solutions[0] if solutions else None
 

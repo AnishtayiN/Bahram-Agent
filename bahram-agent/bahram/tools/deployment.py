@@ -63,7 +63,7 @@ class DeploymentTool:
 
     async def _deploy_kubernetes(self, config: DeploymentConfig) -> dict[str, Any]:
 
-        yaml_content = f""
+        yaml_content = ""
 
         proc = await asyncio.create_subprocess_shell(
             f"echo '{yaml_content}' | kubectl apply -f -",

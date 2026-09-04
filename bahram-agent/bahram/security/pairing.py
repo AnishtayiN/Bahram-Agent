@@ -59,7 +59,7 @@ class DMPairingManager:
         self._requests.append(request)
         return code
 
-    def verify_code(self, code: str) -> Optional[dict]:
+    def verify_code(self, code: str) -> dict | None:
         for request in self._requests:
             if (
                 request.code == code

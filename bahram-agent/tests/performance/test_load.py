@@ -11,6 +11,8 @@ from typing import Any
 
 import pytest
 
+from bahram.autonomy.budget import BudgetConfig, BudgetManager
+from bahram.autonomy.events import EventTracker
 from bahram.core.engine import (
     AgentEngine,
     AgentResponse,
@@ -18,8 +20,6 @@ from bahram.core.engine import (
     MessageRole,
     ToolCall,
 )
-from bahram.autonomy.budget import BudgetManager, BudgetConfig
-from bahram.autonomy.events import EventTracker
 from bahram.memory.providers import LocalMemoryProvider, MemoryEntry
 
 
@@ -598,8 +598,8 @@ class TestDatabaseContention:
 
     @pytest.mark.asyncio
     async def test_concurrent_job_creation(self):
-        from bahram.core.persistence import SessionStore
         from bahram.core.engine import Trajectory
+        from bahram.core.persistence import SessionStore
 
         with tempfile.TemporaryDirectory() as tmpdir:
             db_path = os.path.join(tmpdir, "test.db")

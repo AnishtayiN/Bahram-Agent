@@ -1,6 +1,9 @@
 from __future__ import annotations
+
 from typing import Any
+
 from bahram.providers.compat import OpenAICompatibleProvider
+
 
 class CustomProvider(OpenAICompatibleProvider):
     def __init__(self, api_key: str = "", model: str = "", base_url: str = "", **kwargs: Any) -> None:

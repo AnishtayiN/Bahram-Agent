@@ -12,10 +12,10 @@ from pathlib import Path
 
 import pytest
 
-from bahram.memory.semantic import SemanticMemory
-from bahram.core.smart_context import SmartContextManager
 from bahram.autonomy.learning import LearningEngine
 from bahram.autonomy.skill_lifecycle import SkillLifecycle
+from bahram.core.smart_context import SmartContextManager
+from bahram.memory.semantic import SemanticMemory
 
 
 @pytest.fixture(autouse=True)

@@ -15,7 +15,6 @@ import pytest
 from bahram.autonomy.subagent import SubagentEngine, SubagentResult
 from bahram.core.engine import AgentResponse, RunState
 
-
 # ── Helpers ────────────────────────────────────────────────
 
 

@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any, Optional
 
+
 @dataclass
 class MemoryEntry:
 
@@ -14,16 +15,16 @@ class MemoryEntry:
     metadata: dict[str, Any] = field(default_factory=dict)
     importance: float = 0.5
     access_count: int = 0
-    last_accessed: Optional[datetime] = None
+    last_accessed: datetime | None = None
 
 class BaseMemory(ABC):
 
     @abstractmethod
-    async def add(self, content: str, metadata: Optional[dict[str, Any]] = None) -> str:
+    async def add(self, content: str, metadata: dict[str, Any] | None = None) -> str:
         ...
 
     @abstractmethod
-    async def get(self, memory_id: str) -> Optional[MemoryEntry]:
+    async def get(self, memory_id: str) -> MemoryEntry | None:
         ...
 
     @abstractmethod

@@ -4,7 +4,8 @@ import json
 import logging
 import time
 from abc import ABC, abstractmethod
-from typing import Any, AsyncIterator
+from collections.abc import AsyncIterator
+from typing import Any
 
 from bahram.core.engine import AgentResponse, Message, MessageRole, ToolCall
 

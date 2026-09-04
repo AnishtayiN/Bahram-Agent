@@ -6,9 +6,10 @@ import logging
 import os
 import time
 import uuid
+from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, AsyncIterator, Protocol
+from typing import Any, Protocol
 
 logger = logging.getLogger(__name__)
 
@@ -259,7 +260,7 @@ class AgentEngine:
 
     def _init_approval_system(self) -> None:
         try:
-            from bahram.security.approval import ApprovalSystem, ApprovalConfig
+            from bahram.security.approval import ApprovalConfig, ApprovalSystem
             self._approval_system = ApprovalSystem(ApprovalConfig())
         except Exception as e:
             logger.warning(f"Failed to init approval system: {e}")
@@ -312,7 +313,7 @@ class AgentEngine:
             return self.providers["__fallback__"]
         if self.providers:
             first = next(iter(self.providers.values()))
-            logger.info(f"No fallback registered, using first available provider")
+            logger.info("No fallback registered, using first available provider")
             return first
         raise ValueError(f"Provider '{failed_provider}' not registered and no fallback available")
 

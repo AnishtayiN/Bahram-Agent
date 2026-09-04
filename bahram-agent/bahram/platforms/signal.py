@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import Any, Callable, Optional
+from collections.abc import Callable
+from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -11,7 +12,7 @@ class SignalAdapter:
     def __init__(self, number: str = "", api_url: str = "http://localhost:8080") -> None:
         self.number = number
         self.api_url = api_url.rstrip("/")
-        self._message_fn: Optional[Callable] = None
+        self._message_fn: Callable | None = None
 
     def set_message_function(self, fn: Callable) -> None:
         self._message_fn = fn

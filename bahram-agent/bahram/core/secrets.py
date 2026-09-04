@@ -90,11 +90,11 @@ class SecretsManager:
         )
         self._save()
 
-    def get_secret(self, name: str) -> Optional[str]:
+    def get_secret(self, name: str) -> str | None:
         entry = self._secrets.get(name)
         return entry.value if entry else None
 
-    def get_secret_info(self, name: str) -> Optional[dict]:
+    def get_secret_info(self, name: str) -> dict | None:
         entry = self._secrets.get(name)
         if entry:
             return {

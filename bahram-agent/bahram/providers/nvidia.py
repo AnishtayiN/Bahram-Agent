@@ -1,6 +1,9 @@
 from __future__ import annotations
+
 from typing import Any
+
 from bahram.providers.compat import OpenAICompatibleProvider
+
 
 class NvidiaProvider(OpenAICompatibleProvider):
     def __init__(self, api_key: str = "", model: str = "", **kwargs: Any) -> None:

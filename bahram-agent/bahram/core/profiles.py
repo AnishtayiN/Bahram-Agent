@@ -92,7 +92,7 @@ class ProfileManager:
         self._save()
         return profile
 
-    def get_profile(self, name: str) -> Optional[AgentProfile]:
+    def get_profile(self, name: str) -> AgentProfile | None:
         return self._profiles.get(name)
 
     def set_current(self, name: str) -> bool:

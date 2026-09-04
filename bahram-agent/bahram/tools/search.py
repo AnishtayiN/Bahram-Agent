@@ -59,7 +59,7 @@ class ToolSearch:
                 categories.add(tool["category"])
         return sorted(categories)
 
-    def get_tool(self, name: str) -> Optional[dict]:
+    def get_tool(self, name: str) -> dict | None:
         return self._tools.get(name)
 
     def list_all(self) -> list[dict]:

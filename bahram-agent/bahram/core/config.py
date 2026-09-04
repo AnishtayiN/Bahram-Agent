@@ -5,11 +5,12 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Optional
 
+
 @dataclass
 class ProviderConfig:
 
     api_key: str = ""
-    base_url: Optional[str] = None
+    base_url: str | None = None
     models: list[str] = field(default_factory=list)
     temperature: float = 0.7
     max_tokens: int = 4096

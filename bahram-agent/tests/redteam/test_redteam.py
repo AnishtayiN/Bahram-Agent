@@ -7,6 +7,7 @@ import uuid
 
 import pytest
 
+from bahram.autonomy.subagent import SubagentEngine, SubagentTask
 from bahram.core.engine import (
     AgentEngine,
     AgentResponse,
@@ -16,13 +17,11 @@ from bahram.core.engine import (
     ToolExecutor,
     ToolResult,
 )
-from bahram.security.approval import ApprovalConfig, ApprovalMode, ApprovalSystem
-from bahram.memory.semantic import SemanticMemory
-from bahram.autonomy.subagent import SubagentEngine, SubagentTask
-from bahram.security.protection import PromptInjectionDetector, SSRFProtector
 from bahram.core.smart_context import SmartContextManager
+from bahram.memory.semantic import SemanticMemory
+from bahram.security.approval import ApprovalConfig, ApprovalMode, ApprovalSystem
+from bahram.security.protection import PromptInjectionDetector, SSRFProtector
 from bahram.tools.bash import BashTool
-
 
 # ---------------------------------------------------------------------------
 # Helpers

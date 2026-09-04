@@ -92,7 +92,7 @@ class SkillBundles:
             return True
         return False
 
-    def get_bundle(self, name: str) -> Optional[SkillBundle]:
+    def get_bundle(self, name: str) -> SkillBundle | None:
         return self._bundles.get(name)
 
     def get_enabled_skills(self) -> list[str]:

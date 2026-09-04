@@ -28,7 +28,7 @@ class ContextWindow:
     def get_messages(self) -> list[Message]:
         return self.messages.copy()
 
-    def get_system_prompt(self) -> Optional[str]:
+    def get_system_prompt(self) -> str | None:
         for msg in self.messages:
             if msg.role == MessageRole.SYSTEM:
                 return msg.content
@@ -113,14 +113,14 @@ class Context:
     def __init__(self, max_turns: int = 20) -> None:
         self.max_turns = max_turns
         self._contexts: dict[str, ContextWindow] = {}
-        self._active: Optional[str] = None
+        self._active: str | None = None
 
     def create(self, session_id: str) -> ContextWindow:
         ctx = ContextWindow(max_turns=self.max_turns)
         self._contexts[session_id] = ctx
         return ctx
 
-    def get(self, session_id: str) -> Optional[ContextWindow]:
+    def get(self, session_id: str) -> ContextWindow | None:
         return self._contexts.get(session_id)
 
     def get_or_create(self, session_id: str) -> ContextWindow:
@@ -134,7 +134,7 @@ class Context:
     def set_active(self, session_id: str) -> None:
         self._active = session_id
 
-    def get_active(self) -> Optional[ContextWindow]:
+    def get_active(self) -> ContextWindow | None:
         if self._active:
             return self._contexts.get(self._active)
         return None

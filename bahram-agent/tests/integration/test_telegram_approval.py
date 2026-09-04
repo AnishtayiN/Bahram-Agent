@@ -11,7 +11,6 @@ from typing import Any, Optional
 
 import pytest
 
-
 # ---------------------------------------------------------------------------
 # TelegramApprovalManager — pure-logic approval layer, no Telegram dependency
 # ---------------------------------------------------------------------------

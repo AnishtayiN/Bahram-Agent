@@ -4,6 +4,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Any, Optional
 
+
 @dataclass
 class SkillMetadata:
 
@@ -30,4 +31,4 @@ class BaseSkill(ABC):
         return any(trigger.lower() in task_lower for trigger in self.metadata.triggers)
 
     async def get_help(self) -> str:
-        return f""
+        return ""

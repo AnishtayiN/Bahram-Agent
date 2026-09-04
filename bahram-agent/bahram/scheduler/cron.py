@@ -4,11 +4,12 @@ import asyncio
 import json
 import logging
 import uuid
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from enum import Enum
 from pathlib import Path
-from typing import Any, Optional, Callable
+from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -35,8 +36,8 @@ class CronJob:
     repeat: int = 0
     run_count: int = 0
     created_at: str = field(default_factory=lambda: datetime.now().isoformat())
-    last_run: Optional[str] = None
-    next_run: Optional[str] = None
+    last_run: str | None = None
+    next_run: str | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
 
 class CronScheduler:
@@ -115,7 +116,7 @@ class CronScheduler:
         logger.info(f"Created cron job: {job.name}")
         return job
 
-    def get_job(self, job_id: str) -> Optional[CronJob]:
+    def get_job(self, job_id: str) -> CronJob | None:
         return self.jobs.get(job_id)
 
     def list_jobs(self) -> list[CronJob]:
@@ -250,7 +251,7 @@ class CronScheduler:
             self._handlers[event] = []
         self._handlers[event].append(handler)
 
-    async def trigger_job(self, job_id: str) -> Optional[str]:
+    async def trigger_job(self, job_id: str) -> str | None:
         job = self.jobs.get(job_id)
         if job:
             result = await self._execute_job(job)

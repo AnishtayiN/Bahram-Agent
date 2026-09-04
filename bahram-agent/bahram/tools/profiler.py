@@ -5,8 +5,9 @@ import io
 import logging
 import pstats
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any, Optional, Callable
+from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 

@@ -42,11 +42,11 @@ class APIGenerator:
 
     def _generate_endpoint(self, endpoint: APIEndpoint, framework: str) -> str:
         if framework == "fastapi":
-            return f""
+            return ""
         elif framework == "flask":
-            return f""
+            return ""
         elif framework == "express":
-            return f""
+            return ""
         return ""
 
     def _get_params(self, endpoint: APIEndpoint) -> str:

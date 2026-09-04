@@ -46,7 +46,7 @@ class SSRFProtector:
         if ip:
             for prefix in self.BLOCKED_IP_PREFIXES:
                 if ip.startswith(prefix):
-                    return False, f"Blocked: reserved IP range"
+                    return False, "Blocked: reserved IP range"
 
             for start, end in self.BLOCKED_RANGES:
                 if self._ip_in_range(ip, start, end):
@@ -63,7 +63,7 @@ class SSRFProtector:
         hostname = hostname.split(":")[0]
         return hostname.lower()
 
-    def _extract_ip(self, hostname: str) -> Optional[str]:
+    def _extract_ip(self, hostname: str) -> str | None:
 
         parts = hostname.split(".")
         if len(parts) == 4 and all(p.isdigit() for p in parts):

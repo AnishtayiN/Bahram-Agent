@@ -10,10 +10,10 @@ import tempfile
 
 import pytest
 
-from bahram.memory.semantic import SemanticMemory
-from bahram.security.approval import ApprovalSystem, ApprovalConfig, ApprovalMode
 from bahram.autonomy.learning import LearningEngine
 from bahram.autonomy.skill_lifecycle import SkillLifecycle
+from bahram.memory.semantic import SemanticMemory
+from bahram.security.approval import ApprovalConfig, ApprovalMode, ApprovalSystem
 
 
 class TestMemoryPoisoning:

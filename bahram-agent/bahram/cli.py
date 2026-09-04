@@ -48,10 +48,10 @@ except ImportError:
 if HAS_CLI:
     @app.command()
     def chat(
-        message: Optional[str] = typer.Argument(None, help="Message to send"),
+        message: str | None = typer.Argument(None, help="Message to send"),
         model: str = typer.Option("anthropic/claude-sonnet-4-6", help="Model to use"),
         config: str = typer.Option("config/config.yaml", help="Config file path"),
-        session: Optional[str] = typer.Option(None, help="Session ID"),
+        session: str | None = typer.Option(None, help="Session ID"),
     ) -> None:
         from bahram.core.agent import Agent
         from bahram.core.config import Config
@@ -64,7 +64,7 @@ if HAS_CLI:
     @app.command()
     def model(
         list_models: bool = typer.Option(False, "--list", "-l", help="List available models"),
-        set_model: Optional[str] = typer.Option(None, "--set", "-s", help="Set default model"),
+        set_model: str | None = typer.Option(None, "--set", "-s", help="Set default model"),
     ) -> None:
         from bahram.core.config import Config
 
@@ -87,10 +87,10 @@ if HAS_CLI:
     @app.command()
     def skills(
         list_skills: bool = typer.Option(False, "--list", "-l", help="List available skills"),
-        skill_name: Optional[str] = typer.Argument(None, help="Skill name"),
+        skill_name: str | None = typer.Argument(None, help="Skill name"),
     ) -> None:
-        from bahram.skills.manager import SkillManager
         from bahram.core.config import Config
+        from bahram.skills.manager import SkillManager
 
 
         if list_skills:
@@ -118,9 +118,9 @@ if HAS_CLI:
     def gateway(
         platform: str = typer.Option("telegram", help="Platform to connect"),
     ) -> None:
-        from bahram.core.config import Config
         from bahram.core.agent import Agent
-        from bahram.platforms import TelegramPlatform, DiscordPlatform
+        from bahram.core.config import Config
+        from bahram.platforms import DiscordPlatform, TelegramPlatform
 
         config = Config.from_file("config/config.yaml")
 
@@ -171,10 +171,10 @@ if HAS_CLI:
         console.print(f"[bold]Bahram Agent[/bold] v{__version__}")
 
 async def _chat_async(
-    agent: "Agent",
-    message: Optional[str],
+    agent: Agent,
+    message: str | None,
     model: str,
-    session: Optional[str],
+    session: str | None,
 ) -> None:
     from bahram.core.engine import AgentResponse
 
@@ -232,7 +232,7 @@ async def _chat_async(
 
     await agent.stop()
 
-def _print_response(response: "AgentResponse") -> None:
+def _print_response(response: AgentResponse) -> None:
     console.print(
         Panel(
             Markdown(response.content) if response.content else "",

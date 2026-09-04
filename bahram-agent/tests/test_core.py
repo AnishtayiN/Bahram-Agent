@@ -1,15 +1,23 @@
 from __future__ import annotations
 
-import pytest
 import asyncio
 import time
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from bahram.core.engine import (
-    AgentEngine, AgentResponse, Message, MessageRole, ToolCall, ToolResult,
-    ToolExecutor, Trajectory, TrajectoryStep,
-)
+import pytest
+
 from bahram.core.config import Config, ProviderConfig
+from bahram.core.engine import (
+    AgentEngine,
+    AgentResponse,
+    Message,
+    MessageRole,
+    ToolCall,
+    ToolExecutor,
+    ToolResult,
+    Trajectory,
+    TrajectoryStep,
+)
 
 
 class TestMessage:

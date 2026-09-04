@@ -99,7 +99,7 @@ class LearningJourney:
                 self._save()
                 logger.info(f"Learning curve detected: {curve.curve_type.value} ({curve.confidence:.0%})")
 
-    def _detect_curve(self) -> Optional[LearningCurve]:
+    def _detect_curve(self) -> LearningCurve | None:
         if len(self._points) < 3:
             return None
 

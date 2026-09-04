@@ -54,7 +54,7 @@ class ConversationMemory(BaseMemory):
         except Exception as e:
             logger.error(f"Failed to save memories: {e}")
 
-    async def add(self, content: str, metadata: Optional[dict[str, Any]] = None) -> str:
+    async def add(self, content: str, metadata: dict[str, Any] | None = None) -> str:
         import uuid
 
         memory_id = str(uuid.uuid4())
@@ -68,7 +68,7 @@ class ConversationMemory(BaseMemory):
         self._save()
         return memory_id
 
-    async def get(self, memory_id: str) -> Optional[MemoryEntry]:
+    async def get(self, memory_id: str) -> MemoryEntry | None:
         entry = self._memories.get(memory_id)
         if entry:
             entry.access_count += 1

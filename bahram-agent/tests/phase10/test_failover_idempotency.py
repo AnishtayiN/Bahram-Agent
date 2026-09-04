@@ -11,11 +11,17 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+from bahram.autonomy.events import EventTracker
 from bahram.core.engine import (
-    AgentEngine, AgentResponse, Message, MessageRole, ToolCall, ToolResult, RunState,
+    AgentEngine,
+    AgentResponse,
+    Message,
+    MessageRole,
+    RunState,
+    ToolCall,
+    ToolResult,
 )
 from bahram.providers.fallback import FallbackProvider
-from bahram.autonomy.events import EventTracker
 
 
 class FakeProvider:

@@ -48,7 +48,7 @@ class CodeExplainer:
 
         return explanations
 
-    async def _explain_line(self, line: str) -> Optional[CodeExplanation]:
+    async def _explain_line(self, line: str) -> CodeExplanation | None:
         if not line or line.startswith("#"):
             return None
 

@@ -35,7 +35,7 @@ class TrajectoryGenerator:
         self.data_dir = Path(data_dir)
         self.data_dir.mkdir(parents=True, exist_ok=True)
         self._trajectories: dict[str, Trajectory] = {}
-        self._current: Optional[Trajectory] = None
+        self._current: Trajectory | None = None
 
     def start(self, name: str) -> Trajectory:
         import hashlib
@@ -63,7 +63,7 @@ class TrajectoryGenerator:
         )
         self._current.steps.append(step)
 
-    def finish(self, status: str = "completed") -> Optional[Trajectory]:
+    def finish(self, status: str = "completed") -> Trajectory | None:
         if not self._current:
             return None
 
@@ -97,7 +97,7 @@ class TrajectoryGenerator:
         with open(traj_file, "w") as f:
             json.dump(data, f, indent=2)
 
-    def get_trajectory(self, traj_id: str) -> Optional[Trajectory]:
+    def get_trajectory(self, traj_id: str) -> Trajectory | None:
         return self._trajectories.get(traj_id)
 
     def list_trajectories(self) -> list[dict]:

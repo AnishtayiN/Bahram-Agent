@@ -54,13 +54,13 @@ class SkillManager:
                 logger.info(f"Loaded skill: {skill.metadata.name}")
                 break
 
-    def get_skill(self, name: str) -> Optional[BaseSkill]:
+    def get_skill(self, name: str) -> BaseSkill | None:
         return self.skills.get(name)
 
     def list_skills(self) -> list[str]:
         return list(self.skills.keys())
 
-    async def find_skill(self, task: str) -> Optional[BaseSkill]:
+    async def find_skill(self, task: str) -> BaseSkill | None:
         for skill in self.skills.values():
             if await skill.can_handle(task):
                 return skill
@@ -77,7 +77,7 @@ class SkillManager:
             logger.error(f"Skill execution failed: {e}")
             return f"Skill execution failed: {e}"
 
-    async def auto_execute(self, task: str, context: dict[str, Any]) -> Optional[str]:
+    async def auto_execute(self, task: str, context: dict[str, Any]) -> str | None:
         skill = await self.find_skill(task)
         if skill:
             logger.info(f"Auto-executing skill: {skill.metadata.name}")

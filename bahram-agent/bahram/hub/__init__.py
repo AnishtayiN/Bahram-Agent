@@ -73,7 +73,7 @@ class SkillHub:
         logger.info(f"Browsing skills (source: {source})")
         return []
 
-    async def inspect(self, skill_id: str) -> Optional[HubSkill]:
+    async def inspect(self, skill_id: str) -> HubSkill | None:
         logger.info(f"Inspecting skill: {skill_id}")
         return None
 

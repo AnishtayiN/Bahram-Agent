@@ -95,7 +95,7 @@ class TestGenerator:
         return functions
 
     async def _generate_class_tests(self, cls: dict, test_type: str) -> str:
-        test_methods = f""
+        test_methods = ""
         return self._test_templates.get(test_type, "").format(
             module="module",
             class_name=cls["name"],
@@ -104,7 +104,7 @@ class TestGenerator:
         )
 
     async def _generate_function_tests(self, func: dict, test_type: str) -> str:
-        return f''
+        return ''
 
     def _combine_tests(self, tests: list[GeneratedTest]) -> str:
         lines = ['""', "", "import pytest", ""]

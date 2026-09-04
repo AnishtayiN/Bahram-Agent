@@ -77,7 +77,7 @@ class ChannelOverrideManager:
         self._save_overrides()
         return override
 
-    def get_override(self, platform: str, channel_id: str) -> Optional[ChannelOverride]:
+    def get_override(self, platform: str, channel_id: str) -> ChannelOverride | None:
         return self._overrides.get(platform, {}).get(channel_id)
 
     def remove_override(self, platform: str, channel_id: str) -> bool:

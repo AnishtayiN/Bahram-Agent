@@ -20,9 +20,10 @@ import json
 import sys
 import time
 import uuid
+from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, AsyncIterator
+from typing import Any
 
 # Ensure the bahram package is importable when running from any directory.
 _SCRIPT_DIR = Path(__file__).resolve().parent
@@ -174,8 +175,8 @@ async def run_demo() -> list[str]:
     )
 
     # -- 5. PLAN CREATED ----------------------------------------------------
-    from bahram.autonomy.planner import Planner
     from bahram.autonomy.plan import Plan, PlanStatus, PlanStep, StepStatus
+    from bahram.autonomy.planner import Planner
 
     planner = Planner(provider=None)  # None -> deterministic fallback path
     plan = await planner.create_plan(
@@ -187,7 +188,8 @@ async def run_demo() -> list[str]:
     milestone("PLAN CREATED", f"plan_id={plan.id}, steps={len(plan.steps)}")
 
     # -- 6. TOOL EXECUTED (via ToolExecutor) --------------------------------
-    from bahram.core.engine import ToolExecutor, ToolResult, ToolCall as TC
+    from bahram.core.engine import ToolCall as TC
+    from bahram.core.engine import ToolExecutor, ToolResult
 
     @dataclass
     class EchoTool:
@@ -209,7 +211,7 @@ async def run_demo() -> list[str]:
         async def execute(self, **kwargs: Any) -> str:
             return json.dumps({"status": "ok", "echo": kwargs})
 
-    from bahram.security.approval import ApprovalSystem, ApprovalConfig
+    from bahram.security.approval import ApprovalConfig, ApprovalSystem
 
     approval = ApprovalSystem(ApprovalConfig())
     executor = ToolExecutor(tools={"echo": EchoTool()}, approval_system=approval)

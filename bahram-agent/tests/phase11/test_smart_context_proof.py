@@ -6,8 +6,8 @@ from __future__ import annotations
 
 import pytest
 
-from bahram.core.smart_context import SmartContextManager
 from bahram.core.engine import Message, MessageRole
+from bahram.core.smart_context import SmartContextManager
 
 
 class TestSmartContextProof:

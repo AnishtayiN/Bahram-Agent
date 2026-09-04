@@ -93,7 +93,7 @@ class BrowserTool:
         except Exception:
             return ""
 
-    async def screenshot(self) -> Optional[bytes]:
+    async def screenshot(self) -> bytes | None:
         if not self._page:
             return None
 

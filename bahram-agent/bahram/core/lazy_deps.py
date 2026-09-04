@@ -27,7 +27,7 @@ class LazyLoader:
             self._failed.add(name)
             raise ImportError(f"Optional dependency '{name}' not installed: {e}")
 
-    def load(self, module_name: str) -> Optional[Any]:
+    def load(self, module_name: str) -> Any | None:
         try:
             return getattr(self, module_name)
         except ImportError:
@@ -48,7 +48,7 @@ class LazyLoader:
 
 _lazy = LazyLoader()
 
-def lazy_import(module_name: str) -> Optional[Any]:
+def lazy_import(module_name: str) -> Any | None:
     return _lazy.load(module_name)
 
 def require_optional(module_name: str) -> Any:

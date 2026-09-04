@@ -7,7 +7,7 @@ import uuid
 
 import pytest
 
-from bahram.autonomy.events import EventTracker, Event
+from bahram.autonomy.events import Event, EventTracker
 from bahram.autonomy.jobs import JobEngine, JobStatus
 from bahram.autonomy.learning import LearningEngine, SkillCandidate
 from bahram.autonomy.skill_lifecycle import SkillLifecycle
@@ -20,7 +20,6 @@ from bahram.core.engine import (
     Trajectory,
     TrajectoryStep,
 )
-
 
 # ── Helper: emit a full causal chain ───────────────────────
 

@@ -6,7 +6,7 @@ import uuid
 from dataclasses import dataclass, field
 from typing import Any, Protocol
 
-from bahram.autonomy.learning import LearningEngine, SkillCandidate, Lesson
+from bahram.autonomy.learning import LearningEngine, Lesson, SkillCandidate
 
 logger = logging.getLogger(__name__)
 

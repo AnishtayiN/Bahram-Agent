@@ -187,7 +187,7 @@ class SemanticMemory:
                 ))
         return results
 
-    def get(self, memory_id: str) -> Optional[dict]:
+    def get(self, memory_id: str) -> dict | None:
         row = self._conn.execute(
             "SELECT id, content, source, timestamp, metadata FROM memories WHERE id = ?",
             (memory_id,),

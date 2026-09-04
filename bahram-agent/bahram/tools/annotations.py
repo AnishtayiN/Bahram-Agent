@@ -50,7 +50,7 @@ class AnnotationManager:
             for a in annotations
         ]
 
-    def get_annotation(self, tool_call_id: str, key: str) -> Optional[Any]:
+    def get_annotation(self, tool_call_id: str, key: str) -> Any | None:
         annotations = self._annotations.get(tool_call_id, [])
         for a in annotations:
             if a.key == key:

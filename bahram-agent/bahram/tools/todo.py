@@ -59,8 +59,8 @@ class TodoTool:
         content: str,
         priority: str = "medium",
     ) -> TodoItem:
-        import uuid
         import time
+        import uuid
 
         todo_id = f"todo_{uuid.uuid4().hex[:8]}"
         todo = TodoItem(

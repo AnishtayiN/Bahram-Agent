@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Callable, Optional
+from collections.abc import Callable
+from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -9,7 +10,7 @@ class EmailAdapter:
 
     def __init__(self, config: dict = None) -> None:
         self.config = config or {}
-        self._handler: Optional[Callable] = None
+        self._handler: Callable | None = None
         self._running = False
 
     def set_handler(self, handler: Callable) -> None:

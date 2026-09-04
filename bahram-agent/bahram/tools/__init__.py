@@ -18,7 +18,7 @@ async def init_tools(engine: Any, config: Any) -> None:
         logger.warning(f"Failed to load bash tool: {e}")
 
     try:
-        from bahram.tools.file import ReadTool, WriteTool, EditTool
+        from bahram.tools.file import EditTool, ReadTool, WriteTool
         tool_list.append(("read", ReadTool()))
         tool_list.append(("write", WriteTool(config=tools_config)))
         tool_list.append(("edit", EditTool()))
@@ -39,7 +39,7 @@ async def init_tools(engine: Any, config: Any) -> None:
         logger.warning(f"Failed to load execute_code tool: {e}")
 
     try:
-        from bahram.tools.extended import GitTool, ProcessListTool, ContainerTool, DocumentReadTool
+        from bahram.tools.extended import ContainerTool, DocumentReadTool, GitTool, ProcessListTool
         tool_list.append(("git", GitTool()))
         tool_list.append(("process_list", ProcessListTool()))
         tool_list.append(("container", ContainerTool()))

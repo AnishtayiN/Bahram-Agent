@@ -19,7 +19,6 @@ import pytest
 
 from bahram.autonomy.jobs import JobEngine, JobStatus
 
-
 WORKER_SCRIPT = '''
 import asyncio
 import json
@@ -145,8 +144,8 @@ class TestCrashInjection:
 
     def test_recovery_manager_checkpoint_survives_restart(self):
         """RecoveryManager checkpoints should persist across instances."""
-        from bahram.autonomy.recovery import RecoveryManager
         from bahram.autonomy.plan import Plan, PlanStatus, PlanStep, StepStatus
+        from bahram.autonomy.recovery import RecoveryManager
 
         tmpdir = self._make_tmpdir()
 

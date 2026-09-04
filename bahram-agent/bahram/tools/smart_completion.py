@@ -115,7 +115,7 @@ class SmartCodeCompletion:
             {"text": "for item in iterable:", "description": "For loop", "priority": 1},
         ]
 
-    def get_snippet(self, language: str, trigger: str) -> Optional[str]:
+    def get_snippet(self, language: str, trigger: str) -> str | None:
         snippets = self._snippets.get(language, [])
         for snippet in snippets:
             if snippet["trigger"] == trigger:

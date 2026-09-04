@@ -40,7 +40,7 @@ class SecurityScanner:
 
     async def scan_file(self, file_path: str) -> list[SecurityIssue]:
         try:
-            with open(file_path, "r", encoding="utf-8", errors="replace") as f:
+            with open(file_path, encoding="utf-8", errors="replace") as f:
                 content = f.read()
                 lines = content.split("\n")
 

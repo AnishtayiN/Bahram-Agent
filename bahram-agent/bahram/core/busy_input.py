@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from collections.abc import Callable
 from enum import Enum
-from typing import Any, Optional, Callable
+from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 

@@ -225,7 +225,7 @@ class MCPClient:
             process.stdin.write(data.encode())
             await process.stdin.drain()
 
-    async def _receive_message(self, server_name: str) -> Optional[dict]:
+    async def _receive_message(self, server_name: str) -> dict | None:
         conn = self._connections.get(server_name)
         if not conn:
             return None

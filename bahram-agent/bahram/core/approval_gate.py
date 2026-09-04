@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Optional, Callable
+from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 

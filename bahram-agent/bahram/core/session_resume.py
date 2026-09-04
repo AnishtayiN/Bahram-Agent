@@ -77,7 +77,7 @@ class SessionResumeManager:
         )
         self._save()
 
-    def get_session(self, session_id: str) -> Optional[SessionState]:
+    def get_session(self, session_id: str) -> SessionState | None:
         return self._sessions.get(session_id)
 
     def get_recent_sessions(self, platform: str = None, limit: int = 10) -> list[dict]:

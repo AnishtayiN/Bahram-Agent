@@ -4,9 +4,10 @@ import asyncio
 import json
 import logging
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Optional, Callable
+from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +28,7 @@ class BackgroundReviewer:
         self.data_dir.mkdir(parents=True, exist_ok=True)
         self._reviews: list[ReviewItem] = []
         self._enabled = True
-        self._review_fn: Optional[Callable] = None
+        self._review_fn: Callable | None = None
         self._load()
 
     def _load(self) -> None:
@@ -69,7 +70,7 @@ class BackgroundReviewer:
         review_fn = model_fn or self._review_fn
 
         if review_fn:
-            prompt = f""
+            prompt = ""
 
             try:
                 response = await review_fn([{"role": "user", "content": prompt}])

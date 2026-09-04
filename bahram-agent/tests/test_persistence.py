@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-import pytest
 import time
 
-from bahram.core.persistence import SessionStore
+import pytest
+
 from bahram.core.engine import Message, MessageRole
+from bahram.core.persistence import SessionStore
 
 
 class TestSessionStore:

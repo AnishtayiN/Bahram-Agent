@@ -1,12 +1,13 @@
 from __future__ import annotations
 
-import asyncio
 import ast
+import asyncio
 import inspect
 from pathlib import Path
 from unittest.mock import patch
 
 import pytest
+
 from bahram.core.engine import AgentEngine, ToolCall, ToolExecutor, ToolResult
 from bahram.tools import init_tools
 from bahram.tools.bash import BashTool
@@ -381,7 +382,7 @@ class TestNoDirectToolExecuteCalls:
         )
 
     def test_all_tool_modules_importable(self):
-        from bahram.tools import bash, file, web, execute_code, extended
+        from bahram.tools import bash, execute_code, extended, file, web
         modules = [bash, file, web, execute_code, extended]
         for mod in modules:
             assert mod is not None

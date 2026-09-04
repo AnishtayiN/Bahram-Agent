@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any, Callable, Optional
+from typing import Any, Optional
+
 
 @dataclass
 class PluginMetadata:
@@ -30,13 +32,13 @@ class BasePlugin(ABC):
     async def on_shutdown(self) -> None:
         pass
 
-    async def on_message(self, message: Any) -> Optional[Any]:
+    async def on_message(self, message: Any) -> Any | None:
         pass
 
-    async def on_tool_call(self, tool_name: str, arguments: dict) -> Optional[dict]:
+    async def on_tool_call(self, tool_name: str, arguments: dict) -> dict | None:
         pass
 
-    async def on_tool_result(self, tool_name: str, result: Any) -> Optional[Any]:
+    async def on_tool_result(self, tool_name: str, result: Any) -> Any | None:
         pass
 
     async def on_error(self, error: Exception) -> None:

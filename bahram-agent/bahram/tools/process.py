@@ -77,7 +77,7 @@ class ProcessManager:
             logger.warning(f"Failed to stop process: {e}")
             return False
 
-    async def get_info(self, pid: int) -> Optional[ProcessInfo]:
+    async def get_info(self, pid: int) -> ProcessInfo | None:
         return self._processes.get(pid)
 
     def list_processes(self) -> list[dict]:

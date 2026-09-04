@@ -18,8 +18,8 @@ class ClarifyTool:
         options: list[str] = None,
         required: bool = True,
     ) -> dict[str, Any]:
-        import uuid
         import time
+        import uuid
 
         clarification_id = f"clarify_{uuid.uuid4().hex[:8]}"
 
@@ -39,7 +39,7 @@ class ClarifyTool:
             "required": required,
         }
 
-    def get_clarification(self, clarification_id: str) -> Optional[dict]:
+    def get_clarification(self, clarification_id: str) -> dict | None:
         return self._pending_clarifications.get(clarification_id)
 
     def answer_clarification(

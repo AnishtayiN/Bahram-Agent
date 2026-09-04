@@ -26,7 +26,7 @@ class EgressProxy:
         self._proxy_url = url
         self._proxy_type = proxy_type
 
-    def get_proxy(self) -> Optional[str]:
+    def get_proxy(self) -> str | None:
         return self._proxy_url or None
 
     def should_proxy(self, hostname: str) -> bool:
@@ -45,7 +45,7 @@ class EgressProxy:
 
         return True
 
-    def get_httpx_proxy(self) -> Optional[str]:
+    def get_httpx_proxy(self) -> str | None:
         if not self._proxy_url:
             return None
 

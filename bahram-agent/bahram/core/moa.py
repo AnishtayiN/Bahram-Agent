@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any, Optional, Callable
+from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -112,7 +113,7 @@ class MixtureOfAgents:
 
         return result
 
-    def _get_agent(self, role: str, index: int) -> Optional[AgentConfig]:
+    def _get_agent(self, role: str, index: int) -> AgentConfig | None:
         role_agents = [a for a in self._agents if a.role == role]
         if index < len(role_agents):
             return role_agents[index]

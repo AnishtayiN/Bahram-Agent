@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 import asyncio
+import fcntl
 import logging
 import os
 import pty
 import select
 import signal
 import struct
-import fcntl
 from dataclasses import dataclass, field
 from typing import Any, Optional
 
@@ -71,7 +71,7 @@ class SudoManager:
         self._password_cache[hostname] = password
         self._cache_timestamps[hostname] = time.time()
 
-    def get_password(self, hostname: str) -> Optional[str]:
+    def get_password(self, hostname: str) -> str | None:
         import time
         if hostname not in self._password_cache:
             return None
