@@ -69,6 +69,16 @@ evidence.
   prefix is stripped.
 - **Zombie processes.** Four tools killed a timed-out child without reaping
   it; they now `await proc.wait()`.
+- **The CLI lied or crashed.** `bahram chat "hi"` with no API key raised an
+  unhandled `ValueError: Provider 'anthropic' not registered` and printed a
+  raw traceback; it now explains the problem and exits 1. `bahram serve`
+  printed "Starting API server … / Server started" for a server that does not
+  exist; it now says so and exits 1. `bahram skills --list` printed a
+  hard-coded list that drifted from `skills/`; it loads the real
+  `SkillManager`, and `SkillManager` now falls back to the directory shipped
+  beside the package so the command works from any directory. `bahram model`
+  ignored its config file unless it sat at `config/config.yaml`; it takes
+  `--config` like `chat` does.
 - **`tools/git.py` built shell strings**, which lost `git log --format=%s`,
   broke `git branch --format=%(refname:short)` with
   `Syntax error: "(" unexpected`, and interpolated the commit message into a

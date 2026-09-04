@@ -21,16 +21,31 @@ class SkillManager:
     Skill manager.
     """
 
-    def __init__(self, config: Any) -> None:
-        """
-        Initialise a SkillManager instance.
+    def __init__(self, config: Any = None) -> None:
+        """Initialise a SkillManager instance.
 
         Args:
-            config (Any): configuration object.
+            config (Any): configuration object with a ``directory`` attribute.
+                Defaults to ``None``, which resolves the skills directory
+                relative to the current working directory and then falls back
+                to the one shipped beside the package - so ``bahram skills
+                --list`` still works when the CLI is installed as a wheel and
+                invoked from an unrelated directory.
         """
         self.config = config
         self.skills: dict[str, BaseSkill] = {}
-        self.skill_dir = Path(config.directory) if config.directory else Path("skills")
+        directory = getattr(config, "directory", "") if config is not None else ""
+        self.skill_dir = self._resolve_dir(directory)
+
+    @staticmethod
+    def _resolve_dir(directory: str) -> Path:
+        """Pick the skills directory: explicit, then CWD, then the package one."""
+        if directory:
+            return Path(directory)
+        local = Path("skills")
+        if local.exists():
+            return local
+        return Path(__file__).resolve().parents[2] / "skills"
 
     async def load_skills(self) -> None:
         """
