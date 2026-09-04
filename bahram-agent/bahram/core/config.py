@@ -284,38 +284,64 @@ class Config:
         config = cls()
 
         if "agent" in data:
-            config.agent = AgentConfig(**data["agent"])
+            config.agent = cls._build(AgentConfig, data["agent"], "agent")
 
         if "providers" in data:
             for name, provider_data in data["providers"].items():
-                config.providers[name] = ProviderConfig(**provider_data)
+                config.providers[name] = cls._build(
+                    ProviderConfig, provider_data, f"providers.{name}"
+                )
 
         if "memory" in data:
-            config.memory = MemoryConfig(**data["memory"])
+            config.memory = cls._build(MemoryConfig, data["memory"], "memory")
 
         if "skills" in data:
-            config.skills = SkillsConfig(**data["skills"])
+            config.skills = cls._build(SkillsConfig, data["skills"], "skills")
 
         if "tools" in data:
-            config.tools = ToolsConfig(**data["tools"])
+            config.tools = cls._build(ToolsConfig, data["tools"], "tools")
 
         if "platforms" in data:
             for name, platform_data in data["platforms"].items():
-                config.platforms[name] = PlatformConfig(**platform_data)
+                config.platforms[name] = cls._build(
+                    PlatformConfig, platform_data, f"platforms.{name}"
+                )
 
         if "scheduler" in data:
-            config.scheduler = SchedulerConfig(**data["scheduler"])
+            config.scheduler = cls._build(SchedulerConfig, data["scheduler"], "scheduler")
 
         if "security" in data:
-            config.security = SecurityConfig(**data["security"])
+            config.security = cls._build(SecurityConfig, data["security"], "security")
 
         if "logging" in data:
-            config.logging = LoggingConfig(**data["logging"])
+            config.logging = cls._build(LoggingConfig, data["logging"], "logging")
 
         if "server" in data:
-            config.server = ServerConfig(**data["server"])
+            config.server = cls._build(ServerConfig, data["server"], "server")
 
         return config
+
+    @staticmethod
+    def _build(section_cls: Any, values: Any, label: str) -> Any:
+        """Build one config section, skipping keys the section does not declare.
+
+        A stray or renamed key used to raise ``TypeError: __init__() got an
+        unexpected keyword argument`` and abort start-up with no hint about
+        which file or key was wrong.  Unknown keys are now ignored with a
+        warning; a typo costs one setting, not the whole process.
+        """
+        if not isinstance(values, dict):
+            raise TypeError(
+                f"config section '{label}' must be a mapping, got {type(values).__name__}"
+            )
+        known = set(section_cls.__dataclass_fields__)
+        unknown = sorted(set(values) - known)
+        if unknown:
+            print(
+                f"Warning: ignoring unknown key(s) in config section '{label}': "
+                f"{', '.join(unknown)}"
+            )
+        return section_cls(**{k: v for k, v in values.items() if k in known})
 
     @classmethod
     def _expand_env_vars(cls, obj: Any) -> Any:

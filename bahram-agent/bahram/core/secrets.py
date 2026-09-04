@@ -221,9 +221,18 @@ class SecretsManager:
         """
         count = 0
         for key, value in os.environ.items():
-            if prefix and not key.startswith(prefix):
-                continue
-            if key.startswith(("SECRET", "TOKEN", "KEY", "PASSWORD", "API_")):
+            if prefix:
+                # With a prefix the caller has already said which variables
+                # matter, so naming filters are applied to the remainder:
+                # "BAHRAM_API_KEY" starts with "API_" only once "BAHRAM_" is
+                # stripped.  Previously the filter ran on the full name and a
+                # prefixed import silently imported nothing at all.
+                if not key.startswith(prefix):
+                    continue
+                remainder = key[len(prefix) :]
+            else:
+                remainder = key
+            if prefix or remainder.startswith(("SECRET", "TOKEN", "KEY", "PASSWORD", "API_")):
                 self.set_secret(key, value, description="Imported from environment")
                 count += 1
         return count
