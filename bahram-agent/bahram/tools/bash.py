@@ -167,6 +167,7 @@ class BashTool(BaseTool):
             except asyncio.TimeoutError:
                 process.kill()
                 await process.communicate()
+                await process.wait()  # reap the child instead of leaving a zombie
                 return f"Error: Command timed out after {timeout} seconds"
 
             stdout_str = stdout.decode("utf-8", errors="replace")

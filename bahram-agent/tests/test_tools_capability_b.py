@@ -24,7 +24,7 @@ from bahram.tools.container import (
     ContainerSecurity,
     DockerUnavailableError,
 )
-from bahram.tools.database import DBConfig, DatabaseTool
+from bahram.tools.database import DatabaseTool, DBConfig
 from bahram.tools.delegation import DelegatedTask, DelegationTool
 from bahram.tools.dependency import Dependency, DependencyAnalyzer
 from bahram.tools.deployment import DeploymentConfig, DeploymentTool

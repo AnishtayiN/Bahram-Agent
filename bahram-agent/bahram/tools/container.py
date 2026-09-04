@@ -274,6 +274,7 @@ class ContainerResources:
             }
         except asyncio.TimeoutError:
             proc.kill()
+            await proc.wait()  # reap the child instead of leaving a zombie
             return {
                 "stdout": "",
                 "stderr": "Command timed out",

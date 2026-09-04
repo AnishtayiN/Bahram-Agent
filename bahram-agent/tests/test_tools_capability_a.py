@@ -17,7 +17,7 @@ import pytest
 
 from bahram.tools.ai_generator import AICodeGenerator, GeneratedFile
 from bahram.tools.annotations import AnnotationManager, ToolAnnotation
-from bahram.tools.api_generator import APIGenerator, APIEndpoint
+from bahram.tools.api_generator import APIEndpoint, APIGenerator
 from bahram.tools.autocomplete import AutoComplete, Completion
 from bahram.tools.bg_notify import BackgroundNotifier, BackgroundTask
 from bahram.tools.browser import BrowserState, BrowserTool

@@ -364,6 +364,10 @@ class TerminalTool:
             }
         except asyncio.TimeoutError:
             proc.kill()
+            # Reap the child: without wait() the subprocess transport is
+            # finalised after the loop closes, which leaves a zombie and logs
+            # "Event loop is closed" from the garbage collector.
+            await proc.wait()
             return {
                 "stdout": "",
                 "stderr": "Command timed out",

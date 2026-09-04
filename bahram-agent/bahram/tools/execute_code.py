@@ -143,6 +143,7 @@ class ExecuteCodeTool(BaseTool):
                 }
             except asyncio.TimeoutError:
                 proc.kill()
+                await proc.wait()  # reap the child instead of leaving a zombie
                 return {"stdout": "", "stderr": "Execution timed out", "exit_code": -1}
         finally:
             Path(temp_path).unlink(missing_ok=True)
@@ -164,4 +165,5 @@ class ExecuteCodeTool(BaseTool):
             }
         except asyncio.TimeoutError:
             proc.kill()
+            await proc.wait()  # reap the child instead of leaving a zombie
             return {"stdout": "", "stderr": "Execution timed out", "exit_code": -1}

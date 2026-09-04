@@ -168,9 +168,7 @@ class SmartDocGenerator:
         classes = []
         # The docstring is optional - a symbol without one is still listed,
         # it just gets an empty ``docstring`` value.
-        pattern = (
-            r"class\s+(\w+)\s*(?:\(([^)]*)\))?:[ \t]*\n(?:[ \t]*" + self._DOCSTRING + r")?"
-        )
+        pattern = r"class\s+(\w+)\s*(?:\(([^)]*)\))?:[ \t]*\n(?:[ \t]*" + self._DOCSTRING + r")?"
         for match in re.finditer(pattern, content, re.DOTALL):
             classes.append(
                 {
