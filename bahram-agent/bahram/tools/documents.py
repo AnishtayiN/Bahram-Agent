@@ -6,8 +6,8 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-class DocumentTool:
 
+class DocumentTool:
     def __init__(self) -> None:
         self._max_size: int = 10 * 1024 * 1024
 
@@ -37,10 +37,12 @@ class DocumentTool:
                 return {"content": path.read_text(), "format": "markdown"}
             elif suffix == ".json":
                 import json
+
                 return {"content": json.loads(path.read_text()), "format": "json"}
             elif suffix in (".yaml", ".yml"):
                 try:
                     import yaml
+
                     return {"content": yaml.safe_load(path.read_text()), "format": "yaml"}
                 except ImportError:
                     return {"content": path.read_text(), "format": "text"}

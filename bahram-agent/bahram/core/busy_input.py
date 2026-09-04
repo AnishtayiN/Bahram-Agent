@@ -5,14 +5,14 @@ from enum import Enum
 
 logger = logging.getLogger(__name__)
 
-class BusyInputMode(str, Enum):
 
+class BusyInputMode(str, Enum):
     INTERRUPT = "interrupt"
     QUEUE = "queue"
     STEER = "steer"
 
-class BusyInputManager:
 
+class BusyInputManager:
     def __init__(self, mode: BusyInputMode = BusyInputMode.INTERRUPT) -> None:
         self.mode = mode
         self._queue: list[dict] = []
@@ -31,17 +31,14 @@ class BusyInputManager:
             return message
 
         if self.mode == BusyInputMode.INTERRUPT:
-
             message["_redirect"] = True
             return message
 
         elif self.mode == BusyInputMode.QUEUE:
-
             self._queue.append(message)
             return None
 
         elif self.mode == BusyInputMode.STEER:
-
             message["_steer"] = True
             return message
 
@@ -57,9 +54,13 @@ class BusyInputManager:
             return ""
 
         acks = {
-            BusyInputMode.INTERRUPT: "⚡ Agent is busy. Your message will redirect the current task.",
+            BusyInputMode.INTERRUPT: (
+                "⚡ Agent is busy. Your message will redirect the current task."
+            ),
             BusyInputMode.QUEUE: "⏳ Agent is busy. Your message will run after the current task.",
-            BusyInputMode.STEER: "🔀 Agent is busy. Your message will be injected into the current task.",
+            BusyInputMode.STEER: (
+                "🔀 Agent is busy. Your message will be injected into the current task."
+            ),
         }
         return acks.get(self.mode, "")
 

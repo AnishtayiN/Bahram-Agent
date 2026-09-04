@@ -65,6 +65,7 @@ PROVIDER_MAP: dict[str, type[BaseProvider]] = {
     "custom": CustomProvider,
 }
 
+
 async def init_providers(engine: Any, config: Any) -> None:
     for provider_name, provider_config in config.providers.items():
         try:

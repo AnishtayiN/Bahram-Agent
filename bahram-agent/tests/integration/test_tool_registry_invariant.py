@@ -4,6 +4,7 @@ import ast
 import asyncio
 import inspect
 from pathlib import Path
+
 import pytest
 
 from bahram.core.engine import AgentEngine, ToolCall, ToolExecutor, ToolResult
@@ -14,6 +15,7 @@ from bahram.tools.bash import BashTool
 def _make_tools_config(disabled: list[str] | None = None):
     class FakeToolsConfig:
         pass
+
     cfg = FakeToolsConfig()
     cfg.disabled = disabled or []
     return cfg
@@ -22,6 +24,7 @@ def _make_tools_config(disabled: list[str] | None = None):
 def _make_config(disabled: list[str] | None = None):
     class FakeConfig:
         pass
+
     cfg = FakeConfig()
     cfg.tools = _make_tools_config(disabled)
     return cfg
@@ -57,6 +60,7 @@ class TestEveryToolGoesThroughToolExecutor:
     async def test_executor_handles_missing_execute_method(self):
         class NoExec:
             pass
+
         executor = ToolExecutor(tools={"bad": NoExec()}, approval_system=None)
         call = ToolCall(id="t3", name="bad", arguments={})
         result = await executor.execute(call)
@@ -67,9 +71,22 @@ class TestEveryToolGoesThroughToolExecutor:
         assert engine_with_tools._tool_executor is not None
         assert isinstance(engine_with_tools._tool_executor, ToolExecutor)
 
-    async def test_all_registered_tools_accessible_via_executor(self, executor_with_tools: ToolExecutor):
-        for name in ["bash", "read", "write", "edit", "webfetch", "websearch",
-                      "execute_code", "git", "process_list", "container", "document_read"]:
+    async def test_all_registered_tools_accessible_via_executor(
+        self, executor_with_tools: ToolExecutor
+    ):
+        for name in [
+            "bash",
+            "read",
+            "write",
+            "edit",
+            "webfetch",
+            "websearch",
+            "execute_code",
+            "git",
+            "process_list",
+            "container",
+            "document_read",
+        ]:
             assert name in executor_with_tools.tools, f"'{name}' not in executor tools"
 
     async def test_executor_wraps_timeout(self):
@@ -90,6 +107,7 @@ class TestToolExecutorChecksSecurity:
         class FakeApproval:
             def check_command(self, cmd):
                 return True, "dangerous command"
+
             def assess_risk(self, cmd):
                 return "critical"
 
@@ -106,6 +124,7 @@ class TestToolExecutorChecksSecurity:
         class FakeApproval:
             def check_command(self, cmd):
                 return False, ""
+
             def assess_risk(self, cmd):
                 return "low"
 
@@ -125,6 +144,7 @@ class TestToolExecutorChecksSecurity:
         class FakeApproval:
             def check_command(self, cmd):
                 return True, "risky"
+
             def assess_risk(self, cmd):
                 return "high"
 
@@ -141,6 +161,7 @@ class TestToolExecutorChecksSecurity:
         class FakeApproval:
             def check_command(self, cmd):
                 return True, "minor"
+
             def assess_risk(self, cmd):
                 return "low"
 
@@ -165,6 +186,7 @@ class TestToolExecutorChecksApprovalForDangerousCommands:
             def check_command(self, cmd):
                 log.append(("check", cmd))
                 return False, ""
+
             def assess_risk(self, cmd):
                 return "low"
 
@@ -185,11 +207,16 @@ class TestToolExecutorChecksApprovalForDangerousCommands:
             def check_command(self, cmd):
                 log.append(("check", cmd))
                 return False, ""
+
             def assess_risk(self, cmd):
                 return "low"
 
         executor = ToolExecutor(
-            tools={"execute_code": __import__("bahram.tools.execute_code", fromlist=["ExecuteCodeTool"]).ExecuteCodeTool()},
+            tools={
+                "execute_code": __import__(
+                    "bahram.tools.execute_code", fromlist=["ExecuteCodeTool"]
+                ).ExecuteCodeTool()
+            },
             approval_system=FakeApproval(),
         )
         call = ToolCall(id="app2", name="execute_code", arguments={"code": "print(1)"})
@@ -205,6 +232,7 @@ class TestToolExecutorChecksApprovalForDangerousCommands:
             def check_command(self, cmd):
                 log.append(("check", cmd))
                 return False, ""
+
             def assess_risk(self, cmd):
                 return "low"
 
@@ -258,6 +286,7 @@ class TestToolExecutorRecordsTrajectory:
         class FakeApproval:
             def check_command(self, cmd):
                 return True, "blocked"
+
             def assess_risk(self, cmd):
                 return "critical"
 
@@ -285,6 +314,7 @@ class TestToolExecutorRecordsTrajectory:
         class FakeApproval:
             def check_command(self, cmd):
                 return True, "forbidden operation"
+
             def assess_risk(self, cmd):
                 return "critical"
 
@@ -322,10 +352,12 @@ class TestNoDirectToolExecuteCalls:
                 if isinstance(node, ast.Call):
                     func = node.func
                     if isinstance(func, ast.Attribute) and func.attr == "execute":
-                        results.append({
-                            "lineno": node.lineno,
-                            "source_line": source.splitlines()[node.lineno - 1].strip(),
-                        })
+                        results.append(
+                            {
+                                "lineno": node.lineno,
+                                "source_line": source.splitlines()[node.lineno - 1].strip(),
+                            }
+                        )
         return results
 
     def test_tool_execute_only_in_tool_executor(self):
@@ -351,12 +383,12 @@ class TestNoDirectToolExecuteCalls:
         violations = self._find_execute_calls_outside_executor(engine_path)
 
         real_violations = [
-            v for v in violations
-            if "self._tool_executor.execute" not in v["source_line"]
+            v for v in violations if "self._tool_executor.execute" not in v["source_line"]
         ]
 
         assert not real_violations, (
-            f"Found .execute() calls outside ToolExecutor that bypass the executor: {real_violations}"
+            f"Found .execute() calls outside ToolExecutor that bypass the executor: "
+            f"{real_violations}"
         )
 
     def test_engine_uses_executor_for_tool_execution(self):
@@ -369,6 +401,7 @@ class TestNoDirectToolExecuteCalls:
 
     def test_all_tool_modules_importable(self):
         from bahram.tools import bash, execute_code, extended, file, web
+
         modules = [bash, file, web, execute_code, extended]
         for mod in modules:
             assert mod is not None

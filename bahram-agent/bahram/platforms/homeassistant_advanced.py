@@ -5,8 +5,8 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-class HomeAssistantAdvanced:
 
+class HomeAssistantAdvanced:
     def __init__(self, url: str = "", token: str = "") -> None:
         self.url = url.rstrip("/")
         self.token = token
@@ -46,21 +46,14 @@ class HomeAssistantAdvanced:
 
     async def set_temperature(self, entity_id: str, temperature: float) -> dict[str, Any]:
         return await self._call_service(
-            "climate", "set_temperature", entity_id,
-            {"temperature": temperature}
+            "climate", "set_temperature", entity_id, {"temperature": temperature}
         )
 
     async def set_brightness(self, entity_id: str, brightness: int) -> dict[str, Any]:
-        return await self._call_service(
-            "light", "turn_on", entity_id,
-            {"brightness": brightness}
-        )
+        return await self._call_service("light", "turn_on", entity_id, {"brightness": brightness})
 
     async def set_color(self, entity_id: str, r: int, g: int, b: int) -> dict[str, Any]:
-        return await self._call_service(
-            "light", "turn_on", entity_id,
-            {"rgb_color": [r, g, b]}
-        )
+        return await self._call_service("light", "turn_on", entity_id, {"rgb_color": [r, g, b]})
 
     async def _get_states(self, domain: str) -> dict[str, Any]:
         if not self.url or not self.token:

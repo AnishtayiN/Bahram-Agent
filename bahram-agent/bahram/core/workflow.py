@@ -8,9 +8,9 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class WorkflowStep:
-
     id: str
     name: str
     action: str
@@ -19,17 +19,17 @@ class WorkflowStep:
     status: str = "pending"
     result: Any = None
 
+
 @dataclass
 class Workflow:
-
     id: str
     name: str
     steps: list[WorkflowStep] = field(default_factory=list)
     status: str = "idle"
     current_step: int = 0
 
-class WorkflowAutomation:
 
+class WorkflowAutomation:
     def __init__(self) -> None:
         self._workflows: dict[str, Workflow] = {}
         self._actions: dict[str, Callable] = {}
@@ -70,7 +70,6 @@ class WorkflowAutomation:
         results = []
 
         for step in workflow.steps:
-
             deps_met = all(
                 any(s.id == dep and s.status == "completed" for s in workflow.steps)
                 for dep in step.dependencies
@@ -89,20 +88,26 @@ class WorkflowAutomation:
                         result = action(**step.params)
                     step.result = result
                     step.status = "completed"
-                    results.append({"step": step.name, "status": "success", "result": str(result)[:200]})
+                    results.append(
+                        {"step": step.name, "status": "success", "result": str(result)[:200]}
+                    )
                 else:
                     step.status = "failed"
-                    results.append({"step": step.name, "status": "failed", "error": "Action not found"})
+                    results.append(
+                        {"step": step.name, "status": "failed", "error": "Action not found"}
+                    )
             except Exception as e:
                 step.status = "failed"
                 results.append({"step": step.name, "status": "failed", "error": str(e)})
 
         workflow.status = "completed"
-        self._history.append({
-            "workflow_id": workflow_id,
-            "name": workflow.name,
-            "results": results,
-        })
+        self._history.append(
+            {
+                "workflow_id": workflow_id,
+                "name": workflow.name,
+                "results": results,
+            }
+        )
 
         return {"status": "completed", "results": results}
 

@@ -7,9 +7,9 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class SecurityIssue:
-
     file: str
     line: int
     severity: str
@@ -17,20 +17,67 @@ class SecurityIssue:
     description: str
     recommendation: str
 
-class SecurityScanner:
 
+class SecurityScanner:
     def __init__(self) -> None:
         self._patterns: list[tuple[str, str, str, str, str]] = [
-
-            (r"eval\(", "critical", "code_injection", "eval() usage", "Avoid eval(), use ast.literal_eval()"),
+            (
+                r"eval\(",
+                "critical",
+                "code_injection",
+                "eval() usage",
+                "Avoid eval(), use ast.literal_eval()",
+            ),
             (r"exec\(", "critical", "code_injection", "exec() usage", "Avoid exec()"),
-            (r"os\.system\(", "high", "command_injection", "os.system() usage", "Use subprocess with shell=False"),
-            (r"subprocess\.call.*shell=True", "high", "command_injection", "Shell=True subprocess", "Use shell=False"),
-            (r"pickle\.loads?\(", "high", "deserialization", "Pickle deserialization", "Use JSON or safer format"),
-            (r"yaml\.load\(", "medium", "deserialization", "Unsafe YAML load", "Use yaml.safe_load()"),
-            (r"password\s*=\s*['\"]", "high", "hardcoded_secret", "Hardcoded password", "Use environment variables"),
-            (r"secret\s*=\s*['\"]", "high", "hardcoded_secret", "Hardcoded secret", "Use environment variables"),
-            (r"api_key\s*=\s*['\"]", "high", "hardcoded_secret", "Hardcoded API key", "Use environment variables"),
+            (
+                r"os\.system\(",
+                "high",
+                "command_injection",
+                "os.system() usage",
+                "Use subprocess with shell=False",
+            ),
+            (
+                r"subprocess\.call.*shell=True",
+                "high",
+                "command_injection",
+                "Shell=True subprocess",
+                "Use shell=False",
+            ),
+            (
+                r"pickle\.loads?\(",
+                "high",
+                "deserialization",
+                "Pickle deserialization",
+                "Use JSON or safer format",
+            ),
+            (
+                r"yaml\.load\(",
+                "medium",
+                "deserialization",
+                "Unsafe YAML load",
+                "Use yaml.safe_load()",
+            ),
+            (
+                r"password\s*=\s*['\"]",
+                "high",
+                "hardcoded_secret",
+                "Hardcoded password",
+                "Use environment variables",
+            ),
+            (
+                r"secret\s*=\s*['\"]",
+                "high",
+                "hardcoded_secret",
+                "Hardcoded secret",
+                "Use environment variables",
+            ),
+            (
+                r"api_key\s*=\s*['\"]",
+                "high",
+                "hardcoded_secret",
+                "Hardcoded API key",
+                "Use environment variables",
+            ),
             (r"SELECT.*FROM", "medium", "sql", "Raw SQL query", "Use parameterized queries"),
             (r"INSERT.*INTO", "medium", "sql", "Raw SQL query", "Use parameterized queries"),
             (r"UPDATE.*SET", "medium", "sql", "Raw SQL query", "Use parameterized queries"),
@@ -47,14 +94,16 @@ class SecurityScanner:
             for i, line in enumerate(lines, 1):
                 for pattern, severity, category, description, recommendation in self._patterns:
                     if re.search(pattern, line, re.IGNORECASE):
-                        issues.append(SecurityIssue(
-                            file=file_path,
-                            line=i,
-                            severity=severity,
-                            category=category,
-                            description=description,
-                            recommendation=recommendation,
-                        ))
+                        issues.append(
+                            SecurityIssue(
+                                file=file_path,
+                                line=i,
+                                severity=severity,
+                                category=category,
+                                description=description,
+                                recommendation=recommendation,
+                            )
+                        )
 
             return issues
 

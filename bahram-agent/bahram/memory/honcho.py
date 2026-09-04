@@ -7,8 +7,8 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
-class HonchoModel:
 
+class HonchoModel:
     def __init__(self, data_dir: str = "data/honcho") -> None:
         self.data_dir = Path(data_dir)
         self.data_dir.mkdir(parents=True, exist_ok=True)
@@ -68,7 +68,7 @@ class HonchoModel:
 
         message_lower = message.lower()
 
-        persian_chars = sum(1 for c in message if '\u0600' <= c <= '\u06FF')
+        persian_chars = sum(1 for c in message if "\u0600" <= c <= "\u06ff")
         if persian_chars > len(message) * 0.3:
             preferences["language"] = "persian"
         else:
@@ -88,10 +88,14 @@ class HonchoModel:
 
         avg_length = style.get("avg_message_length", 0)
         interactions = profile.get("interactions", 1)
-        style["avg_message_length"] = (avg_length * (interactions - 1) + len(message)) / interactions
+        style["avg_message_length"] = (
+            avg_length * (interactions - 1) + len(message)
+        ) / interactions
 
         avg_response = style.get("avg_response_length", 0)
-        style["avg_response_length"] = (avg_response * (interactions - 1) + len(response)) / interactions
+        style["avg_response_length"] = (
+            avg_response * (interactions - 1) + len(response)
+        ) / interactions
 
         profile["communication_style"] = style
 
@@ -107,9 +111,7 @@ class HonchoModel:
             }
 
         topics[topic]["mentions"] = topics[topic].get("mentions", 0) + 1
-        topics[topic]["sentiment"] = (
-            topics[topic].get("sentiment", 0) + sentiment
-        ) / 2
+        topics[topic]["sentiment"] = (topics[topic].get("sentiment", 0) + sentiment) / 2
         topics[topic]["last_seen"] = datetime.now().isoformat()
 
         profile["topics"] = topics
@@ -139,7 +141,9 @@ class HonchoModel:
         summary += f"Formality: {preferences.get('formality', 'unknown')}\n"
 
         if topics:
-            top_topics = sorted(topics.keys(), key=lambda t: topics[t].get("mentions", 0), reverse=True)[:3]
+            top_topics = sorted(
+                topics.keys(), key=lambda t: topics[t].get("mentions", 0), reverse=True
+            )[:3]
             summary += f"Top topics: {', '.join(top_topics)}\n"
 
         return summary

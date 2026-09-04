@@ -13,7 +13,7 @@ readme = "README.md"
 license = "MIT"
 requires-python = ">=3.10"
 authors = [
-    { name = "Bahram Team" }
+    { name = "Bahram Team" },
 ]
 keywords = ["ai", "agent", "llm", "automation", "hermes"]
 classifiers = [
@@ -25,21 +25,22 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
+
+# Every entry below is imported by the code that ships in the wheel.
+# ``sentence-transformers`` and ``numpy`` used to be listed here but memory
+# search is implemented with SQLite FTS5 (see bahram/memory/semantic.py) and
+# neither package is imported anywhere - keeping them added ~2 GB of transitive
+# dependencies for nothing.
 dependencies = [
     "httpx>=0.25.0",
     "pydantic>=2.0.0",
     "pydantic-settings>=2.0.0",
     "rich>=13.0.0",
     "typer>=0.9.0",
-    "aiofiles>=23.0.0",
-    "jinja2>=3.1.0",
     "pyyaml>=6.0.0",
-    "tomli>=2.0.0",
     "python-dotenv>=1.0.0",
     "cryptography>=41.0.0",
     "aiosqlite>=0.19.0",
-    "sentence-transformers>=2.2.0",
-    "numpy>=1.24.0",
 ]
 
 [project.optional-dependencies]
@@ -64,7 +65,6 @@ bahram = "bahram.cli:app"
 
 [project.urls]
 Homepage = "https://github.com/AnishtayiN/Bahram-Agent"
-Documentation = "https://bahram-agent.readthedocs.io"
 Repository = "https://github.com/AnishtayiN/Bahram-Agent"
 
 [tool.ruff]
@@ -74,10 +74,45 @@ target-version = "py310"
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "W", "UP"]
 
+[tool.ruff.lint.per-file-ignores]
+# The benchmark and end-to-end suites name their classes after the scenario
+# identifiers they implement (TestAUTO01_..., TestScenarioA_...).  The IDs are
+# referenced from docs/FEATURE_MATRIX.md, so they are preserved deliberately.
+"tests/evaluation/test_benchmarks.py" = ["N801"]
+"tests/test_e2e.py" = ["N801"]
+
 [tool.mypy]
 python_version = "3.10"
-strict = true
+# The project is only partially annotated; strict mode is the goal, not yet the
+# reality.  CI runs mypy on bahram/core and bahram/security only.
+ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+addopts = "--strict-markers"
+markers = [
+    "live: end-to-end tests that call a real LLM API (skipped without credentials)",
+    "slow: tests that take more than a couple of seconds",
+]
+
+[tool.coverage.run]
+source = ["bahram"]
+branch = false
+omit = ["*/tests/*"]
+
+[tool.coverage.report]
+show_missing = true
+skip_empty = true
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+    "@abstractmethod",
+    "@abc.abstractmethod",
+    "if __name__ == .__main__.:",
+]
+
+[tool.coverage.fail_under]
+# Enforced in CI via --cov-fail-under; documented here for local runs.
+total = 75

@@ -11,6 +11,7 @@ from bahram.providers.base import BaseProvider
 
 logger = logging.getLogger(__name__)
 
+
 class AnthropicProvider(BaseProvider):
     BASE_URL = "https://api.anthropic.com/v1"
 
@@ -117,14 +118,18 @@ class AnthropicProvider(BaseProvider):
         for msg in messages:
             role = msg.get("role", "user")
             if role == "tool":
-                anthropic_msgs.append({
-                    "role": "user",
-                    "content": [{
-                        "type": "tool_result",
-                        "tool_use_id": msg.get("tool_call_id", ""),
-                        "content": msg.get("content", ""),
-                    }],
-                })
+                anthropic_msgs.append(
+                    {
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "tool_result",
+                                "tool_use_id": msg.get("tool_call_id", ""),
+                                "content": msg.get("content", ""),
+                            }
+                        ],
+                    }
+                )
             elif role == "assistant":
                 content_parts = []
                 if msg.get("content"):
@@ -135,13 +140,20 @@ class AnthropicProvider(BaseProvider):
                         args = json.loads(func.get("arguments", "{}"))
                     except json.JSONDecodeError:
                         args = {}
-                    content_parts.append({
-                        "type": "tool_use",
-                        "id": tc.get("id", ""),
-                        "name": func.get("name", ""),
-                        "input": args,
-                    })
-                anthropic_msgs.append({"role": "assistant", "content": content_parts if content_parts else msg.get("content", "")})
+                    content_parts.append(
+                        {
+                            "type": "tool_use",
+                            "id": tc.get("id", ""),
+                            "name": func.get("name", ""),
+                            "input": args,
+                        }
+                    )
+                anthropic_msgs.append(
+                    {
+                        "role": "assistant",
+                        "content": content_parts if content_parts else msg.get("content", ""),
+                    }
+                )
             else:
                 anthropic_msgs.append({"role": role, "content": msg.get("content", "")})
         return anthropic_msgs
@@ -150,11 +162,13 @@ class AnthropicProvider(BaseProvider):
         converted = []
         for t in tools:
             func = t.get("function", t)
-            converted.append({
-                "name": func.get("name", ""),
-                "description": func.get("description", ""),
-                "input_schema": func.get("parameters", {}),
-            })
+            converted.append(
+                {
+                    "name": func.get("name", ""),
+                    "description": func.get("description", ""),
+                    "input_schema": func.get("parameters", {}),
+                }
+            )
         return converted
 
     def _parse_anthropic_response(self, data: dict) -> AgentResponse:
@@ -165,11 +179,13 @@ class AnthropicProvider(BaseProvider):
             if part.get("type") == "text":
                 text_parts.append(part.get("text", ""))
             elif part.get("type") == "tool_use":
-                tool_calls.append(ToolCall(
-                    id=part.get("id", f"call_{int(time.time() * 1000)}"),
-                    name=part.get("name", ""),
-                    arguments=part.get("input", {}),
-                ))
+                tool_calls.append(
+                    ToolCall(
+                        id=part.get("id", f"call_{int(time.time() * 1000)}"),
+                        name=part.get("name", ""),
+                        arguments=part.get("input", {}),
+                    )
+                )
         return AgentResponse(content="\n".join(text_parts), tool_calls=tool_calls)
 
     def get_models(self) -> list[str]:

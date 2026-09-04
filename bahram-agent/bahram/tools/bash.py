@@ -12,25 +12,30 @@ logger = logging.getLogger(__name__)
 _tirith_scanner = None
 _supply_chain = None
 
+
 def _get_tirith():
     global _tirith_scanner
     if _tirith_scanner is None:
         try:
             from bahram.security.tirith import TirithScanner
+
             _tirith_scanner = TirithScanner()
         except Exception:
             pass
     return _tirith_scanner
+
 
 def _get_supply_chain():
     global _supply_chain
     if _supply_chain is None:
         try:
             from bahram.security.supply_chain import SupplyChainGuard
+
             _supply_chain = SupplyChainGuard()
         except Exception:
             pass
     return _supply_chain
+
 
 class BashTool(BaseTool):
     def __init__(self, config: Any = None) -> None:
@@ -98,9 +103,7 @@ class BashTool(BaseTool):
             )
 
             try:
-                stdout, stderr = await asyncio.wait_for(
-                    process.communicate(), timeout=timeout
-                )
+                stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=timeout)
             except asyncio.TimeoutError:
                 process.kill()
                 await process.communicate()

@@ -8,16 +8,15 @@ from typing import Any
 
 @dataclass
 class ProviderConfig:
-
     api_key: str = ""
     base_url: str | None = None
     models: list[str] = field(default_factory=list)
     temperature: float = 0.7
     max_tokens: int = 4096
 
+
 @dataclass
 class MemoryConfig:
-
     enabled: bool = True
     database: str = "data/memory.db"
     embedding_model: str = "all-MiniLM-L6-v2"
@@ -25,17 +24,17 @@ class MemoryConfig:
     auto_summarize: bool = True
     summary_threshold: int = 50
 
+
 @dataclass
 class SkillsConfig:
-
     enabled: bool = True
     directory: str = "skills"
     auto_create: bool = True
     auto_improve: bool = True
 
+
 @dataclass
 class ToolsConfig:
-
     enabled: list[str] = field(
         default_factory=lambda: ["bash", "read", "write", "edit", "glob", "grep"]
     )
@@ -45,45 +44,46 @@ class ToolsConfig:
     webfetch_timeout: int = 30
     webfetch_max_size: int = 1048576
 
+
 @dataclass
 class PlatformConfig:
-
     enabled: bool = False
     token: str = ""
     allowed_users: list[str] = field(default_factory=list)
     guild_id: str = ""
     app_token: str = ""
 
+
 @dataclass
 class SchedulerConfig:
-
     enabled: bool = True
     max_concurrent: int = 5
     check_interval: int = 60
 
+
 @dataclass
 class SecurityConfig:
-
     sandbox_mode: bool = False
     allowed_commands: list[str] = field(default_factory=list)
     blocked_commands: list[str] = field(default_factory=list)
     require_approval: list[str] = field(default_factory=lambda: ["bash", "write", "edit"])
 
+
 @dataclass
 class LoggingConfig:
-
     level: str = "INFO"
     file: str = "logs/bahram.log"
     max_size: str = "10MB"
     backup_count: int = 5
 
+
 @dataclass
 class ServerConfig:
-
     enabled: bool = False
     host: str = "0.0.0.0"
     port: int = 8000
     auth_token: str = ""
+
 
 @dataclass
 class AgentConfig:
@@ -98,9 +98,9 @@ class AgentConfig:
     max_tool_calls: int = 50
     max_retries: int = 3
 
+
 @dataclass
 class Config:
-
     agent: AgentConfig = field(default_factory=AgentConfig)
     providers: dict[str, ProviderConfig] = field(default_factory=dict)
     memory: MemoryConfig = field(default_factory=MemoryConfig)
@@ -120,11 +120,12 @@ class Config:
 
         try:
             import yaml
+
             with open(path) as f:
                 data = yaml.safe_load(f)
         except ImportError:
-
             import json
+
             with open(path) as f:
                 data = json.load(f)
         except Exception as e:

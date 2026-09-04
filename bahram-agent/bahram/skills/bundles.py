@@ -7,16 +7,16 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class SkillBundle:
-
     name: str
     description: str
     skills: list[str] = field(default_factory=list)
     enabled: bool = True
 
-class SkillBundles:
 
+class SkillBundles:
     def __init__(self, data_dir: str = "data/skills") -> None:
         self.data_dir = Path(data_dir)
         self.data_dir.mkdir(parents=True, exist_ok=True)

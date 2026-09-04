@@ -25,7 +25,9 @@ class GitTool(BaseTool):
             "properties": {
                 "command": {
                     "type": "string",
-                    "description": "Git command to run (e.g. 'status', 'log --oneline -5', 'diff', 'add .')",
+                    "description": (
+                        "Git command to run (e.g. 'status', 'log --oneline -5', 'diff', 'add .')"
+                    ),
                 },
                 "workdir": {
                     "type": "string",
@@ -107,7 +109,9 @@ class ProcessListTool(BaseTool):
             cmd = f"ps aux | grep {proc_filter} | grep -v grep"
 
         process = await asyncio.create_subprocess_shell(
-            cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
+            cmd,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
         )
         stdout, _ = await process.communicate()
         return stdout.decode("utf-8", errors="replace")[:3000]
@@ -164,7 +168,9 @@ class ContainerTool(BaseTool):
 
         try:
             process = await asyncio.create_subprocess_shell(
-                cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
+                cmd,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
             )
             stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=30)
             if process.returncode != 0:
@@ -204,6 +210,7 @@ class DocumentReadTool(BaseTool):
 
     async def execute(self, **kwargs: Any) -> str:
         import os
+
         file_path = kwargs.get("file_path", "")
 
         if not file_path:
@@ -219,7 +226,21 @@ class DocumentReadTool(BaseTool):
             return "Error: File too large (>10MB)"
 
         try:
-            if ext in (".txt", ".md", ".py", ".js", ".ts", ".json", ".yaml", ".yml", ".toml", ".cfg", ".ini", ".csv", ".log"):
+            if ext in (
+                ".txt",
+                ".md",
+                ".py",
+                ".js",
+                ".ts",
+                ".json",
+                ".yaml",
+                ".yml",
+                ".toml",
+                ".cfg",
+                ".ini",
+                ".csv",
+                ".log",
+            ):
                 with open(file_path, encoding="utf-8", errors="replace") as f:
                     content = f.read(50000)
                 return content
@@ -227,11 +248,18 @@ class DocumentReadTool(BaseTool):
             elif ext == ".pdf":
                 try:
                     import subprocess
+
                     result = subprocess.run(
                         ["pdftotext", file_path, "-"],
-                        capture_output=True, text=True, timeout=30,
+                        capture_output=True,
+                        text=True,
+                        timeout=30,
                     )
-                    return result.stdout[:50000] if result.returncode == 0 else f"Error: {result.stderr}"
+                    return (
+                        result.stdout[:50000]
+                        if result.returncode == 0
+                        else f"Error: {result.stderr}"
+                    )
                 except FileNotFoundError:
                     return "Error: pdftotext not installed"
                 except Exception as e:
@@ -240,6 +268,7 @@ class DocumentReadTool(BaseTool):
             elif ext == ".docx":
                 try:
                     from docx import Document
+
                     doc = Document(file_path)
                     return "\n".join(p.text for p in doc.paragraphs)[:50000]
                 except ImportError:
@@ -250,6 +279,7 @@ class DocumentReadTool(BaseTool):
             elif ext == ".xlsx":
                 try:
                     from openpyxl import load_workbook
+
                     wb = load_workbook(file_path, read_only=True)
                     lines = []
                     for sheet in wb.sheetnames:

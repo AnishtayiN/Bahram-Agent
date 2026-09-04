@@ -7,25 +7,25 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class Metric:
-
     name: str
     value: float
     timestamp: float
     tags: dict[str, str] = field(default_factory=dict)
 
+
 @dataclass
 class Alert:
-
     name: str
     condition: str
     threshold: float
     current_value: float = 0.0
     triggered: bool = False
 
-class PerformanceMonitor:
 
+class PerformanceMonitor:
     def __init__(self) -> None:
         self._metrics: dict[str, list[Metric]] = {}
         self._alerts: list[Alert] = []
@@ -36,12 +36,14 @@ class PerformanceMonitor:
         if name not in self._metrics:
             self._metrics[name] = []
 
-        self._metrics[name].append(Metric(
-            name=name,
-            value=value,
-            timestamp=time.time(),
-            tags=tags or {},
-        ))
+        self._metrics[name].append(
+            Metric(
+                name=name,
+                value=value,
+                timestamp=time.time(),
+                tags=tags or {},
+            )
+        )
 
         self._check_alerts(name, value)
 
@@ -61,11 +63,13 @@ class PerformanceMonitor:
         return 0.0
 
     def add_alert(self, name: str, condition: str, threshold: float) -> None:
-        self._alerts.append(Alert(
-            name=name,
-            condition=condition,
-            threshold=threshold,
-        ))
+        self._alerts.append(
+            Alert(
+                name=name,
+                condition=condition,
+                threshold=threshold,
+            )
+        )
 
     def _check_alerts(self, name: str, value: float) -> None:
         for alert in self._alerts:
@@ -82,10 +86,7 @@ class PerformanceMonitor:
 
     def get_metric(self, name: str, limit: int = 100) -> list[dict]:
         metrics = self._metrics.get(name, [])[-limit:]
-        return [
-            {"value": m.value, "timestamp": m.timestamp, "tags": m.tags}
-            for m in metrics
-        ]
+        return [{"value": m.value, "timestamp": m.timestamp, "tags": m.tags} for m in metrics]
 
     def get_counter(self, name: str) -> int:
         return self._counters.get(name, 0)
@@ -105,7 +106,12 @@ class PerformanceMonitor:
 
     def get_alerts(self) -> list[dict]:
         return [
-            {"name": a.name, "condition": a.condition, "threshold": a.threshold, "current": a.current_value}
+            {
+                "name": a.name,
+                "condition": a.condition,
+                "threshold": a.threshold,
+                "current": a.current_value,
+            }
             for a in self._alerts
             if a.triggered
         ]

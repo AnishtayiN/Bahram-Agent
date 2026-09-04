@@ -7,17 +7,17 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class TestCase:
-
     name: str
     description: str = ""
     steps: list[dict] = field(default_factory=list)
     expected: str = ""
     status: str = "pending"
 
-class TestRunner:
 
+class TestRunner:
     def __init__(self) -> None:
         self._test_cases: dict[str, TestCase] = {}
         self._results: list[dict] = []
@@ -103,7 +103,10 @@ class TestRunner:
         summary = self.get_summary()
         lines = [
             "## Test Report",
-            f"Total: {summary['total']} | Passed: {summary['passed']} | Failed: {summary['failed']}",
+            (
+                f"Total: {summary['total']} | Passed: {summary['passed']} | Failed: "
+                f"{summary['failed']}"
+            ),
             "",
         ]
 

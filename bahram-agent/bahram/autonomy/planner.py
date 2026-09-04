@@ -17,7 +17,8 @@ class LLMProviderForPlanner(Protocol):
     ) -> Any: ...
 
 
-PLANNING_SYSTEM_PROMPT = """You are a planning engine. Given a goal, create a structured execution plan.
+PLANNING_SYSTEM_PROMPT = """You are a planning engine. Given a goal, create a structured \
+execution plan.
 
 Analyze the goal and produce a JSON plan with these fields:
 - strategy: high-level approach
@@ -53,7 +54,8 @@ Available tools: {tools}
 
 Create a structured plan."""
 
-REPLAN_SYSTEM_PROMPT = """You are a replanning engine. A plan step has failed. Analyze the failure and produce a revised plan.
+REPLAN_SYSTEM_PROMPT = """You are a replanning engine. A plan step has failed. Analyze the \
+failure and produce a revised plan.
 
 The original plan and the failed step are provided. Produce a JSON response with:
 - diagnosis: what went wrong
@@ -115,9 +117,7 @@ class Planner:
 
         tools_str = ", ".join(available_tools) if available_tools else "No tools specified."
 
-        user_msg = PLANNING_USER_TEMPLATE.format(
-            goal=goal, context=context_str, tools=tools_str
-        )
+        user_msg = PLANNING_USER_TEMPLATE.format(goal=goal, context=context_str, tools=tools_str)
 
         try:
             from bahram.core.engine import Message, MessageRole
@@ -165,7 +165,7 @@ Failed step:
 
 Error: {error}
 
-Additional context: {context or 'None'}
+Additional context: {context or "None"}
 
 Produce a revised plan."""
 
@@ -202,7 +202,7 @@ Produce a revised plan."""
         content = content.strip()
         if content.startswith("```"):
             lines = content.split("\n")
-            lines = [l for l in lines if not l.strip().startswith("```")]
+            lines = [line for line in lines if not line.strip().startswith("```")]
             content = "\n".join(lines)
 
         try:
@@ -242,43 +242,104 @@ Produce a revised plan."""
 
         if any(w in goal_lower for w in ("fix", "debug", "repair", "error")):
             steps = [
-                PlanStep(id="step_1", plan_id=plan.id, objective="Investigate the issue",
-                         required_tools=["read", "bash"]),
-                PlanStep(id="step_2", plan_id=plan.id, objective="Identify root cause",
-                         dependencies=["step_1"], required_tools=["read"]),
-                PlanStep(id="step_3", plan_id=plan.id, objective="Implement fix",
-                         dependencies=["step_2"], required_tools=["write", "edit"]),
-                PlanStep(id="step_4", plan_id=plan.id, objective="Verify fix works",
-                         dependencies=["step_3"], required_tools=["bash"],
-                         verification_criteria=[{"type": "test_execution", "params": {}}]),
+                PlanStep(
+                    id="step_1",
+                    plan_id=plan.id,
+                    objective="Investigate the issue",
+                    required_tools=["read", "bash"],
+                ),
+                PlanStep(
+                    id="step_2",
+                    plan_id=plan.id,
+                    objective="Identify root cause",
+                    dependencies=["step_1"],
+                    required_tools=["read"],
+                ),
+                PlanStep(
+                    id="step_3",
+                    plan_id=plan.id,
+                    objective="Implement fix",
+                    dependencies=["step_2"],
+                    required_tools=["write", "edit"],
+                ),
+                PlanStep(
+                    id="step_4",
+                    plan_id=plan.id,
+                    objective="Verify fix works",
+                    dependencies=["step_3"],
+                    required_tools=["bash"],
+                    verification_criteria=[{"type": "test_execution", "params": {}}],
+                ),
             ]
         elif any(w in goal_lower for w in ("create", "build", "implement", "add")):
             steps = [
-                PlanStep(id="step_1", plan_id=plan.id, objective="Analyze requirements and existing code",
-                         required_tools=["read"]),
-                PlanStep(id="step_2", plan_id=plan.id, objective="Implement the solution",
-                         dependencies=["step_1"], required_tools=["write", "edit"]),
-                PlanStep(id="step_3", plan_id=plan.id, objective="Verify implementation",
-                         dependencies=["step_2"], required_tools=["bash"],
-                         verification_criteria=[{"type": "test_execution", "params": {}}]),
+                PlanStep(
+                    id="step_1",
+                    plan_id=plan.id,
+                    objective="Analyze requirements and existing code",
+                    required_tools=["read"],
+                ),
+                PlanStep(
+                    id="step_2",
+                    plan_id=plan.id,
+                    objective="Implement the solution",
+                    dependencies=["step_1"],
+                    required_tools=["write", "edit"],
+                ),
+                PlanStep(
+                    id="step_3",
+                    plan_id=plan.id,
+                    objective="Verify implementation",
+                    dependencies=["step_2"],
+                    required_tools=["bash"],
+                    verification_criteria=[{"type": "test_execution", "params": {}}],
+                ),
             ]
         elif any(w in goal_lower for w in ("research", "investigate", "analyze", "understand")):
             steps = [
-                PlanStep(id="step_1", plan_id=plan.id, objective="Gather relevant information",
-                         required_tools=["read", "websearch"]),
-                PlanStep(id="step_2", plan_id=plan.id, objective="Analyze findings",
-                         dependencies=["step_1"], required_tools=["read"]),
-                PlanStep(id="step_3", plan_id=plan.id, objective="Synthesize results",
-                         dependencies=["step_2"], required_tools=[]),
+                PlanStep(
+                    id="step_1",
+                    plan_id=plan.id,
+                    objective="Gather relevant information",
+                    required_tools=["read", "websearch"],
+                ),
+                PlanStep(
+                    id="step_2",
+                    plan_id=plan.id,
+                    objective="Analyze findings",
+                    dependencies=["step_1"],
+                    required_tools=["read"],
+                ),
+                PlanStep(
+                    id="step_3",
+                    plan_id=plan.id,
+                    objective="Synthesize results",
+                    dependencies=["step_2"],
+                    required_tools=[],
+                ),
             ]
         else:
             steps = [
-                PlanStep(id="step_1", plan_id=plan.id, objective="Analyze the goal and context",
-                         required_tools=["read"]),
-                PlanStep(id="step_2", plan_id=plan.id, objective="Execute necessary actions",
-                         dependencies=["step_1"], required_tools=["bash", "read", "write"]),
-                PlanStep(id="step_3", plan_id=plan.id, objective="Verify results",
-                         dependencies=["step_2"], required_tools=["bash"]),
+                PlanStep(
+                    id="step_1",
+                    plan_id=plan.id,
+                    objective="Analyze the goal and context",
+                    required_tools=["read"],
+                ),
+                PlanStep(
+                    id="step_2",
+                    plan_id=plan.id,
+                    objective="Execute necessary actions",
+                    dependencies=["step_1"],
+                    required_tools=["bash", "read", "write"],
+                ),
+                PlanStep(
+                    id="step_3",
+                    plan_id=plan.id,
+                    objective="Verify results",
+                    dependencies=["step_2"],
+                    required_tools=["bash"],
+                ),
             ]
 
         plan.steps = steps

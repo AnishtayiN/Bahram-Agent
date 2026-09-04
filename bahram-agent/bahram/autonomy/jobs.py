@@ -93,7 +93,9 @@ JobHandler = Callable[..., Coroutine[Any, Any, str]]
 
 
 class JobEngine:
-    def __init__(self, data_dir: str = "data/jobs", max_concurrent: int = 3, event_tracker: Any = None) -> None:
+    def __init__(
+        self, data_dir: str = "data/jobs", max_concurrent: int = 3, event_tracker: Any = None
+    ) -> None:
         self._data_dir = Path(data_dir)
         try:
             self._data_dir.mkdir(parents=True, exist_ok=True)
@@ -214,12 +216,25 @@ class JobEngine:
              updated_at, finished_at, result, error, user_id, capabilities, security_policy)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (
-                job.id, job.run_id, job.session_id, job.parent_job_id,
-                job.state.value, job.priority.value, json.dumps(job.payload),
-                job.checkpoint_id, job.attempt_count, job.max_attempts,
-                job.created_at, job.started_at, job.updated_at, job.finished_at,
-                job.result, job.error, job.user_id,
-                json.dumps(job.capabilities), json.dumps(job.security_policy),
+                job.id,
+                job.run_id,
+                job.session_id,
+                job.parent_job_id,
+                job.state.value,
+                job.priority.value,
+                json.dumps(job.payload),
+                job.checkpoint_id,
+                job.attempt_count,
+                job.max_attempts,
+                job.created_at,
+                job.started_at,
+                job.updated_at,
+                job.finished_at,
+                job.result,
+                job.error,
+                job.user_id,
+                json.dumps(job.capabilities),
+                json.dumps(job.security_policy),
             ),
         )
         conn.commit()
@@ -253,7 +268,7 @@ class JobEngine:
         )
         self._save_job(job)
         logger.info(f"Enqueued job {job.id} (type={job_type}, priority={priority.value})")
-        if self._event_tracker is not None and hasattr(self._event_tracker, 'emit_job_started'):
+        if self._event_tracker is not None and hasattr(self._event_tracker, "emit_job_started"):
             self._event_tracker.emit_job_started(
                 job.session_id, job.run_id, job.id, {"type": job_type, "priority": priority.value}
             )
@@ -298,7 +313,9 @@ class JobEngine:
             job.finished_at = time.time()
             self._save_job(job)
             logger.info(f"Job {job.id} completed successfully")
-            if self._event_tracker is not None and hasattr(self._event_tracker, 'emit_job_checkpointed'):
+            if self._event_tracker is not None and hasattr(
+                self._event_tracker, "emit_job_checkpointed"
+            ):
                 self._event_tracker.emit_job_checkpointed(
                     job.session_id, job.run_id, job.id, {"status": "completed"}
                 )
@@ -310,7 +327,7 @@ class JobEngine:
             if job.attempt_count < job.max_attempts:
                 job.state = JobStatus.RETRYING
                 self._save_job(job)
-                await asyncio.sleep(min(30, 2 ** job.attempt_count))
+                await asyncio.sleep(min(30, 2**job.attempt_count))
                 await self.start_job(job)
             else:
                 job.state = JobStatus.FAILED
@@ -362,7 +379,5 @@ class JobEngine:
 
     def get_queue_depth(self) -> dict[str, int]:
         conn = self._get_conn()
-        rows = conn.execute(
-            "SELECT state, COUNT(*) as cnt FROM jobs GROUP BY state"
-        ).fetchall()
+        rows = conn.execute("SELECT state, COUNT(*) as cnt FROM jobs GROUP BY state").fetchall()
         return {row["state"]: row["cnt"] for row in rows}

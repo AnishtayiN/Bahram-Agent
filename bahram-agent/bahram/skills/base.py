@@ -7,7 +7,6 @@ from typing import Any
 
 @dataclass
 class SkillMetadata:
-
     name: str
     description: str
     version: str = "1.0.0"
@@ -15,16 +14,14 @@ class SkillMetadata:
     tags: list[str] = field(default_factory=list)
     triggers: list[str] = field(default_factory=list)
 
-class BaseSkill(ABC):
 
+class BaseSkill(ABC):
     @property
     @abstractmethod
-    def metadata(self) -> SkillMetadata:
-        ...
+    def metadata(self) -> SkillMetadata: ...
 
     @abstractmethod
-    async def execute(self, context: dict[str, Any]) -> str:
-        ...
+    async def execute(self, context: dict[str, Any]) -> str: ...
 
     async def can_handle(self, task: str) -> bool:
         task_lower = task.lower()

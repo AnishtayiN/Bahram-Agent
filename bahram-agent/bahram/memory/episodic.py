@@ -10,8 +10,8 @@ from bahram.memory.base import BaseMemory, MemoryEntry
 
 logger = logging.getLogger(__name__)
 
-class EpisodicMemory(BaseMemory):
 
+class EpisodicMemory(BaseMemory):
     def __init__(self, storage_path: str = "data/episodes.json") -> None:
         self.storage_path = Path(storage_path)
         self._memories: dict[str, MemoryEntry] = {}
@@ -113,9 +113,7 @@ class EpisodicMemory(BaseMemory):
         self._memories.clear()
         self._save()
 
-    async def record_task_completion(
-        self, task: str, result: str, tools_used: list[str]
-    ) -> str:
+    async def record_task_completion(self, task: str, result: str, tools_used: list[str]) -> str:
         content = f"Completed task: {task}\nResult: {result}"
         metadata = {
             "type": "task_complete",

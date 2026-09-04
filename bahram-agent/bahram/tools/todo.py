@@ -7,9 +7,9 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class TodoItem:
-
     id: str
     content: str
     status: str = "pending"
@@ -17,8 +17,8 @@ class TodoItem:
     created_at: float = 0.0
     completed_at: float = 0.0
 
-class TodoTool:
 
+class TodoTool:
     def __init__(self, data_dir: str = "data") -> None:
         self.data_dir = Path(data_dir)
         self.data_dir.mkdir(parents=True, exist_ok=True)
@@ -75,6 +75,7 @@ class TodoTool:
     def update_status(self, todo_id: str, status: str) -> bool:
         if todo_id in self._todos:
             import time
+
             self._todos[todo_id].status = status
             if status == "completed":
                 self._todos[todo_id].completed_at = time.time()

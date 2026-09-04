@@ -7,9 +7,9 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class ContainerConfig:
-
     image: str = "python:3.11-slim"
     name: str = ""
     memory_limit: str = "512m"
@@ -19,8 +19,8 @@ class ContainerConfig:
     env: dict[str, str] = field(default_factory=dict)
     working_dir: str = "/workspace"
 
-class ContainerResources:
 
+class ContainerResources:
     def __init__(self) -> None:
         self._active_containers: dict[str, dict] = {}
 
@@ -30,12 +30,18 @@ class ContainerResources:
         name = config.name or f"bahram-agent-{uuid.uuid4().hex[:8]}"
 
         cmd = [
-            "docker", "create",
-            "--name", name,
-            "--memory", config.memory_limit,
-            "--cpus", str(config.cpu_limit),
-            "--network", config.network,
-            "--workdir", config.working_dir,
+            "docker",
+            "create",
+            "--name",
+            name,
+            "--memory",
+            config.memory_limit,
+            "--cpus",
+            str(config.cpu_limit),
+            "--network",
+            config.network,
+            "--workdir",
+            config.working_dir,
         ]
 
         for host_path, container_path in config.volumes.items():
@@ -65,7 +71,9 @@ class ContainerResources:
 
     async def start_container(self, name: str) -> bool:
         proc = await asyncio.create_subprocess_exec(
-            "docker", "start", name,
+            "docker",
+            "start",
+            name,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
@@ -74,7 +82,11 @@ class ContainerResources:
 
     async def stop_container(self, name: str, timeout: int = 10) -> bool:
         proc = await asyncio.create_subprocess_exec(
-            "docker", "stop", "-t", str(timeout), name,
+            "docker",
+            "stop",
+            "-t",
+            str(timeout),
+            name,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
@@ -106,7 +118,12 @@ class ContainerResources:
         timeout: float = 60.0,
     ) -> dict[str, Any]:
         proc = await asyncio.create_subprocess_exec(
-            "docker", "exec", name, "sh", "-c", command,
+            "docker",
+            "exec",
+            name,
+            "sh",
+            "-c",
+            command,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
@@ -131,7 +148,11 @@ class ContainerResources:
 
     async def get_container_stats(self, name: str) -> dict[str, Any]:
         proc = await asyncio.create_subprocess_exec(
-            "docker", "stats", name, "--no-stream", "--format",
+            "docker",
+            "stats",
+            name,
+            "--no-stream",
+            "--format",
             "{{.CPUPerc}}|{{.MemUsage}}|{{.NetIO}}|{{.BlockIO}}",
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
@@ -167,15 +188,17 @@ class ContainerResources:
                 if line:
                     parts = line.split("|")
                     if len(parts) >= 3:
-                        containers.append({
-                            "name": parts[0],
-                            "image": parts[1],
-                            "status": parts[2],
-                        })
+                        containers.append(
+                            {
+                                "name": parts[0],
+                                "image": parts[1],
+                                "status": parts[2],
+                            }
+                        )
         return containers
 
-class ContainerSecurity:
 
+class ContainerSecurity:
     def __init__(self) -> None:
         self._blocked_images: list[str] = []
         self._max_memory: str = "2g"

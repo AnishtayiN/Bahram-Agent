@@ -8,9 +8,9 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class ToolProgress:
-
     tool_name: str
     status: str = "pending"
     progress: float = 0.0
@@ -20,8 +20,8 @@ class ToolProgress:
     result: Any = None
     error: str = ""
 
-class ProgressTracker:
 
+class ProgressTracker:
     def __init__(self) -> None:
         self._active: dict[str, ToolProgress] = {}
         self._history: list[ToolProgress] = []
@@ -29,6 +29,7 @@ class ProgressTracker:
 
     def start(self, tool_name: str) -> str:
         import uuid
+
         tracker_id = f"{tool_name}_{uuid.uuid4().hex[:8]}"
 
         progress = ToolProgress(

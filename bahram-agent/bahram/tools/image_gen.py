@@ -6,8 +6,8 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-class ImageGenTool:
 
+class ImageGenTool:
     def __init__(self) -> None:
         self._provider: str = "openai"
         self._api_key: str = ""

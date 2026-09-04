@@ -34,7 +34,9 @@ if str(_PROJECT_ROOT) not in sys.path:
 # Deterministic provider (no network, no mocking – just returns canned data)
 # ---------------------------------------------------------------------------
 
-from bahram.core.engine import (
+# Imported after the sys.path bootstrap above (required so the demo runs
+# from any working directory) - hence the E402 suppression.
+from bahram.core.engine import (  # noqa: E402
     AgentResponse,
     RunState,
 )
@@ -184,8 +186,7 @@ async def run_demo() -> list[str]:
     milestone("PLAN CREATED", f"plan_id={plan.id}, steps={len(plan.steps)}")
 
     # -- 6. TOOL EXECUTED (via ToolExecutor) --------------------------------
-    from bahram.core.engine import ToolCall as TC
-    from bahram.core.engine import ToolExecutor, ToolResult
+    from bahram.core.engine import ToolCall, ToolExecutor, ToolResult
 
     @dataclass
     class EchoTool:
@@ -212,7 +213,7 @@ async def run_demo() -> list[str]:
     approval = ApprovalSystem(ApprovalConfig())
     executor = ToolExecutor(tools={"echo": EchoTool()}, approval_system=approval)
 
-    tc = TC(id="tc_001", name="echo", arguments={"message": "hello"})
+    tc = ToolCall(id="tc_001", name="echo", arguments={"message": "hello"})
     tr: ToolResult = await executor.execute(tc, timeout=10.0)
     milestone("TOOL EXECUTED", f"tool={tc.name}, success={tr.success}")
 
@@ -437,9 +438,22 @@ def main() -> None:
     print()
     print("  Chain coverage:")
     chain = [
-        "SESSION", "MEMORY", "SMART CONTEXT", "PLAN", "TOOL", "SECURITY",
-        "SUBAGENT", "FAILURE", "REPLAN", "RECOVERY", "VERIFY", "CHECKPOINT",
-        "COMPLETE", "TRAJECTORY", "LESSON", "SKILL",
+        "SESSION",
+        "MEMORY",
+        "SMART CONTEXT",
+        "PLAN",
+        "TOOL",
+        "SECURITY",
+        "SUBAGENT",
+        "FAILURE",
+        "REPLAN",
+        "RECOVERY",
+        "VERIFY",
+        "CHECKPOINT",
+        "COMPLETE",
+        "TRAJECTORY",
+        "LESSON",
+        "SKILL",
     ]
     for link in chain:
         # Check if any milestone string starts with the chain step name

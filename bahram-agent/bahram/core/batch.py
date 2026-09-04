@@ -8,17 +8,17 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class BatchItem:
-
     id: str
     data: Any
     status: str = "pending"
     result: Any = None
     error: str = ""
 
-class BatchProcessor:
 
+class BatchProcessor:
     def __init__(self, batch_size: int = 10, max_concurrent: int = 3) -> None:
         self.batch_size = batch_size
         self.max_concurrent = max_concurrent
@@ -53,7 +53,7 @@ class BatchProcessor:
                 return item
 
         for i in range(0, len(self._queue), self.batch_size):
-            batch = self._queue[i: i + self.batch_size]
+            batch = self._queue[i : i + self.batch_size]
             tasks = [process_item(item) for item in batch]
             results = await asyncio.gather(*tasks)
             self._results.extend(results)

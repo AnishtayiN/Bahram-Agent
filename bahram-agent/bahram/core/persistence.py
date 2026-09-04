@@ -119,11 +119,21 @@ class SessionStore:
         """)
         conn.commit()
 
-    def create_session(self, session_id: str, user_id: str = "", channel: str = "", model: str = "", metadata: dict[str, Any] | None = None) -> dict[str, Any]:
+    def create_session(
+        self,
+        session_id: str,
+        user_id: str = "",
+        channel: str = "",
+        model: str = "",
+        metadata: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         conn = self._get_conn()
         now = time.time()
         conn.execute(
-            "INSERT INTO sessions (id, user_id, channel, model, created_at, updated_at, metadata) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (
+                "INSERT INTO sessions (id, user_id, channel, model, created_at, updated_at, "
+                "metadata) VALUES (?, ?, ?, ?, ?, ?, ?)"
+            ),
             (session_id, user_id, channel, model, now, now, json.dumps(metadata or {})),
         )
         conn.commit()
@@ -153,7 +163,12 @@ class SessionStore:
 
     def delete_session(self, session_id: str) -> None:
         conn = self._get_conn()
-        run_ids = [r["id"] for r in conn.execute("SELECT id FROM runs WHERE session_id = ?", (session_id,)).fetchall()]
+        run_ids = [
+            r["id"]
+            for r in conn.execute(
+                "SELECT id FROM runs WHERE session_id = ?", (session_id,)
+            ).fetchall()
+        ]
         for rid in run_ids:
             conn.execute("DELETE FROM trajectory_steps WHERE run_id = ?", (rid,))
             conn.execute("DELETE FROM tool_calls WHERE run_id = ?", (rid,))
@@ -166,8 +181,20 @@ class SessionStore:
         conn = self._get_conn()
         msg_id = str(uuid.uuid4())[:12]
         conn.execute(
-            "INSERT INTO messages (id, session_id, role, content, name, tool_call_id, timestamp, metadata) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-            (msg_id, session_id, message.role.value, message.content, message.name, message.tool_call_id, message.timestamp, json.dumps(message.metadata)),
+            (
+                "INSERT INTO messages (id, session_id, role, content, name, tool_call_id, "
+                "timestamp, metadata) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+            ),
+            (
+                msg_id,
+                session_id,
+                message.role.value,
+                message.content,
+                message.name,
+                message.tool_call_id,
+                message.timestamp,
+                json.dumps(message.metadata),
+            ),
         )
         conn.execute("UPDATE sessions SET updated_at = ? WHERE id = ?", (time.time(), session_id))
         conn.commit()
@@ -181,19 +208,23 @@ class SessionStore:
         ).fetchall()
         messages = []
         for row in reversed(rows):
-            messages.append(Message(
-                role=MessageRole(row["role"]),
-                content=row["content"],
-                name=row["name"],
-                tool_call_id=row["tool_call_id"],
-                timestamp=row["timestamp"],
-                metadata=json.loads(row["metadata"]) if row["metadata"] else {},
-            ))
+            messages.append(
+                Message(
+                    role=MessageRole(row["role"]),
+                    content=row["content"],
+                    name=row["name"],
+                    tool_call_id=row["tool_call_id"],
+                    timestamp=row["timestamp"],
+                    metadata=json.loads(row["metadata"]) if row["metadata"] else {},
+                )
+            )
         return messages
 
     def list_sessions(self, limit: int = 50) -> list[dict[str, Any]]:
         conn = self._get_conn()
-        rows = conn.execute("SELECT * FROM sessions ORDER BY updated_at DESC LIMIT ?", (limit,)).fetchall()
+        rows = conn.execute(
+            "SELECT * FROM sessions ORDER BY updated_at DESC LIMIT ?", (limit,)
+        ).fetchall()
         return [dict(r) for r in rows]
 
     def clear_messages(self, session_id: str) -> None:
@@ -205,18 +236,45 @@ class SessionStore:
         conn = self._get_conn()
         run_id = trajectory.run_id
         conn.execute(
-            "INSERT INTO runs (id, session_id, goal, model, provider, status, final_content, total_tool_calls, total_duration_ms, started_at, finished_at, metadata) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            (run_id, session_id, trajectory.goal, trajectory.model, trajectory.provider,
-             trajectory.status, trajectory.final_content, trajectory.total_tool_calls,
-             trajectory.total_duration_ms, trajectory.started_at, trajectory.finished_at, "{}"),
+            "INSERT INTO runs (id, session_id, goal, model, provider, status, "
+            "final_content, total_tool_calls, total_duration_ms, started_at, "
+            "finished_at, metadata) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                run_id,
+                session_id,
+                trajectory.goal,
+                trajectory.model,
+                trajectory.provider,
+                trajectory.status,
+                trajectory.final_content,
+                trajectory.total_tool_calls,
+                trajectory.total_duration_ms,
+                trajectory.started_at,
+                trajectory.finished_at,
+                "{}",
+            ),
         )
         for step in trajectory.steps:
             conn.execute(
-                "INSERT INTO trajectory_steps (id, run_id, step_id, iteration, provider, model, tool_calls, tool_results, content_length, duration_ms, state, error, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                (f"{run_id}_{step.step_id}", run_id, step.step_id, step.iteration,
-                 step.provider, step.model, json.dumps(step.tool_calls),
-                 json.dumps(step.tool_results), step.content_length, step.duration_ms,
-                 step.state, step.error, step.timestamp),
+                "INSERT INTO trajectory_steps (id, run_id, step_id, iteration, "
+                "provider, model, tool_calls, tool_results, content_length, "
+                "duration_ms, state, error, timestamp) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (
+                    f"{run_id}_{step.step_id}",
+                    run_id,
+                    step.step_id,
+                    step.iteration,
+                    step.provider,
+                    step.model,
+                    json.dumps(step.tool_calls),
+                    json.dumps(step.tool_results),
+                    step.content_length,
+                    step.duration_ms,
+                    step.state,
+                    step.error,
+                    step.timestamp,
+                ),
             )
         conn.commit()
         return run_id
@@ -226,18 +284,42 @@ class SessionStore:
         run = conn.execute("SELECT * FROM runs WHERE id = ?", (run_id,)).fetchone()
         if not run:
             return None
-        steps = conn.execute("SELECT * FROM trajectory_steps WHERE run_id = ? ORDER BY iteration", (run_id,)).fetchall()
+        steps = conn.execute(
+            "SELECT * FROM trajectory_steps WHERE run_id = ? ORDER BY iteration", (run_id,)
+        ).fetchall()
         return {
             "run": dict(run),
             "steps": [dict(s) for s in steps],
         }
 
-    def log_tool_call(self, run_id: str, tool_name: str, arguments: dict, status: str, result: str = "", error: str = "", duration_ms: float = 0) -> str:
+    def log_tool_call(
+        self,
+        run_id: str,
+        tool_name: str,
+        arguments: dict,
+        status: str,
+        result: str = "",
+        error: str = "",
+        duration_ms: float = 0,
+    ) -> str:
         conn = self._get_conn()
         call_id = str(uuid.uuid4())[:12]
         conn.execute(
-            "INSERT INTO tool_calls (id, run_id, tool_name, arguments, status, result, error, duration_ms, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            (call_id, run_id, tool_name, json.dumps(arguments), status, result[:10000], error, duration_ms, time.time()),
+            (
+                "INSERT INTO tool_calls (id, run_id, tool_name, arguments, status, result, error, "
+                "duration_ms, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+            ),
+            (
+                call_id,
+                run_id,
+                tool_name,
+                json.dumps(arguments),
+                status,
+                result[:10000],
+                error,
+                duration_ms,
+                time.time(),
+            ),
         )
         conn.commit()
         return call_id
@@ -255,12 +337,19 @@ class SessionStore:
     def get_events(self, event_type: str | None = None, limit: int = 100) -> list[dict[str, Any]]:
         conn = self._get_conn()
         if event_type:
-            rows = conn.execute("SELECT * FROM events WHERE event_type = ? ORDER BY timestamp DESC LIMIT ?", (event_type, limit)).fetchall()
+            rows = conn.execute(
+                "SELECT * FROM events WHERE event_type = ? ORDER BY timestamp DESC LIMIT ?",
+                (event_type, limit),
+            ).fetchall()
         else:
-            rows = conn.execute("SELECT * FROM events ORDER BY timestamp DESC LIMIT ?", (limit,)).fetchall()
+            rows = conn.execute(
+                "SELECT * FROM events ORDER BY timestamp DESC LIMIT ?", (limit,)
+            ).fetchall()
         return [dict(r) for r in rows]
 
     def get_recent_runs(self, limit: int = 20) -> list[dict[str, Any]]:
         conn = self._get_conn()
-        rows = conn.execute("SELECT * FROM runs ORDER BY started_at DESC LIMIT ?", (limit,)).fetchall()
+        rows = conn.execute(
+            "SELECT * FROM runs ORDER BY started_at DESC LIMIT ?", (limit,)
+        ).fetchall()
         return [dict(r) for r in rows]

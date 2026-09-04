@@ -96,7 +96,8 @@ class VerificationEngine:
 
         if not command:
             return VerificationResult(
-                passed=False, verification_type=VerificationType.COMMAND,
+                passed=False,
+                verification_type=VerificationType.COMMAND,
                 details="No command specified",
             )
 
@@ -139,7 +140,8 @@ class VerificationEngine:
 
         if not path:
             return VerificationResult(
-                passed=False, verification_type=VerificationType.FILE_EXISTS,
+                passed=False,
+                verification_type=VerificationType.FILE_EXISTS,
                 details="No path specified",
             )
 
@@ -153,7 +155,9 @@ class VerificationEngine:
             evidence={"path": path, "exists": exists},
         )
 
-    async def _verify_content_check(self, result: str, params: dict[str, Any]) -> VerificationResult:
+    async def _verify_content_check(
+        self, result: str, params: dict[str, Any]
+    ) -> VerificationResult:
         expected_content = params.get("contains", "")
         not_contains = params.get("not_contains", "")
         min_length = params.get("min_length", 0)

@@ -7,9 +7,9 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class HubSkill:
-
     name: str
     description: str
     source: str
@@ -18,8 +18,8 @@ class HubSkill:
     tags: list[str] = field(default_factory=list)
     installed: bool = False
 
-class SkillHub:
 
+class SkillHub:
     def __init__(self, skills_dir: str = "skills") -> None:
         self.skills_dir = Path(skills_dir)
         self.hub_dir = self.skills_dir / ".hub"
@@ -103,7 +103,6 @@ class SkillHub:
     async def update(self) -> int:
         updated = 0
         for skill_id in list(self.installed.keys()):
-
             updated += 1
         logger.info(f"Updated {updated} skills")
         return updated
@@ -111,7 +110,6 @@ class SkillHub:
     async def audit(self) -> dict[str, str]:
         results = {}
         for skill_id in self.installed:
-
             results[skill_id] = "safe"
         return results
 

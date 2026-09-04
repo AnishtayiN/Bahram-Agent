@@ -9,9 +9,9 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class DashboardStats:
-
     total_messages: int = 0
     total_tokens: int = 0
     total_cost: float = 0.0
@@ -21,8 +21,8 @@ class DashboardStats:
     errors: int = 0
     success_rate: float = 100.0
 
-class Dashboard:
 
+class Dashboard:
     def __init__(self, data_dir: str = "data/gateway") -> None:
         self.data_dir = Path(data_dir)
         self.data_dir.mkdir(parents=True, exist_ok=True)
@@ -71,9 +71,7 @@ class Dashboard:
         self._stats.errors += 1
         if self._stats.total_messages > 0:
             self._stats.success_rate = (
-                (self._stats.total_messages - self._stats.errors)
-                / self._stats.total_messages
-                * 100
+                (self._stats.total_messages - self._stats.errors) / self._stats.total_messages * 100
             )
         self._save()
 

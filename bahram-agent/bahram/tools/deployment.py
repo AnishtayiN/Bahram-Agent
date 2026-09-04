@@ -7,9 +7,9 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class DeploymentConfig:
-
     name: str
     target: str
     region: str = ""
@@ -18,8 +18,8 @@ class DeploymentConfig:
     resources: dict = field(default_factory=dict)
     env_vars: dict[str, str] = field(default_factory=dict)
 
-class DeploymentTool:
 
+class DeploymentTool:
     def __init__(self) -> None:
         self._configs: dict[str, DeploymentConfig] = {}
         self._history: list[dict] = []

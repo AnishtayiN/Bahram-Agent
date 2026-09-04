@@ -39,7 +39,7 @@ class ToolGateway:
             risk = "low"
             capability = "general"
             requires_approval = False
-            if hasattr(tool, 'description'):
+            if hasattr(tool, "description"):
                 desc = tool.description.lower()
                 if any(kw in desc for kw in ["bash", "shell", "execute", "command"]):
                     risk = "high"
@@ -57,17 +57,21 @@ class ToolGateway:
                     capability = "vcs"
                     requires_approval = True
             self._routes[name] = ToolRoute(
-                tool_name=name, capability=capability, risk_level=risk,
+                tool_name=name,
+                capability=capability,
+                risk_level=risk,
                 requires_approval=requires_approval,
             )
 
-    def search_tools(self, task: str, context: dict[str, Any] | None = None) -> list[ToolSearchResult]:
+    def search_tools(
+        self, task: str, context: dict[str, Any] | None = None
+    ) -> list[ToolSearchResult]:
         task_lower = task.lower()
         results = []
         for name, route in self._routes.items():
             score = 0.0
             reason = ""
-            if hasattr(self.tools[name], 'description'):
+            if hasattr(self.tools[name], "description"):
                 desc = self.tools[name].description.lower()
                 words = set(task_lower.split())
                 desc_words = set(desc.split())
@@ -76,9 +80,14 @@ class ToolGateway:
                     score = len(overlap) / max(len(words), 1)
                     reason = f"matched: {', '.join(list(overlap)[:3])}"
             if score > 0:
-                results.append(ToolSearchResult(
-                    tool_name=name, score=score, route=route, reason=reason,
-                ))
+                results.append(
+                    ToolSearchResult(
+                        tool_name=name,
+                        score=score,
+                        route=route,
+                        reason=reason,
+                    )
+                )
         results.sort(key=lambda x: x.score, reverse=True)
         return results[:10]
 
@@ -92,7 +101,8 @@ class ToolGateway:
         risk_order = {"low": 0, "medium": 1, "high": 2, "critical": 3}
         max_level = risk_order.get(max_risk, 2)
         return [
-            name for name, route in self._routes.items()
+            name
+            for name, route in self._routes.items()
             if risk_order.get(route.risk_level, 0) <= max_level
         ]
 

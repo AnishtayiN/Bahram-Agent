@@ -21,6 +21,7 @@ from bahram.autonomy.verification import VerificationEngine, VerificationResult
 
 # ── Plan DAG Tests ──────────────────────────────────────────
 
+
 class TestPlanDAG:
     def test_create_plan_with_steps(self):
         plan = Plan(id="p1", run_id="r1", goal="test")
@@ -125,7 +126,9 @@ class TestPlanDAG:
 
     def test_plan_serialization(self):
         plan = Plan(id="p1", run_id="r1", goal="test", strategy="approach")
-        plan.add_step(PlanStep(id="s1", plan_id="p1", objective="a", dependencies=[], required_tools=["bash"]))
+        plan.add_step(
+            PlanStep(id="s1", plan_id="p1", objective="a", dependencies=[], required_tools=["bash"])
+        )
         d = plan.to_dict()
         plan2 = Plan.from_dict(d)
         assert plan2.id == "p1"
@@ -144,6 +147,7 @@ class TestPlanDAG:
 
 
 # ── Planner Tests ───────────────────────────────────────────
+
 
 class TestPlanner:
     @pytest.mark.asyncio
@@ -186,17 +190,31 @@ class TestPlanner:
     @pytest.mark.asyncio
     async def test_llm_planner_integration(self):
         mock_response = MagicMock()
-        mock_response.content = json.dumps({
-            "strategy": "test strategy",
-            "rationale": "test rationale",
-            "success_criteria": ["tests pass"],
-            "risk_assessment": "low risk",
-            "steps": [
-                {"id": "s1", "objective": "step one", "dependencies": [], "required_tools": ["bash"],
-                 "verification_criteria": [{"type": "command", "params": {"command": "echo ok"}}]},
-                {"id": "s2", "objective": "step two", "dependencies": ["s1"], "required_tools": ["read"]},
-            ]
-        })
+        mock_response.content = json.dumps(
+            {
+                "strategy": "test strategy",
+                "rationale": "test rationale",
+                "success_criteria": ["tests pass"],
+                "risk_assessment": "low risk",
+                "steps": [
+                    {
+                        "id": "s1",
+                        "objective": "step one",
+                        "dependencies": [],
+                        "required_tools": ["bash"],
+                        "verification_criteria": [
+                            {"type": "command", "params": {"command": "echo ok"}}
+                        ],
+                    },
+                    {
+                        "id": "s2",
+                        "objective": "step two",
+                        "dependencies": ["s1"],
+                        "required_tools": ["read"],
+                    },
+                ],
+            }
+        )
         mock_provider = AsyncMock()
         mock_provider.complete = AsyncMock(return_value=mock_response)
 
@@ -210,11 +228,18 @@ class TestPlanner:
     @pytest.mark.asyncio
     async def test_llm_replan_integration(self):
         mock_response = MagicMock()
-        mock_response.content = json.dumps({
-            "revised_steps": [
-                {"id": "s1_fix", "objective": "fix step", "dependencies": [], "required_tools": ["bash"]}
-            ]
-        })
+        mock_response.content = json.dumps(
+            {
+                "revised_steps": [
+                    {
+                        "id": "s1_fix",
+                        "objective": "fix step",
+                        "dependencies": [],
+                        "required_tools": ["bash"],
+                    }
+                ]
+            }
+        )
         mock_provider = AsyncMock()
         mock_provider.complete = AsyncMock(return_value=mock_response)
 
@@ -232,6 +257,7 @@ class TestPlanner:
 
 # ── Verification Engine Tests ──────────────────────────────
 
+
 class TestVerificationEngine:
     @pytest.mark.asyncio
     async def test_verify_command_success(self):
@@ -245,9 +271,7 @@ class TestVerificationEngine:
     @pytest.mark.asyncio
     async def test_verify_command_failure(self):
         engine = VerificationEngine()
-        results = await engine.verify(
-            "", [{"type": "command", "params": {"command": "false"}}]
-        )
+        results = await engine.verify("", [{"type": "command", "params": {"command": "false"}}])
         assert len(results) == 1
         assert results[0].passed is False
 
@@ -271,7 +295,8 @@ class TestVerificationEngine:
     async def test_verify_file_not_exists(self):
         engine = VerificationEngine()
         results = await engine.verify(
-            "", [{"type": "file_exists", "params": {"path": "/nonexistent_xyz_file", "exists": False}}]
+            "",
+            [{"type": "file_exists", "params": {"path": "/nonexistent_xyz_file", "exists": False}}],
         )
         assert results[0].passed is True
 
@@ -304,7 +329,7 @@ class TestVerificationEngine:
         engine = VerificationEngine()
         results = await engine.verify(
             '{"name": "test", "version": "1.0"}',
-            [{"type": "schema_validation", "params": {"schema": {"required": ["name"]}}}]
+            [{"type": "schema_validation", "params": {"schema": {"required": ["name"]}}}],
         )
         assert results[0].passed is True
 
@@ -321,7 +346,12 @@ class TestVerificationEngine:
         engine = VerificationEngine()
         results = await engine.verify(
             '{"name": "test"}',
-            [{"type": "schema_validation", "params": {"schema": {"required": ["name", "version"]}}}]
+            [
+                {
+                    "type": "schema_validation",
+                    "params": {"schema": {"required": ["name", "version"]}},
+                }
+            ],
         )
         assert results[0].passed is False
 
@@ -329,17 +359,13 @@ class TestVerificationEngine:
     async def test_verify_custom(self):
         engine = VerificationEngine()
         engine.register_verifier("always_true", lambda r, p, c: True)
-        results = await engine.verify(
-            "", [{"type": "custom", "params": {"name": "always_true"}}]
-        )
+        results = await engine.verify("", [{"type": "custom", "params": {"name": "always_true"}}])
         assert results[0].passed is True
 
     @pytest.mark.asyncio
     async def test_verify_unknown_type(self):
         engine = VerificationEngine()
-        results = await engine.verify(
-            "", [{"type": "unknown_type", "params": {}}]
-        )
+        results = await engine.verify("", [{"type": "unknown_type", "params": {}}])
         assert results[0].passed is False
 
     @pytest.mark.asyncio
@@ -351,12 +377,13 @@ class TestVerificationEngine:
                 {"type": "content_check", "params": {"contains": "hello"}},
                 {"type": "content_check", "params": {"contains": "world"}},
                 {"type": "content_check", "params": {"not_contains": "xyz"}},
-            ]
+            ],
         )
         assert all(r.passed for r in results)
 
 
 # ── Replanner Tests ────────────────────────────────────────
+
 
 class TestReplanner:
     @pytest.mark.asyncio
@@ -368,7 +395,7 @@ class TestReplanner:
         plan = Plan(id="p1", run_id="r1", goal="test")
         plan.add_step(PlanStep(id="s1", plan_id="p1", objective="step1"))
 
-        result = await replanner.handle_step_failure(plan, plan.steps[0], "timeout after 30s")
+        await replanner.handle_step_failure(plan, plan.steps[0], "timeout after 30s")
         assert plan.steps[0].status == StepStatus.PENDING
         assert plan.steps[0].attempt_count == 1
 
@@ -381,7 +408,7 @@ class TestReplanner:
         plan = Plan(id="p1", run_id="r1", goal="test")
         plan.add_step(PlanStep(id="s1", plan_id="p1", objective="step1"))
 
-        result = await replanner.handle_step_failure(plan, plan.steps[0], "permission denied")
+        await replanner.handle_step_failure(plan, plan.steps[0], "permission denied")
         assert plan.steps[0].status == StepStatus.REPLANNED
         assert len(plan.steps) == 2
 
@@ -410,7 +437,7 @@ class TestReplanner:
         plan.add_step(PlanStep(id="s1", plan_id="p1", objective="step1"))
         plan.add_step(PlanStep(id="s2", plan_id="p1", objective="step2"))
 
-        result = await replanner.handle_step_failure(plan, plan.steps[0], "budget exceeded")
+        await replanner.handle_step_failure(plan, plan.steps[0], "budget exceeded")
         assert plan.status == PlanStatus.FAILED
         assert plan.steps[1].status == StepStatus.CANCELLED
 
@@ -479,6 +506,7 @@ class TestReplanner:
 
 # ── Budget Manager Tests ───────────────────────────────────
 
+
 class TestBudgetManager:
     def test_default_config(self):
         manager = BudgetManager()
@@ -487,7 +515,7 @@ class TestBudgetManager:
 
     def test_record_model_call(self):
         manager = BudgetManager()
-        warnings = manager.record_model_call("run1", "sess1", 100, 50)
+        manager.record_model_call("run1", "sess1", 100, 50)
         budget = manager.get_run_budget("run1")
         assert budget.input_tokens == 100
         assert budget.output_tokens == 50
@@ -549,6 +577,7 @@ class TestBudgetManager:
 
 # ── Event Tracker Tests ────────────────────────────────────
 
+
 class TestEventTracker:
     def test_emit_event(self, tmp_path):
         tracker = EventTracker(data_dir=str(tmp_path))
@@ -598,6 +627,7 @@ class TestEventTracker:
 
 
 # ── Recovery Manager Tests ─────────────────────────────────
+
 
 class TestRecoveryManager:
     def test_checkpoint_and_load(self, tmp_path):
@@ -685,12 +715,14 @@ class TestRecoveryManager:
 
 # ── Learning Engine Tests ──────────────────────────────────
 
+
 class TestLearningEngine:
     @pytest.mark.asyncio
     async def test_analyze_outcome_success(self, tmp_path):
         engine = LearningEngine(data_dir=str(tmp_path))
         analysis = await engine.analyze_outcome(
-            run_id="r1", goal="test",
+            run_id="r1",
+            goal="test",
             trajectory_steps=[{"step": 1}],
             tool_results=[{"tool": "bash", "success": True}],
             success=True,
@@ -702,7 +734,8 @@ class TestLearningEngine:
     async def test_analyze_outcome_failure_extracts_lessons(self, tmp_path):
         engine = LearningEngine(data_dir=str(tmp_path))
         analysis = await engine.analyze_outcome(
-            run_id="r2", goal="fix bug",
+            run_id="r2",
+            goal="fix bug",
             trajectory_steps=[],
             tool_results=[{"tool": "bash", "success": False, "error": "command not found"}],
             success=False,
@@ -713,8 +746,11 @@ class TestLearningEngine:
     async def test_generate_skill_from_lessons(self, tmp_path):
         engine = LearningEngine(data_dir=str(tmp_path))
         lesson = Lesson(
-            id="l1", content="pytest requires -q flag", scope="testing",
-            source_run="r1", confidence=0.6,
+            id="l1",
+            content="pytest requires -q flag",
+            scope="testing",
+            source_run="r1",
+            confidence=0.6,
         )
         engine._lessons["l1"] = lesson
         engine._save()
@@ -728,8 +764,14 @@ class TestLearningEngine:
     async def test_validate_skill_promotion(self, tmp_path):
         engine = LearningEngine(data_dir=str(tmp_path))
         skill = SkillCandidate(
-            id="s1", name="test_skill", description="test", instructions="test",
-            triggers=["test"], usage_count=5, success_count=4, failure_count=1,
+            id="s1",
+            name="test_skill",
+            description="test",
+            instructions="test",
+            triggers=["test"],
+            usage_count=5,
+            success_count=4,
+            failure_count=1,
             confidence=0.5,
         )
         engine._skills["s1"] = skill
@@ -743,21 +785,31 @@ class TestLearningEngine:
     async def test_validate_skill_rejection(self, tmp_path):
         engine = LearningEngine(data_dir=str(tmp_path))
         skill = SkillCandidate(
-            id="s2", name="bad_skill", description="bad", instructions="bad",
-            triggers=["bad"], usage_count=5, success_count=1, failure_count=4,
+            id="s2",
+            name="bad_skill",
+            description="bad",
+            instructions="bad",
+            triggers=["bad"],
+            usage_count=5,
+            success_count=1,
+            failure_count=4,
             confidence=0.3,
         )
         engine._skills["s2"] = skill
         engine._save()
 
-        status = await engine.validate_skill("s2")
+        await engine.validate_skill("s2")
         assert skill.confidence < 0.3
 
     def test_record_skill_usage(self, tmp_path):
         engine = LearningEngine(data_dir=str(tmp_path))
         skill = SkillCandidate(
-            id="s1", name="test", description="test", instructions="test",
-            triggers=["test"], confidence=0.5,
+            id="s1",
+            name="test",
+            description="test",
+            instructions="test",
+            triggers=["test"],
+            confidence=0.5,
         )
         engine._skills["s1"] = skill
         engine.record_skill_usage("s1", success=True)
@@ -768,8 +820,12 @@ class TestLearningEngine:
     def test_get_relevant_skills(self, tmp_path):
         engine = LearningEngine(data_dir=str(tmp_path))
         skill = SkillCandidate(
-            id="s1", name="pytest_skill", description="test", instructions="test",
-            triggers=["pytest", "test"], confidence=0.8,
+            id="s1",
+            name="pytest_skill",
+            description="test",
+            instructions="test",
+            triggers=["pytest", "test"],
+            confidence=0.8,
         )
         engine._skills["s1"] = skill
         results = engine.get_relevant_skills("run pytest tests")
@@ -779,8 +835,11 @@ class TestLearningEngine:
     def test_get_relevant_lessons(self, tmp_path):
         engine = LearningEngine(data_dir=str(tmp_path))
         lesson = Lesson(
-            id="l1", content="pytest needs -q flag", scope="testing",
-            source_run="r1", confidence=0.7,
+            id="l1",
+            content="pytest needs -q flag",
+            scope="testing",
+            source_run="r1",
+            confidence=0.7,
         )
         engine._lessons["l1"] = lesson
         results = engine.get_relevant_lessons("run pytest")
@@ -790,8 +849,12 @@ class TestLearningEngine:
         engine = LearningEngine(data_dir=str(tmp_path))
         engine._lessons["l1"] = Lesson(id="l1", content="test", scope="test", source_run="r1")
         engine._skills["s1"] = SkillCandidate(
-            id="s1", name="test", description="test", instructions="test",
-            triggers=["test"], confidence=0.5,
+            id="s1",
+            name="test",
+            description="test",
+            instructions="test",
+            triggers=["test"],
+            confidence=0.5,
         )
         stats = engine.get_stats()
         assert stats["total_lessons"] == 1
@@ -808,17 +871,24 @@ class TestLearningEngine:
 
 # ── Skill Lifecycle Tests ──────────────────────────────────
 
+
 class TestSkillLifecycle:
     @pytest.mark.asyncio
     async def test_generate_from_lessons(self, tmp_path):
         learning = LearningEngine(data_dir=str(tmp_path))
         learning._lessons["l1"] = Lesson(
-            id="l1", content="always run tests before commit", scope="testing",
-            source_run="r1", confidence=0.6,
+            id="l1",
+            content="always run tests before commit",
+            scope="testing",
+            source_run="r1",
+            confidence=0.6,
         )
         learning._lessons["l2"] = Lesson(
-            id="l2", content="use pytest -q for fast tests", scope="testing",
-            source_run="r1", confidence=0.7,
+            id="l2",
+            content="use pytest -q for fast tests",
+            scope="testing",
+            source_run="r1",
+            confidence=0.7,
         )
         learning._save()
 
@@ -831,8 +901,12 @@ class TestSkillLifecycle:
     async def test_record_usage_and_validate(self, tmp_path):
         learning = LearningEngine(data_dir=str(tmp_path))
         skill = SkillCandidate(
-            id="s1", name="test", description="test", instructions="test",
-            triggers=["test"], confidence=0.5,
+            id="s1",
+            name="test",
+            description="test",
+            instructions="test",
+            triggers=["test"],
+            confidence=0.5,
         )
         learning._skills["s1"] = skill
         learning._save()
@@ -847,12 +921,22 @@ class TestSkillLifecycle:
     def test_get_trusted_skills(self, tmp_path):
         learning = LearningEngine(data_dir=str(tmp_path))
         learning._skills["s1"] = SkillCandidate(
-            id="s1", name="trusted", description="test", instructions="test",
-            triggers=["test"], status="trusted", confidence=0.8,
+            id="s1",
+            name="trusted",
+            description="test",
+            instructions="test",
+            triggers=["test"],
+            status="trusted",
+            confidence=0.8,
         )
         learning._skills["s2"] = SkillCandidate(
-            id="s2", name="candidate", description="test", instructions="test",
-            triggers=["test"], status="candidate", confidence=0.3,
+            id="s2",
+            name="candidate",
+            description="test",
+            instructions="test",
+            triggers=["test"],
+            status="candidate",
+            confidence=0.3,
         )
         lifecycle = SkillLifecycle(learning)
         trusted = lifecycle.get_trusted_skills()
@@ -861,6 +945,7 @@ class TestSkillLifecycle:
 
 
 # ── Job Engine Tests ───────────────────────────────────────
+
 
 class TestJobEngine:
     @pytest.mark.asyncio
@@ -890,8 +975,8 @@ class TestJobEngine:
     @pytest.mark.asyncio
     async def test_list_jobs_by_state(self, tmp_path):
         engine = JobEngine(data_dir=str(tmp_path))
-        job1 = await engine.enqueue("test", "r1", "s1", payload={"type": "test"})
-        job2 = await engine.enqueue("test", "r1", "s1", payload={"type": "test"})
+        await engine.enqueue("test", "r1", "s1", payload={"type": "test"})
+        await engine.enqueue("test", "r1", "s1", payload={"type": "test"})
         queued = engine.list_jobs(state=JobStatus.QUEUED)
         assert len(queued) == 2
 
@@ -904,7 +989,9 @@ class TestJobEngine:
 
         engine.register_handler("test_job", test_handler)
         job = await engine.enqueue(
-            "test_job", "r1", "s1",
+            "test_job",
+            "r1",
+            "s1",
             payload={"type": "test_job"},
         )
 
@@ -929,7 +1016,9 @@ class TestJobEngine:
 
         engine.register_handler("flaky_job", failing_handler)
         job = await engine.enqueue(
-            "flaky_job", "r1", "s1",
+            "flaky_job",
+            "r1",
+            "s1",
             payload={"type": "flaky_job"},
             priority=JobPriority.HIGH,
         )
@@ -954,7 +1043,9 @@ class TestJobEngine:
 
         engine.register_handler("slow_job", slow_handler)
         job = await engine.enqueue(
-            "slow_job", "r1", "s1",
+            "slow_job",
+            "r1",
+            "s1",
             payload={"type": "slow_job"},
         )
         await engine.start_job(job)
@@ -966,7 +1057,9 @@ class TestJobEngine:
     async def test_job_persistence(self, tmp_path):
         engine1 = JobEngine(data_dir=str(tmp_path))
         job = await engine1.enqueue(
-            "test", "r1", "s1",
+            "test",
+            "r1",
+            "s1",
             payload={"type": "test", "key": "value"},
         )
 
@@ -986,8 +1079,12 @@ class TestJobEngine:
     @pytest.mark.asyncio
     async def test_priority_ordering(self, tmp_path):
         engine = JobEngine(data_dir=str(tmp_path))
-        j1 = await engine.enqueue("test", "r1", "s1", payload={"type": "test"}, priority=JobPriority.LOW)
-        j2 = await engine.enqueue("test", "r1", "s1", payload={"type": "test"}, priority=JobPriority.CRITICAL)
+        j1 = await engine.enqueue(
+            "test", "r1", "s1", payload={"type": "test"}, priority=JobPriority.LOW
+        )
+        j2 = await engine.enqueue(
+            "test", "r1", "s1", payload={"type": "test"}, priority=JobPriority.CRITICAL
+        )
         assert PRIORITY_ORDER[j2.priority] < PRIORITY_ORDER[j1.priority]
 
     @pytest.mark.asyncio
@@ -999,7 +1096,9 @@ class TestJobEngine:
 
         engine.register_handler("perm_fail", always_fails)
         job = await engine.enqueue(
-            "perm_fail", "r1", "s1",
+            "perm_fail",
+            "r1",
+            "s1",
             payload={"type": "perm_fail"},
             priority=JobPriority.NORMAL,
         )
@@ -1014,6 +1113,7 @@ class TestJobEngine:
 
 
 # ── Subagent Engine Tests ──────────────────────────────────
+
 
 class TestSubagentEngine:
     @pytest.mark.asyncio
@@ -1094,6 +1194,7 @@ class TestSubagentEngine:
 
 # ── State Invariant Tests ──────────────────────────────────
 
+
 class TestStateInvariants:
     def test_completed_step_cannot_return_to_pending(self):
         plan = Plan(id="p1", run_id="r1", goal="test")
@@ -1121,15 +1222,14 @@ class TestStateInvariants:
         assert event.plan_id == "p1"
 
     def test_subagent_result_references_parent(self):
-        result = SubagentResult(
-            task_id="t1", status="completed", summary="done"
-        )
+        result = SubagentResult(task_id="t1", status="completed", summary="done")
         d = result.to_dict()
         assert d["task_id"] == "t1"
         assert d["status"] == "completed"
 
 
 # ── Concurrency Tests ──────────────────────────────────────
+
 
 class TestConcurrency:
     @pytest.mark.asyncio
@@ -1160,18 +1260,41 @@ class TestConcurrency:
 
 # ── Integration: Plan → Execute → Verify → Replan ─────────
 
+
 class TestPlanExecutionIntegration:
     @pytest.mark.asyncio
     async def test_full_plan_lifecycle(self, tmp_path):
         plan = Plan(id="p1", run_id="r1", goal="fix bug")
-        plan.add_step(PlanStep(id="s1", plan_id="p1", objective="investigate",
-                               required_tools=["read"],
-                               verification_criteria=[{"type": "content_check", "params": {"contains": "root cause"}}]))
-        plan.add_step(PlanStep(id="s2", plan_id="p1", objective="fix",
-                               dependencies=["s1"], required_tools=["write"]))
-        plan.add_step(PlanStep(id="s3", plan_id="p1", objective="verify",
-                               dependencies=["s2"], required_tools=["bash"],
-                               verification_criteria=[{"type": "command", "params": {"command": "echo ok"}}]))
+        plan.add_step(
+            PlanStep(
+                id="s1",
+                plan_id="p1",
+                objective="investigate",
+                required_tools=["read"],
+                verification_criteria=[
+                    {"type": "content_check", "params": {"contains": "root cause"}}
+                ],
+            )
+        )
+        plan.add_step(
+            PlanStep(
+                id="s2",
+                plan_id="p1",
+                objective="fix",
+                dependencies=["s1"],
+                required_tools=["write"],
+            )
+        )
+        plan.add_step(
+            PlanStep(
+                id="s3",
+                plan_id="p1",
+                objective="verify",
+                dependencies=["s2"],
+                required_tools=["bash"],
+                verification_criteria=[{"type": "command", "params": {"command": "echo ok"}}],
+            )
+        )
 
         assert plan.validate_dependencies() == []
         assert plan.detect_cycles() is None

@@ -6,8 +6,8 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-class SlackAdapter:
 
+class SlackAdapter:
     def __init__(self, token: str = "", signing_secret: str = "") -> None:
         self.token = token
         self.signing_secret = signing_secret
@@ -68,7 +68,6 @@ class SlackAdapter:
             return False
 
         try:
-
             response = await self._app.client.conversations_open(users=[user_id])
             channel_id = response["channel"]["id"]
 

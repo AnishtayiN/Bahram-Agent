@@ -18,11 +18,13 @@ try:
 except ImportError:
     CircuitBreaker = None  # type: ignore[assignment,misc]
 
+
 class MessageRole(str, Enum):
     SYSTEM = "system"
     USER = "user"
     ASSISTANT = "assistant"
     TOOL = "tool"
+
 
 class RunState(str, Enum):
     CREATED = "created"
@@ -39,6 +41,7 @@ class RunState(str, Enum):
     CANCELLED = "cancelled"
     TIMEOUT = "timeout"
 
+
 @dataclass
 class Message:
     role: MessageRole
@@ -48,11 +51,13 @@ class Message:
     timestamp: float = field(default_factory=time.time)
     metadata: dict[str, Any] = field(default_factory=dict)
 
+
 @dataclass
 class ToolCall:
     id: str
     name: str
     arguments: dict[str, Any]
+
 
 @dataclass
 class ToolResult:
@@ -62,6 +67,7 @@ class ToolResult:
     error: str | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
 
+
 @dataclass
 class AgentResponse:
     content: str
@@ -70,16 +76,22 @@ class AgentResponse:
     metadata: dict[str, Any] = field(default_factory=dict)
     state: RunState = RunState.COMPLETED
 
+
 class LLMProvider(Protocol):
     async def complete(
-        self, messages: list[Message], tools: list[dict[str, Any]] | None = None,
+        self,
+        messages: list[Message],
+        tools: list[dict[str, Any]] | None = None,
         **kwargs: Any,
     ) -> AgentResponse: ...
 
     async def stream(
-        self, messages: list[Message], tools: list[dict[str, Any]] | None = None,
+        self,
+        messages: list[Message],
+        tools: list[dict[str, Any]] | None = None,
         **kwargs: Any,
     ) -> AsyncIterator[str]: ...
+
 
 @dataclass
 class TrajectoryStep:
@@ -94,6 +106,7 @@ class TrajectoryStep:
     timestamp: float
     state: str = ""
     error: str | None = None
+
 
 @dataclass
 class Trajectory:
@@ -141,6 +154,7 @@ class Trajectory:
             "provider": self.provider,
         }
 
+
 @dataclass
 class RunConfig:
     max_iterations: int = 15
@@ -148,6 +162,7 @@ class RunConfig:
     max_tool_calls: int = 50
     max_retries: int = 3
     tool_timeout_seconds: float = 120.0
+
 
 class ToolExecutor:
     def __init__(self, tools: dict[str, Any], approval_system: Any = None) -> None:
@@ -186,7 +201,9 @@ class ToolExecutor:
 
         if tool_name not in self.tools:
             return ToolResult(
-                tool_call_id=tool_call.id, content="", success=False,
+                tool_call_id=tool_call.id,
+                content="",
+                success=False,
                 error=f"Unknown tool: {tool_name}",
             )
 
@@ -198,7 +215,9 @@ class ToolExecutor:
                 if risk != "low":
                     self._log_event(tool_name, tool_call.arguments, "blocked", reason)
                     return ToolResult(
-                        tool_call_id=tool_call.id, content="", success=False,
+                        tool_call_id=tool_call.id,
+                        content="",
+                        success=False,
                         error=f"Security block ({risk}): {reason}",
                     )
 
@@ -206,27 +225,34 @@ class ToolExecutor:
         try:
             if hasattr(tool, "execute"):
                 result = await asyncio.wait_for(
-                    tool.execute(**tool_call.arguments), timeout=timeout,
+                    tool.execute(**tool_call.arguments),
+                    timeout=timeout,
                 )
                 self._log_event(tool_name, tool_call.arguments, "success")
                 tc_result = ToolResult(tool_call_id=tool_call.id, content=str(result), success=True)
                 self._result_cache[tool_call.id] = tc_result
                 return tc_result
             return ToolResult(
-                tool_call_id=tool_call.id, content="", success=False,
+                tool_call_id=tool_call.id,
+                content="",
+                success=False,
                 error=f"Tool '{tool_name}' has no execute method",
             )
         except asyncio.TimeoutError:
             self._log_event(tool_name, tool_call.arguments, "timeout")
             return ToolResult(
-                tool_call_id=tool_call.id, content="", success=False,
+                tool_call_id=tool_call.id,
+                content="",
+                success=False,
                 error=f"Tool '{tool_name}' timed out after {timeout}s",
             )
         except Exception as e:
             logger.error(f"Tool execution error: {e}")
             self._log_event(tool_name, tool_call.arguments, "error", str(e))
             return ToolResult(
-                tool_call_id=tool_call.id, content="", success=False,
+                tool_call_id=tool_call.id,
+                content="",
+                success=False,
                 error=str(e),
             )
 
@@ -238,10 +264,16 @@ class ToolExecutor:
         return f"{tool_name}({json.dumps(arguments, default=str)[:200]})"
 
     def _log_event(self, tool: str, args: dict, status: str, error: str | None = None) -> None:
-        self._log.append({
-            "tool": tool, "args": args, "status": status, "error": error,
-            "timestamp": time.time(),
-        })
+        self._log.append(
+            {
+                "tool": tool,
+                "args": args,
+                "status": status,
+                "error": error,
+                "timestamp": time.time(),
+            }
+        )
+
 
 class AgentEngine:
     def __init__(self, config: Any = None) -> None:
@@ -261,6 +293,7 @@ class AgentEngine:
     def _init_approval_system(self) -> None:
         try:
             from bahram.security.approval import ApprovalConfig, ApprovalSystem
+
             self._approval_system = ApprovalSystem(ApprovalConfig())
         except Exception as e:
             logger.warning(f"Failed to init approval system: {e}")
@@ -276,11 +309,11 @@ class AgentEngine:
         self._trajectory_dir = trajectory_dir
 
     def _persist_trajectory(self, trajectory: Trajectory) -> None:
-        trajectory_dir = getattr(self, '_trajectory_dir', 'data/trajectories')
+        trajectory_dir = getattr(self, "_trajectory_dir", "data/trajectories")
         try:
             os.makedirs(trajectory_dir, exist_ok=True)
             path = os.path.join(trajectory_dir, f"{trajectory.run_id}.json")
-            with open(path, 'w') as f:
+            with open(path, "w") as f:
                 json.dump(trajectory.to_dict(), f, indent=2)
         except Exception as e:
             logger.warning(f"Failed to persist trajectory: {e}")
@@ -324,9 +357,17 @@ class AgentEngine:
     def record_provider_failure(self, provider_name: str) -> None:
         if self._circuit_breaker is not None:
             self._circuit_breaker.record_failure(provider_name)
-        if self._event_tracker is not None and hasattr(self._event_tracker, 'emit_provider_fallback'):
+        if self._event_tracker is not None and hasattr(
+            self._event_tracker, "emit_provider_fallback"
+        ):
             self._event_tracker.emit_provider_fallback(
-                "", "", {"provider": provider_name, "reason": "circuit_breaker", "message": f"Provider {provider_name} failed"}
+                "",
+                "",
+                {
+                    "provider": provider_name,
+                    "reason": "circuit_breaker",
+                    "message": f"Provider {provider_name} failed",
+                },
             )
 
     def get_tools_schema(self) -> list[dict[str, Any]]:
@@ -343,21 +384,25 @@ class AgentEngine:
         self._cancel_event.clear()
 
     def _get_run_config(self) -> RunConfig:
-        if self.config and hasattr(self.config, 'agent'):
+        if self.config and hasattr(self.config, "agent"):
             return RunConfig(
-                max_iterations=getattr(self.config.agent, 'max_iterations', 15),
-                max_runtime_seconds=getattr(self.config.agent, 'max_runtime_seconds', 300.0),
-                max_tool_calls=getattr(self.config.agent, 'max_tool_calls', 50),
-                tool_timeout_seconds=getattr(self.config.tools, 'bash_timeout', 120.0),
+                max_iterations=getattr(self.config.agent, "max_iterations", 15),
+                max_runtime_seconds=getattr(self.config.agent, "max_runtime_seconds", 300.0),
+                max_tool_calls=getattr(self.config.agent, "max_tool_calls", 50),
+                tool_timeout_seconds=getattr(self.config.tools, "bash_timeout", 120.0),
             )
         return RunConfig()
 
     async def run(
-        self, messages: list[Message], model: str | None = None,
+        self,
+        messages: list[Message],
+        model: str | None = None,
         session_id: str = "",
     ) -> AgentResponse:
         run_cfg = self._get_run_config()
-        model = model or (self.config.agent.model if self.config else "anthropic/claude-sonnet-4-20250514")
+        model = model or (
+            self.config.agent.model if self.config else "anthropic/claude-sonnet-4-20250514"
+        )
         provider_name = model.split("/")[0] if "/" in model else "anthropic"
         provider = self.get_provider(model)
         tools_schema = self.get_tools_schema()
@@ -366,8 +411,11 @@ class AgentEngine:
         self.reset_cancel()
 
         trajectory = Trajectory(
-            run_id=run_id, session_id=session_id, goal="",
-            model=model, provider=provider_name,
+            run_id=run_id,
+            session_id=session_id,
+            goal="",
+            model=model,
+            provider=provider_name,
         )
 
         if messages:
@@ -382,27 +430,42 @@ class AgentEngine:
             if self._cancel_event.is_set():
                 trajectory.status = "cancelled"
                 trajectory.finished_at = time.time()
-                trajectory.total_duration_ms = (trajectory.finished_at - trajectory.started_at) * 1000
+                trajectory.total_duration_ms = (
+                    trajectory.finished_at - trajectory.started_at
+                ) * 1000
                 self._persist_trajectory(trajectory)
                 return AgentResponse(content="Operation cancelled.", state=RunState.CANCELLED)
 
             if time.time() - start_time > run_cfg.max_runtime_seconds:
                 trajectory.status = "timeout"
                 trajectory.finished_at = time.time()
-                trajectory.total_duration_ms = (trajectory.finished_at - trajectory.started_at) * 1000
+                trajectory.total_duration_ms = (
+                    trajectory.finished_at - trajectory.started_at
+                ) * 1000
                 self._persist_trajectory(trajectory)
-                return AgentResponse(content="Operation timed out. Please try a more specific request.", state=RunState.TIMEOUT)
+                return AgentResponse(
+                    content="Operation timed out. Please try a more specific request.",
+                    state=RunState.TIMEOUT,
+                )
 
             if self._budget_manager is not None:
                 budget_result = self._budget_manager.check_budget(run_id)
                 if not budget_result.get("can_continue", True):
-                    reason = "Budget limit exceeded: " + ", ".join(budget_result.get("exceeded", []))
+                    reason = "Budget limit exceeded: " + ", ".join(
+                        budget_result.get("exceeded", [])
+                    )
                     logger.warning(f"Budget exceeded: {reason}")
-                    if self._event_tracker is not None and hasattr(self._event_tracker, 'emit_budget_exceeded'):
-                        self._event_tracker.emit_budget_exceeded(session_id, run_id, {"reason": reason})
+                    if self._event_tracker is not None and hasattr(
+                        self._event_tracker, "emit_budget_exceeded"
+                    ):
+                        self._event_tracker.emit_budget_exceeded(
+                            session_id, run_id, {"reason": reason}
+                        )
                     trajectory.status = "budget_exceeded"
                     trajectory.finished_at = time.time()
-                    trajectory.total_duration_ms = (trajectory.finished_at - trajectory.started_at) * 1000
+                    trajectory.total_duration_ms = (
+                        trajectory.finished_at - trajectory.started_at
+                    ) * 1000
                     self._persist_trajectory(trajectory)
                     return AgentResponse(
                         content=f"Budget limit reached: {reason}",
@@ -422,23 +485,33 @@ class AgentEngine:
                 fallback_provider = self._get_fallback_provider(provider_name)
                 if fallback_provider is not provider:
                     try:
-                        response = await fallback_provider.complete(messages, tools_schema if tools_schema else None)
+                        response = await fallback_provider.complete(
+                            messages, tools_schema if tools_schema else None
+                        )
                     except Exception as e2:
                         logger.error(f"Fallback also failed: {e2}")
                         trajectory.status = "error"
                         trajectory.finished_at = time.time()
                         self._persist_trajectory(trajectory)
-                        return AgentResponse(content=f"I encountered an error communicating with the model: {e2}", state=RunState.FAILED)
+                        return AgentResponse(
+                            content=f"I encountered an error communicating with the model: {e2}",
+                            state=RunState.FAILED,
+                        )
                 else:
                     trajectory.status = "error"
                     trajectory.finished_at = time.time()
                     self._persist_trajectory(trajectory)
-                    return AgentResponse(content=f"I encountered an error communicating with the model: {e}", state=RunState.FAILED)
+                    return AgentResponse(
+                        content=f"I encountered an error communicating with the model: {e}",
+                        state=RunState.FAILED,
+                    )
 
             if self._budget_manager is not None:
                 usage_tokens = len(response.content or "") // 4
                 if response.tool_calls:
-                    usage_tokens += sum(len(json.dumps(tc.arguments)) // 4 for tc in response.tool_calls)
+                    usage_tokens += sum(
+                        len(json.dumps(tc.arguments)) // 4 for tc in response.tool_calls
+                    )
                 self._budget_manager.record_model_call(
                     run_id,
                     input_tokens=usage_tokens // 2,
@@ -449,11 +522,14 @@ class AgentEngine:
             if not response.tool_calls:
                 trajectory.status = "completed"
                 trajectory.finished_at = time.time()
-                trajectory.total_duration_ms = (trajectory.finished_at - trajectory.started_at) * 1000
+                trajectory.total_duration_ms = (
+                    trajectory.finished_at - trajectory.started_at
+                ) * 1000
                 trajectory.final_content = response.content
                 self._persist_trajectory(trajectory)
                 return AgentResponse(
-                    content=response.content, state=RunState.COMPLETED,
+                    content=response.content,
+                    state=RunState.COMPLETED,
                     metadata={"trajectory": trajectory.to_dict()},
                 )
 
@@ -464,51 +540,66 @@ class AgentEngine:
                 if total_tool_calls >= run_cfg.max_tool_calls:
                     trajectory.status = "max_tool_calls"
                     trajectory.finished_at = time.time()
-                    trajectory.total_duration_ms = (trajectory.finished_at - trajectory.started_at) * 1000
+                    trajectory.total_duration_ms = (
+                        trajectory.finished_at - trajectory.started_at
+                    ) * 1000
                     self._persist_trajectory(trajectory)
                     return AgentResponse(
-                        content=f"Reached maximum tool calls ({run_cfg.max_tool_calls}). Here's what I've done so far.",
+                        content=(
+                            f"Reached maximum tool calls ({run_cfg.max_tool_calls}). Here's what "
+                            f"I've done so far."
+                        ),
                         state=RunState.COMPLETED,
                     )
 
                 if self._tool_executor is None:
                     self._tool_executor = ToolExecutor(self.tools, self._approval_system)
-                result = await self._tool_executor.execute(tool_call, timeout=run_cfg.tool_timeout_seconds)
+                result = await self._tool_executor.execute(
+                    tool_call, timeout=run_cfg.tool_timeout_seconds
+                )
                 total_tool_calls += 1
 
                 if self._budget_manager is not None:
                     self._budget_manager.record_tool_call(run_id, tool_name=tool_call.name)
 
-                tool_results_data.append({
-                    "tool": tool_call.name,
-                    "success": result.success,
-                    "error": result.error,
-                })
-                messages.append(Message(
-                    role=MessageRole.TOOL,
-                    content=result.content if result.success else f"Error: {result.error}",
-                    tool_call_id=result.tool_call_id,
-                ))
+                tool_results_data.append(
+                    {
+                        "tool": tool_call.name,
+                        "success": result.success,
+                        "error": result.error,
+                    }
+                )
+                messages.append(
+                    Message(
+                        role=MessageRole.TOOL,
+                        content=result.content if result.success else f"Error: {result.error}",
+                        tool_call_id=result.tool_call_id,
+                    )
+                )
 
-            messages.append(Message(
-                role=MessageRole.ASSISTANT,
-                content=response.content or "",
-                metadata={"tool_calls": response.tool_calls} if response.tool_calls else {},
-            ))
+            messages.append(
+                Message(
+                    role=MessageRole.ASSISTANT,
+                    content=response.content or "",
+                    metadata={"tool_calls": response.tool_calls} if response.tool_calls else {},
+                )
+            )
 
             step_duration = (time.time() - step_start) * 1000
-            trajectory.steps.append(TrajectoryStep(
-                step_id=step_id,
-                iteration=iteration,
-                provider=trajectory.provider,
-                model=model or "",
-                tool_calls=[{"name": tc.name, "id": tc.id} for tc in response.tool_calls],
-                tool_results=tool_results_data,
-                content_length=len(response.content or ""),
-                duration_ms=step_duration,
-                timestamp=time.time(),
-                state=RunState.TOOL_EXECUTING.value,
-            ))
+            trajectory.steps.append(
+                TrajectoryStep(
+                    step_id=step_id,
+                    iteration=iteration,
+                    provider=trajectory.provider,
+                    model=model or "",
+                    tool_calls=[{"name": tc.name, "id": tc.id} for tc in response.tool_calls],
+                    tool_results=tool_results_data,
+                    content_length=len(response.content or ""),
+                    duration_ms=step_duration,
+                    timestamp=time.time(),
+                    state=RunState.TOOL_EXECUTING.value,
+                )
+            )
             trajectory.total_tool_calls += len(response.tool_calls)
 
         logger.warning(f"Agent reached max iterations ({run_cfg.max_iterations})")
@@ -517,15 +608,22 @@ class AgentEngine:
         trajectory.total_duration_ms = (trajectory.finished_at - trajectory.started_at) * 1000
         self._persist_trajectory(trajectory)
         return AgentResponse(
-            content="I've reached the maximum number of iterations. Let me summarize what I've accomplished so far.",
+            content=(
+                "I've reached the maximum number of iterations. Let me summarize what I've "
+                "accomplished so far."
+            ),
             state=RunState.COMPLETED,
         )
 
     async def run_streaming(
-        self, messages: list[Message], model: str | None = None,
+        self,
+        messages: list[Message],
+        model: str | None = None,
     ) -> AsyncIterator[str]:
         run_cfg = self._get_run_config()
-        model = model or (self.config.agent.model if self.config else "anthropic/claude-sonnet-4-20250514")
+        model = model or (
+            self.config.agent.model if self.config else "anthropic/claude-sonnet-4-20250514"
+        )
         provider_name = model.split("/")[0] if "/" in model else "anthropic"
         provider = self.get_provider(model)
         tools_schema = self.get_tools_schema()
@@ -541,7 +639,9 @@ class AgentEngine:
 
             full_content = ""
             try:
-                async for chunk in provider.stream(messages, tools_schema if tools_schema else None):
+                async for chunk in provider.stream(
+                    messages, tools_schema if tools_schema else None
+                ):
                     full_content += chunk
                     yield chunk
                 self.record_provider_success(provider_name)
@@ -549,7 +649,9 @@ class AgentEngine:
                 self.record_provider_failure(provider_name)
                 try:
                     provider = self.get_provider(model)
-                    async for chunk in provider.stream(messages, tools_schema if tools_schema else None):
+                    async for chunk in provider.stream(
+                        messages, tools_schema if tools_schema else None
+                    ):
                         full_content += chunk
                         yield chunk
                 except Exception as e2:

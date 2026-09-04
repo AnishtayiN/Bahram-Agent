@@ -7,9 +7,9 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class AgentProfile:
-
     name: str
     display_name: str
     description: str = ""
@@ -22,8 +22,8 @@ class AgentProfile:
     is_default: bool = False
     metadata: dict = field(default_factory=dict)
 
-class ProfileManager:
 
+class ProfileManager:
     def __init__(self, data_dir: str = "data/profiles") -> None:
         self.data_dir = Path(data_dir)
         self.data_dir.mkdir(parents=True, exist_ok=True)

@@ -8,8 +8,8 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-class MemoryNudge:
 
+class MemoryNudge:
     def __init__(self, memory_dir: str = "data/memory") -> None:
         self.memory_dir = Path(memory_dir)
         self.memory_dir.mkdir(parents=True, exist_ok=True)

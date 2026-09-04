@@ -10,31 +10,31 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-class CurveType(str, Enum):
 
+class CurveType(str, Enum):
     PLATEAU = "plateau"
     CLIMBING = "climbing"
     DECLINING = "declining"
     MASTERY = "mastery"
 
+
 @dataclass
 class LearningPoint:
-
     timestamp: float
     metric: float
     description: str
     context: dict = field(default_factory=dict)
 
+
 @dataclass
 class LearningCurve:
-
     curve_type: CurveType
     confidence: float
     description: str
     suggested_action: str
 
-class LearningJourney:
 
+class LearningJourney:
     def __init__(self, data_dir: str = "data/memory") -> None:
         self.data_dir = Path(data_dir)
         self.data_dir.mkdir(parents=True, exist_ok=True)
@@ -48,12 +48,8 @@ class LearningJourney:
             try:
                 with open(journey_file) as f:
                     data = json.load(f)
-                self._points = [
-                    LearningPoint(**p) for p in data.get("points", [])
-                ]
-                self._curves = [
-                    LearningCurve(**c) for c in data.get("curves", [])
-                ]
+                self._points = [LearningPoint(**p) for p in data.get("points", [])]
+                self._curves = [LearningCurve(**c) for c in data.get("curves", [])]
             except Exception as e:
                 logger.warning(f"Failed to load journey: {e}")
 
@@ -97,7 +93,9 @@ class LearningJourney:
             if curve and (not self._curves or self._curves[-1].curve_type != curve.curve_type):
                 self._curves.append(curve)
                 self._save()
-                logger.info(f"Learning curve detected: {curve.curve_type.value} ({curve.confidence:.0%})")
+                logger.info(
+                    f"Learning curve detected: {curve.curve_type.value} ({curve.confidence:.0%})"
+                )
 
     def _detect_curve(self) -> LearningCurve | None:
         if len(self._points) < 3:
@@ -110,7 +108,7 @@ class LearningJourney:
             return None
 
         first_half = metrics[: len(metrics) // 2]
-        second_half = metrics[len(metrics) // 2:]
+        second_half = metrics[len(metrics) // 2 :]
 
         avg_first = sum(first_half) / len(first_half) if first_half else 0
         avg_second = sum(second_half) / len(second_half) if second_half else 0
@@ -164,7 +162,11 @@ class LearningJourney:
             "worst_metric": min(metrics),
             "average_metric": sum(metrics) / len(metrics),
             "current_curve": self._curves[-1].curve_type.value if self._curves else "unknown",
-            "trend": "improving" if metrics[-1] > metrics[0] else "declining" if metrics[-1] < metrics[0] else "stable",
+            "trend": "improving"
+            if metrics[-1] > metrics[0]
+            else "declining"
+            if metrics[-1] < metrics[0]
+            else "stable",
         }
 
     def get_curve_history(self) -> list[dict]:

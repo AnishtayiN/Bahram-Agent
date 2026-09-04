@@ -71,6 +71,7 @@ class FakeProvider:
 # 1. CounterTool basics (no caching — proves counting works)
 # ---------------------------------------------------------------------------
 
+
 class TestCounterToolBasics:
     """Verify the CounterTool increments on every call (no built-in cache)."""
 
@@ -92,6 +93,7 @@ class TestCounterToolBasics:
 # ---------------------------------------------------------------------------
 # 2. ToolExecutor idempotency via _result_cache
 # ---------------------------------------------------------------------------
+
 
 class TestToolExecutorIdempotency:
     """Prove that ToolExecutor caches ToolResults by tool_call_id,
@@ -167,7 +169,11 @@ class TestToolExecutorIdempotency:
         results = [await executor.execute(tc) for tc in calls]
         assert tool.counter == 3
         assert [r.content for r in results] == [
-            "count=1", "count=2", "count=1", "count=3", "count=2"
+            "count=1",
+            "count=2",
+            "count=1",
+            "count=3",
+            "count=2",
         ]
 
     @pytest.mark.asyncio
@@ -183,6 +189,7 @@ class TestToolExecutorIdempotency:
 # ---------------------------------------------------------------------------
 # 3. FallbackProvider does not re-execute completed tool calls
 # ---------------------------------------------------------------------------
+
 
 class TestFallbackProviderIdempotency:
     """Prove that when FallbackProvider takes over, already-completed
@@ -201,16 +208,16 @@ class TestFallbackProviderIdempotency:
 
         messages = [
             Message(role=MessageRole.USER, content="do something"),
-            Message(role=MessageRole.ASSISTANT, content="calling tool",
-                    metadata={"tool_calls": [tc]}),
-            Message(role=MessageRole.TOOL, content=result.content,
-                    tool_call_id="tc_1"),
+            Message(
+                role=MessageRole.ASSISTANT, content="calling tool", metadata={"tool_calls": [tc]}
+            ),
+            Message(role=MessageRole.TOOL, content=result.content, tool_call_id="tc_1"),
         ]
 
         primary = FakeProvider(should_fail=True, fail_msg="primary crashed")
-        fallback = FakeProvider(responses=[
-            AgentResponse(content="fallback done", state=RunState.COMPLETED)
-        ])
+        fallback = FakeProvider(
+            responses=[AgentResponse(content="fallback done", state=RunState.COMPLETED)]
+        )
         fb = FallbackProvider(primary, [fallback])
 
         resp = await fb.complete(messages, [])
@@ -232,16 +239,16 @@ class TestFallbackProviderIdempotency:
 
         messages = [
             Message(role=MessageRole.USER, content="run task"),
-            Message(role=MessageRole.ASSISTANT, content="using counter",
-                    metadata={"tool_calls": [tc]}),
-            Message(role=MessageRole.TOOL, content=exec_result.content,
-                    tool_call_id="failover_tc"),
+            Message(
+                role=MessageRole.ASSISTANT, content="using counter", metadata={"tool_calls": [tc]}
+            ),
+            Message(role=MessageRole.TOOL, content=exec_result.content, tool_call_id="failover_tc"),
         ]
 
         primary = FakeProvider(should_fail=True)
-        fallback = FakeProvider(responses=[
-            AgentResponse(content="continued", state=RunState.COMPLETED)
-        ])
+        fallback = FakeProvider(
+            responses=[AgentResponse(content="continued", state=RunState.COMPLETED)]
+        )
         fb = FallbackProvider(primary, [fallback])
 
         resp = await fb.complete(messages, [])
@@ -265,20 +272,16 @@ class TestFallbackProviderIdempotency:
 
         messages = [
             Message(role=MessageRole.USER, content="multi-step task"),
-            Message(role=MessageRole.ASSISTANT, content="step 1",
-                    metadata={"tool_calls": [tc1]}),
-            Message(role=MessageRole.TOOL, content=r1.content,
-                    tool_call_id="step1"),
-            Message(role=MessageRole.ASSISTANT, content="step 2",
-                    metadata={"tool_calls": [tc2]}),
-            Message(role=MessageRole.TOOL, content=r2.content,
-                    tool_call_id="step2"),
+            Message(role=MessageRole.ASSISTANT, content="step 1", metadata={"tool_calls": [tc1]}),
+            Message(role=MessageRole.TOOL, content=r1.content, tool_call_id="step1"),
+            Message(role=MessageRole.ASSISTANT, content="step 2", metadata={"tool_calls": [tc2]}),
+            Message(role=MessageRole.TOOL, content=r2.content, tool_call_id="step2"),
         ]
 
         primary = FakeProvider(should_fail=True, fail_msg="network error")
-        fallback = FakeProvider(responses=[
-            AgentResponse(content="all done", state=RunState.COMPLETED)
-        ])
+        fallback = FakeProvider(
+            responses=[AgentResponse(content="all done", state=RunState.COMPLETED)]
+        )
         fb = FallbackProvider(primary, [fallback])
 
         resp = await fb.complete(messages, [])
@@ -302,16 +305,14 @@ class TestFallbackProviderIdempotency:
 
         messages = [
             Message(role=MessageRole.USER, content="task"),
-            Message(role=MessageRole.ASSISTANT, content="exec",
-                    metadata={"tool_calls": [tc]}),
-            Message(role=MessageRole.TOOL, content=r2.content,
-                    tool_call_id="dup_id"),
+            Message(role=MessageRole.ASSISTANT, content="exec", metadata={"tool_calls": [tc]}),
+            Message(role=MessageRole.TOOL, content=r2.content, tool_call_id="dup_id"),
         ]
 
         primary = FakeProvider(should_fail=True)
-        fallback = FakeProvider(responses=[
-            AgentResponse(content="fallback", state=RunState.COMPLETED)
-        ])
+        fallback = FakeProvider(
+            responses=[AgentResponse(content="fallback", state=RunState.COMPLETED)]
+        )
         fb = FallbackProvider(primary, [fallback])
 
         resp = await fb.complete(messages, [])
@@ -331,17 +332,13 @@ class TestFallbackProviderIdempotency:
 
         messages = [
             Message(role=MessageRole.USER, content="task"),
-            Message(role=MessageRole.ASSISTANT, content="exec",
-                    metadata={"tool_calls": [tc]}),
-            Message(role=MessageRole.TOOL, content=r.content,
-                    tool_call_id="multi_fb"),
+            Message(role=MessageRole.ASSISTANT, content="exec", metadata={"tool_calls": [tc]}),
+            Message(role=MessageRole.TOOL, content=r.content, tool_call_id="multi_fb"),
         ]
 
         primary = FakeProvider(should_fail=True)
         fb1 = FakeProvider(should_fail=True, fail_msg="fb1 down")
-        fb2 = FakeProvider(responses=[
-            AgentResponse(content="fb2 ok", state=RunState.COMPLETED)
-        ])
+        fb2 = FakeProvider(responses=[AgentResponse(content="fb2 ok", state=RunState.COMPLETED)])
         fb = FallbackProvider(primary, [fb1, fb2])
 
         resp = await fb.complete(messages, [])
@@ -352,6 +349,7 @@ class TestFallbackProviderIdempotency:
 # ---------------------------------------------------------------------------
 # 4. Concurrent idempotency
 # ---------------------------------------------------------------------------
+
 
 class TestConcurrentIdempotency:
     """Verify idempotency holds under concurrent execution."""

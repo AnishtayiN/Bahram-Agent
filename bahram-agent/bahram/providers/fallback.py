@@ -8,14 +8,23 @@ from bahram.providers.base import BaseProvider
 
 logger = logging.getLogger(__name__)
 
-class FallbackProvider(BaseProvider):
 
+class FallbackProvider(BaseProvider):
     def __init__(self, primary: BaseProvider, fallbacks: list[BaseProvider] = None) -> None:
         self.primary = primary
         self.fallbacks = fallbacks or []
         self._current = primary
 
-    async def _call_api(self, messages, system_msg=None, tools=None, model=None, temperature=0.7, max_tokens=4096, **kwargs):
+    async def _call_api(
+        self,
+        messages,
+        system_msg=None,
+        tools=None,
+        model=None,
+        temperature=0.7,
+        max_tokens=4096,
+        **kwargs,
+    ):
         raise NotImplementedError("FallbackProvider delegates to child providers via complete()")
 
     async def complete(

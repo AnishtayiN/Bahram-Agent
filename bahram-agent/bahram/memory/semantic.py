@@ -11,6 +11,7 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class MemoryResult:
     id: str
@@ -110,7 +111,9 @@ class SemanticMemory:
 
     def _migrate(self) -> None:
         try:
-            cursor = self._conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='memories'")
+            cursor = self._conn.execute(
+                "SELECT name FROM sqlite_master WHERE type='table' AND name='memories'"
+            )
             if not cursor.fetchone():
                 return
             cursor = self._conn.execute("PRAGMA table_info(memories)")
@@ -128,21 +131,38 @@ class SemanticMemory:
             logger.debug(f"Migration skipped: {e}")
 
     def add(
-        self, content: str, source: str = "", metadata: dict = None,
-        scope: str = "global", importance: float = 0.5, confidence: float = 1.0,
+        self,
+        content: str,
+        source: str = "",
+        metadata: dict = None,
+        scope: str = "global",
+        importance: float = 0.5,
+        confidence: float = 1.0,
     ) -> str:
         memory_id = str(uuid.uuid4())[:12]
         self._conn.execute(
-            "INSERT INTO memories (id, content, source, timestamp, metadata, scope, importance, confidence) "
+            "INSERT INTO memories (id, content, source, timestamp, metadata, "
+            "scope, importance, confidence) "
             "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-            (memory_id, content, source, time.time(), "{}" if not metadata else str(metadata),
-             scope, importance, confidence),
+            (
+                memory_id,
+                content,
+                source,
+                time.time(),
+                "{}" if not metadata else str(metadata),
+                scope,
+                importance,
+                confidence,
+            ),
         )
         self._conn.commit()
         return memory_id
 
     def search(
-        self, query: str, limit: int = 10, min_score: float = 0.0,
+        self,
+        query: str,
+        limit: int = 10,
+        min_score: float = 0.0,
         scope: str | None = None,
     ) -> list[MemoryResult]:
         results = []
@@ -165,10 +185,16 @@ class SemanticMemory:
                 # metadata(4) scope(5) rank(6)
                 score = abs(row[6]) if row[6] is not None else 0.0
                 if score >= min_score:
-                    results.append(MemoryResult(
-                        id=row[0], content=row[1], score=score,
-                        source=row[2], timestamp=row[3], scope=row[5],
-                    ))
+                    results.append(
+                        MemoryResult(
+                            id=row[0],
+                            content=row[1],
+                            score=score,
+                            source=row[2],
+                            timestamp=row[3],
+                            scope=row[5],
+                        )
+                    )
         except Exception:
             # FTS unavailable or query unsupported: tokenized LIKE fallback
             # that ANDs every search term across content/source.
@@ -181,10 +207,16 @@ class SemanticMemory:
             sql += scope_clause + " ORDER BY timestamp DESC LIMIT ?"
             rows = self._conn.execute(sql, (*params, *scope_params, limit)).fetchall()
             for row in rows:
-                results.append(MemoryResult(
-                    id=row[0], content=row[1], score=0.5,
-                    source=row[2], timestamp=row[3], scope=row[5] if len(row) > 5 else "global",
-                ))
+                results.append(
+                    MemoryResult(
+                        id=row[0],
+                        content=row[1],
+                        score=0.5,
+                        source=row[2],
+                        timestamp=row[3],
+                        scope=row[5] if len(row) > 5 else "global",
+                    )
+                )
         return results
 
     def get(self, memory_id: str) -> dict | None:
@@ -193,7 +225,13 @@ class SemanticMemory:
             (memory_id,),
         ).fetchone()
         if row:
-            return {"id": row[0], "content": row[1], "source": row[2], "timestamp": row[3], "metadata": row[4]}
+            return {
+                "id": row[0],
+                "content": row[1],
+                "source": row[2],
+                "timestamp": row[3],
+                "metadata": row[4],
+            }
         return None
 
     def delete(self, memory_id: str) -> bool:
@@ -209,8 +247,12 @@ class SemanticMemory:
 
     def get_statistics(self) -> dict[str, Any]:
         count = self._conn.execute("SELECT COUNT(*) FROM memories").fetchone()[0]
-        sources = [r[0] for r in self._conn.execute("SELECT DISTINCT source FROM memories").fetchall()]
-        scopes = [r[0] for r in self._conn.execute("SELECT DISTINCT scope FROM memories").fetchall()]
+        sources = [
+            r[0] for r in self._conn.execute("SELECT DISTINCT source FROM memories").fetchall()
+        ]
+        scopes = [
+            r[0] for r in self._conn.execute("SELECT DISTINCT scope FROM memories").fetchall()
+        ]
         return {"total_memories": count, "sources": sources, "scopes": scopes}
 
     def consolidate(self, max_age_hours: int = 168, min_confidence: float = 0.1) -> int:

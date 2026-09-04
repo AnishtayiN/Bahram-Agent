@@ -86,10 +86,12 @@ class TestAgentChat:
         config = _make_config()
         agent = Agent(config=config)
         tool = AsyncMock()
-        tool.schema = MagicMock(return_value={
-            "type": "function",
-            "function": {"name": "echo", "description": "Echo tool", "parameters": {}},
-        })
+        tool.schema = MagicMock(
+            return_value={
+                "type": "function",
+                "function": {"name": "echo", "description": "Echo tool", "parameters": {}},
+            }
+        )
         tool.execute = AsyncMock(return_value="Tool output")
         agent.engine.register_tool("echo", tool)
 
@@ -109,7 +111,7 @@ class TestAgentChat:
         agent.engine.register_provider("test", mock_provider)
         agent.engine.providers = {"test": mock_provider, "anthropic": mock_provider}
 
-        response = await agent.chat("Hi", model="test")
+        await agent.chat("Hi", model="test")
         assert len(agent.sessions) == 1
 
 

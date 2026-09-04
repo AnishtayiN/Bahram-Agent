@@ -8,9 +8,9 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class DeliveryEntry:
-
     message_id: str
     platform: str
     chat_id: str
@@ -21,8 +21,8 @@ class DeliveryEntry:
     max_attempts: int = 3
     error: str = ""
 
-class DeliveryLedger:
 
+class DeliveryLedger:
     def __init__(self, data_dir: str = "data/gateway") -> None:
         self.data_dir = Path(data_dir)
         self.data_dir.mkdir(parents=True, exist_ok=True)
@@ -127,8 +127,7 @@ class DeliveryLedger:
         to_remove = [
             msg_id
             for msg_id, entry in self._entries.items()
-            if entry.status in ("sent", "failed")
-            and (now - entry.timestamp) > max_age_seconds
+            if entry.status in ("sent", "failed") and (now - entry.timestamp) > max_age_seconds
         ]
         for msg_id in to_remove:
             del self._entries[msg_id]

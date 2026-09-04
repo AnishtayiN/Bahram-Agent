@@ -5,8 +5,8 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-class WebFetchTool:
 
+class WebFetchTool:
     def __init__(self) -> None:
         self._timeout: float = 30.0
         self._max_size: int = 1024 * 1024
@@ -36,7 +36,7 @@ class WebFetchTool:
                         "content": "",
                     }
 
-                content = response.text[:self._max_size]
+                content = response.text[: self._max_size]
 
                 if format == "text":
                     return {"content": content}

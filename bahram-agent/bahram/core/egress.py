@@ -6,8 +6,8 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-class EgressProxy:
 
+class EgressProxy:
     def __init__(self) -> None:
         self._proxy_url: str = ""
         self._proxy_type: str = "http"
@@ -35,7 +35,6 @@ class EgressProxy:
 
         for pattern in self._no_proxy:
             if pattern.startswith("."):
-
                 if hostname.endswith(pattern) or hostname == pattern[1:]:
                     return False
             elif pattern == "*":

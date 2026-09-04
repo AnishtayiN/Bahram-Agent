@@ -8,9 +8,9 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class DelegatedTask:
-
     task_id: str
     agent: str
     description: str
@@ -18,8 +18,8 @@ class DelegatedTask:
     result: Any = None
     error: str = ""
 
-class DelegationTool:
 
+class DelegationTool:
     def __init__(self) -> None:
         self._agents: dict[str, Callable] = {}
         self._tasks: dict[str, DelegatedTask] = {}

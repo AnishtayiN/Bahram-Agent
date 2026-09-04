@@ -4,8 +4,8 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-class BuiltInPlugin:
 
+class BuiltInPlugin:
     def __init__(self) -> None:
         self.name = ""
         self.description = ""
@@ -23,8 +23,8 @@ class BuiltInPlugin:
     async def on_error(self, error: Exception) -> None:
         pass
 
-class LoggingPlugin(BuiltInPlugin):
 
+class LoggingPlugin(BuiltInPlugin):
     def __init__(self) -> None:
         super().__init__()
         self.name = "logging"
@@ -38,8 +38,8 @@ class LoggingPlugin(BuiltInPlugin):
         logger.debug(f"Response: {response[:100]}...")
         return response
 
-class MetricsPlugin(BuiltInPlugin):
 
+class MetricsPlugin(BuiltInPlugin):
     def __init__(self) -> None:
         super().__init__()
         self.name = "metrics"
@@ -69,8 +69,8 @@ class MetricsPlugin(BuiltInPlugin):
     def get_metrics(self) -> dict:
         return self._metrics.copy()
 
-class CachePlugin(BuiltInPlugin):
 
+class CachePlugin(BuiltInPlugin):
     def __init__(self) -> None:
         super().__init__()
         self.name = "cache"
@@ -85,6 +85,7 @@ class CachePlugin(BuiltInPlugin):
 
     async def on_response(self, response: str) -> str:
         return response
+
 
 BUILTIN_PLUGINS = {
     "logging": LoggingPlugin,

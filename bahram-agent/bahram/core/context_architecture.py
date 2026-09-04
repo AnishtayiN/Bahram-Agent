@@ -43,19 +43,34 @@ class ContextArchitecture:
         self._stable = elements
 
     def add_stable(self, content: str, source: str, **kwargs: Any) -> None:
-        self._stable.append(ContextElement(
-            content=content, category=ContextCategory.STABLE, source=source, **kwargs,
-        ))
+        self._stable.append(
+            ContextElement(
+                content=content,
+                category=ContextCategory.STABLE,
+                source=source,
+                **kwargs,
+            )
+        )
 
     def add_contextual(self, content: str, source: str, **kwargs: Any) -> None:
-        self._contextual.append(ContextElement(
-            content=content, category=ContextCategory.CONTEXTUAL, source=source, **kwargs,
-        ))
+        self._contextual.append(
+            ContextElement(
+                content=content,
+                category=ContextCategory.CONTEXTUAL,
+                source=source,
+                **kwargs,
+            )
+        )
 
     def add_volatile(self, content: str, source: str, **kwargs: Any) -> None:
-        self._volatile.append(ContextElement(
-            content=content, category=ContextCategory.VOLATILE, source=source, **kwargs,
-        ))
+        self._volatile.append(
+            ContextElement(
+                content=content,
+                category=ContextCategory.VOLATILE,
+                source=source,
+                **kwargs,
+            )
+        )
 
     def build_messages(self) -> list[dict[str, str]]:
         messages: list[dict[str, str]] = []
@@ -64,17 +79,23 @@ class ContextArchitecture:
             if element.tokens <= remaining:
                 messages.append({"role": "system", "content": element.content})
                 remaining -= element.tokens
-                self._trace.append({"source": element.source, "category": "stable", "included": True})
+                self._trace.append(
+                    {"source": element.source, "category": "stable", "included": True}
+                )
         for element in sorted(self._contextual, key=lambda e: e.priority, reverse=True):
             if element.tokens <= remaining:
                 messages.append({"role": "system", "content": element.content})
                 remaining -= element.tokens
-                self._trace.append({"source": element.source, "category": "contextual", "included": True})
+                self._trace.append(
+                    {"source": element.source, "category": "contextual", "included": True}
+                )
         for element in sorted(self._volatile, key=lambda e: e.priority, reverse=True):
             if element.tokens <= remaining:
                 messages.append({"role": "system", "content": element.content})
                 remaining -= element.tokens
-                self._trace.append({"source": element.source, "category": "volatile", "included": True})
+                self._trace.append(
+                    {"source": element.source, "category": "volatile", "included": True}
+                )
         return messages
 
     def get_usage(self) -> dict[str, int]:
@@ -108,5 +129,12 @@ class ContextArchitecture:
             element = self._volatile.pop(0)
             usage["remaining"] += element.tokens
             removed += 1
-            self._trace.append({"source": element.source, "category": "volatile", "included": False, "reason": "optimized"})
+            self._trace.append(
+                {
+                    "source": element.source,
+                    "category": "volatile",
+                    "included": False,
+                    "reason": "optimized",
+                }
+            )
         return removed

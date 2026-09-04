@@ -6,16 +6,16 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class ToolAnnotation:
-
     key: str
     value: Any
     timestamp: float = 0.0
     metadata: dict = field(default_factory=dict)
 
-class AnnotationManager:
 
+class AnnotationManager:
     def __init__(self) -> None:
         self._annotations: dict[str, list[ToolAnnotation]] = {}
 
@@ -27,6 +27,7 @@ class AnnotationManager:
         metadata: dict = None,
     ) -> None:
         import time
+
         if tool_call_id not in self._annotations:
             self._annotations[tool_call_id] = []
 
@@ -61,10 +62,7 @@ class AnnotationManager:
         self._annotations.pop(tool_call_id, None)
 
     def get_all_annotations(self) -> dict[str, list[dict]]:
-        return {
-            k: self.get_annotations(k)
-            for k in self._annotations.keys()
-        }
+        return {k: self.get_annotations(k) for k in self._annotations.keys()}
 
     def set_exit_code(self, tool_call_id: str, exit_code: int) -> None:
         self.add_annotation(tool_call_id, "exit_code", exit_code)

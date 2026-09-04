@@ -3,6 +3,7 @@
 Tests that the system handles resource exhaustion gracefully:
 repeated model calls, tool calls, huge outputs, recursive subagents.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -176,9 +177,7 @@ class TestResourceExhaustion:
         msg.role.value = "user"
         msg.content = "test"
 
-        result = asyncio.run(
-            engine.run([msg], model="test/model")
-        )
+        asyncio.run(engine.run([msg], model="test/model"))
 
         assert provider.call_count <= 4
 
@@ -203,9 +202,7 @@ class TestResourceExhaustion:
         msg.role.value = "user"
         msg.content = "test"
 
-        result = asyncio.run(
-            engine.run([msg], model="test/model")
-        )
+        asyncio.run(engine.run([msg], model="test/model"))
 
         assert tool.call_count <= 4
 
@@ -248,15 +245,14 @@ class TestResourceExhaustion:
 
         def cancel_soon():
             import time
+
             time.sleep(0.2)
             engine._cancel_event.set()
 
         t = threading.Thread(target=cancel_soon)
         t.start()
 
-        result = asyncio.run(
-            engine.run([msg], model="test/model")
-        )
+        result = asyncio.run(engine.run([msg], model="test/model"))
 
         t.join(timeout=1)
 

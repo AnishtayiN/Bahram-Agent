@@ -6,16 +6,16 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class ContextWindow:
-
     content: str
     tokens: int
     priority: int = 0
     metadata: dict = field(default_factory=dict)
 
-class SmartContextManager:
 
+class SmartContextManager:
     def __init__(self, max_tokens: int = 8192) -> None:
         self.max_tokens = max_tokens
         self._windows: list[ContextWindow] = []
@@ -32,12 +32,14 @@ class SmartContextManager:
         metadata: dict = None,
     ) -> None:
         tokens = self._estimate_tokens(content)
-        self._windows.append(ContextWindow(
-            content=content,
-            tokens=tokens,
-            priority=priority,
-            metadata=metadata or {},
-        ))
+        self._windows.append(
+            ContextWindow(
+                content=content,
+                tokens=tokens,
+                priority=priority,
+                metadata=metadata or {},
+            )
+        )
 
     def add_history(self, role: str, content: str) -> None:
         self._history.append({"role": role, "content": content})

@@ -5,15 +5,15 @@ from dataclasses import dataclass
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class WebsiteRule:
-
     pattern: str
     action: str
     reason: str = ""
 
-class WebsitePolicy:
 
+class WebsitePolicy:
     def __init__(self) -> None:
         self._rules: list[WebsiteRule] = []
         self._default_action = "allow"
@@ -21,14 +21,11 @@ class WebsitePolicy:
 
     def _load_defaults(self) -> None:
         self._rules = [
-
             WebsiteRule(pattern="*.malware.com", action="deny", reason="Malware site"),
             WebsiteRule(pattern="*.phishing.com", action="deny", reason="Phishing site"),
-
             WebsiteRule(pattern="github.com", action="allow"),
             WebsiteRule(pattern="stackoverflow.com", action="allow"),
             WebsiteRule(pattern="docs.python.org", action="allow"),
-
             WebsiteRule(pattern="*", action="log", reason="Default logging"),
         ]
 
@@ -61,7 +58,4 @@ class WebsitePolicy:
         self._default_action = action
 
     def list_rules(self) -> list[dict]:
-        return [
-            {"pattern": r.pattern, "action": r.action, "reason": r.reason}
-            for r in self._rules
-        ]
+        return [{"pattern": r.pattern, "action": r.action, "reason": r.reason} for r in self._rules]

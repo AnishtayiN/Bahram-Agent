@@ -6,20 +6,22 @@ from dataclasses import dataclass, field
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class CodeExplanation:
-
     line: int
     code: str
     explanation: str
     complexity: str
     concepts: list[str] = field(default_factory=list)
 
-class CodeExplainer:
 
+class CodeExplainer:
     def __init__(self) -> None:
         self._patterns: dict[str, str] = {
-            r"def\s+(\w+)\s*\(([^)]*)\)": "Function definition named '{name}' with parameters: {params}",
+            r"def\s+(\w+)\s*\(([^)]*)\)": (
+                "Function definition named '{name}' with parameters: {params}"
+            ),
             r"class\s+(\w+)\s*(?:\(([^)]*)\))?": "Class definition named '{name}'{parent}",
             r"if\s+(.+):": "Conditional check: {condition}",
             r"for\s+(\w+)\s+in\s+(.+)": "Loop iterating over {iterable} with variable {var}",
@@ -30,7 +32,9 @@ class CodeExplainer:
             r"import\s+(\w+)": "Imports module: {module}",
             r"from\s+(\w+)\s+import\s+(\w+)": "Imports {item} from {module}",
             r"lambda\s+([^:]+):\s*(.+)": "Anonymous function with parameter {param}",
-            r"\[(.+)\s+for\s+(\w+)\s+in\s+(.+)\]": "List comprehension creating {item} from {iterable}",
+            r"\[(.+)\s+for\s+(\w+)\s+in\s+(.+)\]": (
+                "List comprehension creating {item} from {iterable}"
+            ),
             r"\{(.+):\s*(.+)\s+for\s+(\w+)\s+in\s+(.+)\}": "Dictionary comprehension",
             r"async\s+def\s+(\w+)": "Asynchronous function definition: {name}",
             r"await\s+(.+)": "Awaiting async operation: {operation}",
@@ -54,7 +58,6 @@ class CodeExplainer:
         for pattern, template in self._patterns.items():
             match = re.search(pattern, line)
             if match:
-
                 explanation = template
                 concepts = self._extract_concepts(line)
 
@@ -125,7 +128,9 @@ class CodeExplainer:
             lines.append(f"### Line {exp.line}")
             lines.append(f"```{exp.code}```")
             lines.append(f"**Explanation:** {exp.explanation}")
-            lines.append(f"**Complexity:** {complexity_emoji.get(exp.complexity, '⚪')} {exp.complexity}")
+            lines.append(
+                f"**Complexity:** {complexity_emoji.get(exp.complexity, '⚪')} {exp.complexity}"
+            )
             if exp.concepts:
                 lines.append(f"**Concepts:** {', '.join(exp.concepts)}")
             lines.append("")

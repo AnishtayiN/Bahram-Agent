@@ -61,7 +61,9 @@ class SubagentTask:
 
 
 class SubagentEngine:
-    def __init__(self, engine: AgentEngine, event_tracker: Any = None, max_concurrent: int = 5) -> None:
+    def __init__(
+        self, engine: AgentEngine, event_tracker: Any = None, max_concurrent: int = 5
+    ) -> None:
         self._engine = engine
         self._event_tracker = event_tracker
         self._tasks: dict[str, SubagentTask] = {}
@@ -104,7 +106,9 @@ class SubagentEngine:
         )
         self._tasks[task_id] = task
 
-        if self._event_tracker is not None and hasattr(self._event_tracker, 'emit_subagent_spawned'):
+        if self._event_tracker is not None and hasattr(
+            self._event_tracker, "emit_subagent_spawned"
+        ):
             self._event_tracker.emit_subagent_spawned(
                 "", parent_run_id, task_id, {"objective": objective}
             )
@@ -147,10 +151,14 @@ class SubagentEngine:
                     self._active_count -= 1
                     task.completed_at = time.time()
                     self._cancel_events.pop(task_id, None)
-                    if self._event_tracker is not None and hasattr(self._event_tracker, 'emit_subagent_completed'):
+                    if self._event_tracker is not None and hasattr(
+                        self._event_tracker, "emit_subagent_completed"
+                    ):
                         self._event_tracker.emit_subagent_completed(
-                            "", task.parent_run_id, task_id,
-                            {"status": result.status, "summary": result.summary}
+                            "",
+                            task.parent_run_id,
+                            task_id,
+                            {"status": result.status, "summary": result.summary},
                         )
                 return result
 
@@ -204,7 +212,8 @@ class SubagentEngine:
         tools_schema = self._engine.get_tools_schema()
         if task.allowed_tools:
             tools_schema = [
-                t for t in tools_schema
+                t
+                for t in tools_schema
                 if t.get("function", {}).get("name", "") in task.allowed_tools
             ]
 
@@ -216,7 +225,11 @@ class SubagentEngine:
         )
 
         try:
-            provider = self._engine.get_provider(model or self._engine.config.agent.model if self._engine.config else "anthropic/claude-sonnet-4-20250514")
+            provider = self._engine.get_provider(
+                model or self._engine.config.agent.model
+                if self._engine.config
+                else "anthropic/claude-sonnet-4-20250514"
+            )
         except (ValueError, AttributeError):
             providers = list(self._engine.providers.keys())
             if not providers:
@@ -262,37 +275,48 @@ class SubagentEngine:
                     break
 
                 if not self._is_tool_allowed(tool_call.name, task.allowed_tools):
-                    messages.append(Message(
-                        role=MessageRole.TOOL,
-                        content=f"Error: Tool '{tool_call.name}' is not allowed for this subagent",
-                        tool_call_id=tool_call.id,
-                    ))
+                    messages.append(
+                        Message(
+                            role=MessageRole.TOOL,
+                            content=(
+                                f"Error: Tool '{tool_call.name}' is not allowed for this subagent"
+                            ),
+                            tool_call_id=tool_call.id,
+                        )
+                    )
                     continue
 
                 executor = self._engine._tool_executor
                 if executor is None:
                     from bahram.core.engine import ToolExecutor
+
                     executor = ToolExecutor(self._engine.tools, self._engine._approval_system)
 
                 result = await executor.execute(tool_call, timeout=run_cfg.tool_timeout_seconds)
                 total_tool_calls += 1
 
-                tool_results_summary.append({
-                    "tool": tool_call.name,
-                    "success": result.success,
-                })
+                tool_results_summary.append(
+                    {
+                        "tool": tool_call.name,
+                        "success": result.success,
+                    }
+                )
 
-                messages.append(Message(
-                    role=MessageRole.TOOL,
-                    content=result.content if result.success else f"Error: {result.error}",
-                    tool_call_id=result.tool_call_id,
-                ))
+                messages.append(
+                    Message(
+                        role=MessageRole.TOOL,
+                        content=result.content if result.success else f"Error: {result.error}",
+                        tool_call_id=result.tool_call_id,
+                    )
+                )
 
-            messages.append(Message(
-                role=MessageRole.ASSISTANT,
-                content=response.content or "",
-                metadata={"tool_calls": response.tool_calls} if response.tool_calls else {},
-            ))
+            messages.append(
+                Message(
+                    role=MessageRole.ASSISTANT,
+                    content=response.content or "",
+                    metadata={"tool_calls": response.tool_calls} if response.tool_calls else {},
+                )
+            )
 
         return SubagentResult(
             task_id=task.task_id,

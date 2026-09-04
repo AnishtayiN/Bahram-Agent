@@ -7,16 +7,16 @@ from dataclasses import dataclass
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class CompressionResult:
-
     compressed: str
     original_tokens: int
     compressed_tokens: int
     ratio: float
 
-class ContextCompressor:
 
+class ContextCompressor:
     def __init__(self) -> None:
         self._compression_level = 0.5
         self._enabled = True
@@ -101,10 +101,13 @@ class ContextCompressor:
 
         if len(messages) > target_count:
             skipped = len(messages) - target_count
-            result.insert(1, {
-                "role": "system",
-                "content": f"[Context compressed: {skipped} earlier messages summarized]",
-            })
+            result.insert(
+                1,
+                {
+                    "role": "system",
+                    "content": f"[Context compressed: {skipped} earlier messages summarized]",
+                },
+            )
 
         return json.dumps(result)
 

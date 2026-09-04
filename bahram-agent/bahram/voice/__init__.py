@@ -6,8 +6,8 @@ import tempfile
 
 logger = logging.getLogger(__name__)
 
-class VoiceTranscriber:
 
+class VoiceTranscriber:
     def __init__(self, method: str = "whisper") -> None:
         self.method = method
         self._whisper_model = None
@@ -51,7 +51,6 @@ class VoiceTranscriber:
             return None
 
         try:
-
             cmd = command.format(audio_path=audio_path)
 
             process = await asyncio.create_subprocess_shell(
@@ -60,9 +59,7 @@ class VoiceTranscriber:
                 stderr=asyncio.subprocess.PIPE,
             )
 
-            stdout, stderr = await asyncio.wait_for(
-                process.communicate(), timeout=60
-            )
+            stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=60)
 
             if process.returncode == 0:
                 return stdout.decode().strip()

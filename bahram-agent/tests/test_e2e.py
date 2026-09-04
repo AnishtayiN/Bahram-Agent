@@ -45,9 +45,7 @@ class TestScenarioA_SimpleReasoning:
     async def test_simple_reasoning(self):
         config = _make_config()
         agent = Agent(config=config)
-        provider = MockProvider(responses=[
-            AgentResponse(content="The answer is 42.")
-        ])
+        provider = MockProvider(responses=[AgentResponse(content="The answer is 42.")])
         agent.engine.register_provider("test", provider)
         agent.engine.providers = {"test": provider, "anthropic": provider}
 
@@ -64,18 +62,22 @@ class TestScenarioB_ToolExecution:
         agent = Agent(config=config)
 
         echo_tool = AsyncMock()
-        echo_tool.schema = MagicMock(return_value={
-            "type": "function",
-            "function": {"name": "echo", "description": "Echo tool", "parameters": {}},
-        })
+        echo_tool.schema = MagicMock(
+            return_value={
+                "type": "function",
+                "function": {"name": "echo", "description": "Echo tool", "parameters": {}},
+            }
+        )
         echo_tool.execute = AsyncMock(return_value="Hello from echo")
         agent.engine.register_tool("echo", echo_tool)
 
         tc = ToolCall(id="call_1", name="echo", arguments={"text": "hello"})
-        provider = MockProvider(responses=[
-            AgentResponse(content="Let me use the tool.", tool_calls=[tc]),
-            AgentResponse(content="The tool returned: Hello from echo"),
-        ])
+        provider = MockProvider(
+            responses=[
+                AgentResponse(content="Let me use the tool.", tool_calls=[tc]),
+                AgentResponse(content="The tool returned: Hello from echo"),
+            ]
+        )
         agent.engine.register_provider("test", provider)
         agent.engine.providers = {"test": provider, "anthropic": provider}
 
@@ -89,18 +91,22 @@ class TestScenarioB_ToolExecution:
         agent = Agent(config=config)
 
         fail_tool = AsyncMock()
-        fail_tool.schema = MagicMock(return_value={
-            "type": "function",
-            "function": {"name": "fail", "description": "Failing tool", "parameters": {}},
-        })
+        fail_tool.schema = MagicMock(
+            return_value={
+                "type": "function",
+                "function": {"name": "fail", "description": "Failing tool", "parameters": {}},
+            }
+        )
         fail_tool.execute = AsyncMock(side_effect=ValueError("Tool crashed"))
         agent.engine.register_tool("fail", fail_tool)
 
         tc = ToolCall(id="call_1", name="fail", arguments={})
-        provider = MockProvider(responses=[
-            AgentResponse(content="Trying tool.", tool_calls=[tc]),
-            AgentResponse(content="The tool failed, but I recovered."),
-        ])
+        provider = MockProvider(
+            responses=[
+                AgentResponse(content="Trying tool.", tool_calls=[tc]),
+                AgentResponse(content="The tool failed, but I recovered."),
+            ]
+        )
         agent.engine.register_provider("test", provider)
         agent.engine.providers = {"test": provider, "anthropic": provider}
 
@@ -115,9 +121,11 @@ class TestScenarioC_Memory:
         agent = Agent(config=config)
         await agent._init_memory()
 
-        provider = MockProvider(responses=[
-            AgentResponse(content="I remember that."),
-        ])
+        provider = MockProvider(
+            responses=[
+                AgentResponse(content="I remember that."),
+            ]
+        )
         agent.engine.register_provider("test", provider)
         agent.engine.providers = {"test": provider, "anthropic": provider}
 
@@ -179,10 +187,12 @@ class TestScenarioE_SessionPersistence:
         config = _make_config()
         agent = Agent(config=config)
 
-        provider = MockProvider(responses=[
-            AgentResponse(content="Hello!"),
-            AgentResponse(content="Nice to see you again!"),
-        ])
+        provider = MockProvider(
+            responses=[
+                AgentResponse(content="Hello!"),
+                AgentResponse(content="Nice to see you again!"),
+            ]
+        )
         agent.engine.register_provider("test", provider)
         agent.engine.providers = {"test": provider, "anthropic": provider}
 
@@ -238,7 +248,15 @@ class TestScenarioG_ToolRegistry:
         from bahram.tools.file import EditTool, ReadTool, WriteTool
         from bahram.tools.web import WebFetchTool, WebSearchTool
 
-        tools = [BashTool(), ReadTool(), WriteTool(), EditTool(), WebFetchTool(), WebSearchTool(), ExecuteCodeTool()]
+        tools = [
+            BashTool(),
+            ReadTool(),
+            WriteTool(),
+            EditTool(),
+            WebFetchTool(),
+            WebSearchTool(),
+            ExecuteCodeTool(),
+        ]
         for tool in tools:
             engine.register_tool(tool.name, tool)
 
@@ -277,9 +295,11 @@ class TestScenarioI_Trajectory:
         config = _make_config()
         agent = Agent(config=config)
 
-        provider = MockProvider(responses=[
-            AgentResponse(content="Final answer"),
-        ])
+        provider = MockProvider(
+            responses=[
+                AgentResponse(content="Final answer"),
+            ]
+        )
         agent.engine.register_provider("test", provider)
         agent.engine.providers = {"test": provider, "anthropic": provider}
 
@@ -296,18 +316,23 @@ class TestScenarioJ_MaxIterations:
 
         tc = ToolCall(id="call_1", name="bash", arguments={"command": "ls"})
         infinite_tool = AsyncMock()
-        infinite_tool.schema = MagicMock(return_value={
-            "type": "function",
-            "function": {"name": "bash", "description": "Bash tool", "parameters": {}},
-        })
+        infinite_tool.schema = MagicMock(
+            return_value={
+                "type": "function",
+                "function": {"name": "bash", "description": "Bash tool", "parameters": {}},
+            }
+        )
         infinite_tool.execute = AsyncMock(return_value="output")
         agent.engine.register_tool("bash", infinite_tool)
 
-        provider = MockProvider(responses=[
-            AgentResponse(content="", tool_calls=[tc]),
-        ] * 20)
+        provider = MockProvider(
+            responses=[
+                AgentResponse(content="", tool_calls=[tc]),
+            ]
+            * 20
+        )
         agent.engine.register_provider("test", provider)
         agent.engine.providers = {"test": provider, "anthropic": provider}
 
-        response = await agent.chat("Do something", model="test")
+        await agent.chat("Do something", model="test")
         assert provider.call_count <= 15

@@ -14,6 +14,7 @@ import pytest
 # TelegramApprovalManager — pure-logic approval layer, no Telegram dependency
 # ---------------------------------------------------------------------------
 
+
 class ApprovalStatus:
     PENDING = "pending"
     APPROVED = "approved"
@@ -88,9 +89,7 @@ class TelegramApprovalManager:
     def deny(self, approval_id: str, user_id: str, session_id: str = "") -> bool:
         return self._respond(approval_id, user_id, session_id, ApprovalStatus.DENIED)
 
-    def _respond(
-        self, approval_id: str, user_id: str, session_id: str, action: str
-    ) -> bool:
+    def _respond(self, approval_id: str, user_id: str, session_id: str, action: str) -> bool:
         req = self._requests.get(approval_id)
         if req is None:
             return False
@@ -142,7 +141,7 @@ class TelegramApprovalManager:
         return req.status == ApprovalStatus.APPROVED
 
     def get_pending(self) -> list[dict[str, Any]]:
-        now = time.time()
+        time.time()
         result = []
         for req in self._requests.values():
             if req.status != ApprovalStatus.PENDING:
@@ -152,16 +151,18 @@ class TelegramApprovalManager:
                 continue
             if req.cancelled or req.completed:
                 continue
-            result.append({
-                "approval_id": req.approval_id,
-                "run_id": req.run_id,
-                "tool_call_id": req.tool_call_id,
-                "user_id": req.user_id,
-                "session_id": req.session_id,
-                "command": req.command,
-                "arguments": req.arguments,
-                "created_at": req.created_at,
-            })
+            result.append(
+                {
+                    "approval_id": req.approval_id,
+                    "run_id": req.run_id,
+                    "tool_call_id": req.tool_call_id,
+                    "user_id": req.user_id,
+                    "session_id": req.session_id,
+                    "command": req.command,
+                    "arguments": req.arguments,
+                    "created_at": req.created_at,
+                }
+            )
         return result
 
     def get_request(self, approval_id: str) -> ApprovalRequest | None:
@@ -204,8 +205,8 @@ class TelegramApprovalManager:
 # Semantic approval behaviour tests (no Telegram needed)
 # ---------------------------------------------------------------------------
 
-class TestTelegramApprovalManager:
 
+class TestTelegramApprovalManager:
     @pytest.fixture()
     def mgr(self):
         return TelegramApprovalManager(default_timeout=300)
@@ -367,6 +368,7 @@ class TestTelegramApprovalManager:
 _NO_TELEGRAM = True
 try:
     from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+
     _NO_TELEGRAM = False
 except ImportError:
     pass
@@ -409,7 +411,6 @@ def _build_inline_keyboard(approval_id: str) -> InlineKeyboardMarkup:
 
 @pytest.mark.skipif(_NO_TELEGRAM, reason="python-telegram-bot not installed")
 class TestTelegramIntegration:
-
     def test_callback_data_binding(self, mgr=None):
         """Verify that callback_data encodes action + approval_id correctly."""
         mgr = mgr or TelegramApprovalManager()
@@ -431,11 +432,15 @@ class TestTelegramIntegration:
         """Simulate a callback_query arriving and being routed to approve."""
         mgr = TelegramApprovalManager()
         aid = mgr.create_approval_request(
-            run_id="r1", tool_call_id="tc1", user_id="99",
-            session_id="s1", command="ls", arguments={},
+            run_id="r1",
+            tool_call_id="tc1",
+            user_id="99",
+            session_id="s1",
+            command="ls",
+            arguments={},
         )
         cq = _FakeCallbackQuery(f"approve:{aid}", user_id="99")
-        update = _FakeUpdate(cq)
+        _FakeUpdate(cq)
 
         action, approval_id = cq.data.split(":", 1)
         if action == "approve":
@@ -457,12 +462,20 @@ class TestTelegramIntegration:
         """Two different tool calls produce independent approvals."""
         mgr = TelegramApprovalManager()
         a1 = mgr.create_approval_request(
-            run_id="r1", tool_call_id="tc1", user_id="u1",
-            session_id="s1", command="rm /a", arguments={},
+            run_id="r1",
+            tool_call_id="tc1",
+            user_id="u1",
+            session_id="s1",
+            command="rm /a",
+            arguments={},
         )
         a2 = mgr.create_approval_request(
-            run_id="r1", tool_call_id="tc2", user_id="u1",
-            session_id="s1", command="rm /b", arguments={},
+            run_id="r1",
+            tool_call_id="tc2",
+            user_id="u1",
+            session_id="s1",
+            command="rm /b",
+            arguments={},
         )
         mgr.approve(a1, "u1", "s1")
         assert mgr.is_approved(a1) is True
@@ -472,8 +485,12 @@ class TestTelegramIntegration:
         """A callback from a different user is rejected."""
         mgr = TelegramApprovalManager()
         aid = mgr.create_approval_request(
-            run_id="r1", tool_call_id="tc1", user_id="authorized_user",
-            session_id="s1", command="rm /x", arguments={},
+            run_id="r1",
+            tool_call_id="tc1",
+            user_id="authorized_user",
+            session_id="s1",
+            command="rm /x",
+            arguments={},
         )
         cq = _FakeCallbackQuery(f"approve:{aid}", user_id="attacker")
         action, approval_id = cq.data.split(":", 1)

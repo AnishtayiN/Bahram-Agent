@@ -7,7 +7,12 @@ from bahram.providers.compat import OpenAICompatibleProvider
 
 class OpenRouterProvider(OpenAICompatibleProvider):
     def __init__(self, api_key: str = "", model: str = "", **kwargs: Any) -> None:
-        super().__init__(api_key=api_key, model=model or "anthropic/claude-3.5-sonnet", base_url="https://openrouter.ai/api/v1", **kwargs)
+        super().__init__(
+            api_key=api_key,
+            model=model or "anthropic/claude-3.5-sonnet",
+            base_url="https://openrouter.ai/api/v1",
+            **kwargs,
+        )
 
     def get_models(self) -> list[str]:
         return ["anthropic/claude-3.5-sonnet", "openai/gpt-4o", "meta-llama/llama-3-70b"]

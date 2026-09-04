@@ -3,6 +3,7 @@
 Tests that MCP tools enter the same pipeline as built-in tools:
 discovery -> normalization -> ToolRegistry -> security -> approval -> executor -> trajectory.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -36,9 +37,7 @@ class FakeMCPTool:
             "description": self.description,
             "parameters": {
                 "type": "object",
-                "properties": {
-                    "input": {"type": "string", "description": "Input parameter"}
-                },
+                "properties": {"input": {"type": "string", "description": "Input parameter"}},
             },
         }
 
@@ -134,7 +133,11 @@ class TestMCPIntegration:
                 return "should not reach"
 
             def schema(self):
-                return {"name": "mcp_slow", "description": "slow", "parameters": {"type": "object", "properties": {}}}
+                return {
+                    "name": "mcp_slow",
+                    "description": "slow",
+                    "parameters": {"type": "object", "properties": {}},
+                }
 
         engine.register_tool("mcp_slow", SlowMCPTool())
 

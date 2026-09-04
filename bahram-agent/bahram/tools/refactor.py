@@ -6,9 +6,9 @@ from dataclasses import dataclass
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class RefactorSuggestion:
-
     file: str
     line: int
     type: str
@@ -16,18 +16,27 @@ class RefactorSuggestion:
     before: str
     after: str
 
-class RefactorTool:
 
+class RefactorTool:
     def __init__(self) -> None:
         self._rules: list[tuple[str, str, str, str]] = [
-
             (r"if (.+) is True", r"if \1", "Simplify boolean check", "simplify"),
             (r"if (.+) is False", r"if not \1", "Simplify boolean check", "simplify"),
             (r"if (.+) == None", r"if \1 is None", "Use 'is' for None comparison", "pythonic"),
-            (r"if (.+) != None", r"if \1 is not None", "Use 'is not' for None comparison", "pythonic"),
+            (
+                r"if (.+) != None",
+                r"if \1 is not None",
+                "Use 'is not' for None comparison",
+                "pythonic",
+            ),
             (r"len\((.+)\) == 0", r"not \1", "Use 'not' for empty check", "pythonic"),
             (r"len\((.+)\) > 0", r"\1", "Use truthiness for non-empty check", "pythonic"),
-            (r"\.append\((.+)\)", r".append(\1)  # Consider list comprehension", "Review append usage", "review"),
+            (
+                r"\.append\((.+)\)",
+                r".append(\1)  # Consider list comprehension",
+                "Review append usage",
+                "review",
+            ),
         ]
 
     async def analyze(self, file_path: str) -> list[RefactorSuggestion]:
@@ -41,14 +50,16 @@ class RefactorTool:
                 for pattern, replacement, description, ref_type in self._rules:
                     if re.search(pattern, line):
                         new_line = re.sub(pattern, replacement, line)
-                        suggestions.append(RefactorSuggestion(
-                            file=file_path,
-                            line=i,
-                            type=ref_type,
-                            description=description,
-                            before=line.strip(),
-                            after=new_line.strip(),
-                        ))
+                        suggestions.append(
+                            RefactorSuggestion(
+                                file=file_path,
+                                line=i,
+                                type=ref_type,
+                                description=description,
+                                before=line.strip(),
+                                after=new_line.strip(),
+                            )
+                        )
 
             return suggestions
 

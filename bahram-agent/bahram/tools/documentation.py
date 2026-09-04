@@ -5,8 +5,8 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
-class DocumentationGenerator:
 
+class DocumentationGenerator:
     def __init__(self) -> None:
         self._templates: dict[str, str] = {
             "readme": self._get_readme_template(),
@@ -59,6 +59,7 @@ class DocumentationGenerator:
             content = py_file.read_text(errors="replace")
 
             import re
+
             classes = re.findall(r"class (\w+).*:", content)
             functions = re.findall(r"def (\w+)\(.*\):", content)
 
@@ -80,6 +81,7 @@ class DocumentationGenerator:
         try:
             content = file_path.read_text(errors="replace")
             import re
+
             match = re.search(r'"""(.*?)"""', content, re.DOTALL)
             if match:
                 return match.group(1).strip()

@@ -4,8 +4,8 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-class SilenceManager:
 
+class SilenceManager:
     def __init__(self) -> None:
         self._tokens: dict[str, str] = {
             "pause": "...",

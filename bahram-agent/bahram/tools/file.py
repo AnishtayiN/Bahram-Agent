@@ -10,15 +10,18 @@ logger = logging.getLogger(__name__)
 
 _file_safety = None
 
+
 def _get_file_safety():
     global _file_safety
     if _file_safety is None:
         try:
             from bahram.security.file_safety import FileWriteSafety
+
             _file_safety = FileWriteSafety()
         except Exception:
             pass
     return _file_safety
+
 
 class ReadTool(BaseTool):
     @property
@@ -81,6 +84,7 @@ class ReadTool(BaseTool):
         except Exception as e:
             return f"Error reading file: {e}"
 
+
 class WriteTool(BaseTool):
     @property
     def name(self) -> str:
@@ -136,6 +140,7 @@ class WriteTool(BaseTool):
             return f"Successfully wrote to {file_path}"
         except Exception as e:
             return f"Error writing file: {e}"
+
 
 class EditTool(BaseTool):
     @property
@@ -203,7 +208,10 @@ class EditTool(BaseTool):
 
             count = content.count(old_string)
             if count > 1 and not replace_all:
-                return f"Error: Found {count} occurrences of old_string. Use replace_all or provide more context."
+                return (
+                    f"Error: Found {count} occurrences of old_string. Use replace_all or provide "
+                    f"more context."
+                )
 
             if replace_all:
                 new_content = content.replace(old_string, new_string)

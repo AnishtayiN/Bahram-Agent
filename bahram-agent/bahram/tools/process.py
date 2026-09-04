@@ -8,9 +8,9 @@ from dataclasses import dataclass
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class ProcessInfo:
-
     pid: int
     name: str
     command: str
@@ -19,8 +19,8 @@ class ProcessInfo:
     cpu_percent: float = 0.0
     memory_percent: float = 0.0
 
-class ProcessManager:
 
+class ProcessManager:
     def __init__(self) -> None:
         self._processes: dict[int, ProcessInfo] = {}
         self._max_processes: int = 10
@@ -93,8 +93,7 @@ class ProcessManager:
 
     async def cleanup(self) -> int:
         to_remove = [
-            pid for pid, info in self._processes.items()
-            if info.status in ("completed", "failed")
+            pid for pid, info in self._processes.items() if info.status in ("completed", "failed")
         ]
         for pid in to_remove:
             del self._processes[pid]

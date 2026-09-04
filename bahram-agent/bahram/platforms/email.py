@@ -6,8 +6,8 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-class EmailAdapter:
 
+class EmailAdapter:
     def __init__(self, config: dict = None) -> None:
         self.config = config or {}
         self._handler: Callable | None = None

@@ -9,17 +9,17 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class SecretEntry:
-
     name: str
     value: str
     description: str = ""
     category: str = "general"
     created_at: float = 0.0
 
-class SecretsManager:
 
+class SecretsManager:
     def __init__(self, data_dir: str = "data/secrets") -> None:
         self.data_dir = Path(data_dir)
         self.data_dir.mkdir(parents=True, exist_ok=True)
@@ -41,30 +41,28 @@ class SecretsManager:
         secrets_file = self.data_dir / "secrets.enc"
         if secrets_file.exists():
             try:
-
                 data = secrets_file.read_text()
                 decoded = base64.b64decode(data)
 
                 decrypted = bytes(b ^ self._key[i % len(self._key)] for i, b in enumerate(decoded))
-                self._secrets = {
-                    k: SecretEntry(**v)
-                    for k, v in json.loads(decrypted).items()
-                }
+                self._secrets = {k: SecretEntry(**v) for k, v in json.loads(decrypted).items()}
             except Exception as e:
                 logger.warning(f"Failed to load secrets: {e}")
 
     def _save(self) -> None:
         secrets_file = self.data_dir / "secrets.enc"
-        data = json.dumps({
-            k: {
-                "name": s.name,
-                "value": s.value,
-                "description": s.description,
-                "category": s.category,
-                "created_at": s.created_at,
+        data = json.dumps(
+            {
+                k: {
+                    "name": s.name,
+                    "value": s.value,
+                    "description": s.description,
+                    "category": s.category,
+                    "created_at": s.created_at,
+                }
+                for k, s in self._secrets.items()
             }
-            for k, s in self._secrets.items()
-        })
+        )
 
         encrypted = bytes(b ^ self._key[i % len(self._key)] for i, b in enumerate(data.encode()))
         secrets_file.write_text(base64.b64encode(encrypted).decode())
@@ -78,6 +76,7 @@ class SecretsManager:
         category: str = "general",
     ) -> None:
         import time
+
         self._secrets[name] = SecretEntry(
             name=name,
             value=value,

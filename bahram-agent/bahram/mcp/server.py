@@ -9,8 +9,8 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-class MCPServer:
 
+class MCPServer:
     def __init__(self, name: str = "bahram-agent") -> None:
         self.name = name
         self.tools: dict[str, dict] = {}
@@ -107,9 +107,7 @@ class MCPServer:
 
         try:
             while True:
-                line = await asyncio.get_event_loop().run_in_executor(
-                    None, sys.stdin.readline
-                )
+                line = await asyncio.get_event_loop().run_in_executor(None, sys.stdin.readline)
                 if not line:
                     break
 

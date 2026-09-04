@@ -5,8 +5,8 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-class HomeAssistantTool:
 
+class HomeAssistantTool:
     def __init__(self, url: str = "", token: str = "") -> None:
         self.url = url.rstrip("/")
         self.token = token

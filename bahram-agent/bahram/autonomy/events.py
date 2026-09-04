@@ -68,19 +68,21 @@ class EventTracker:
                     if not line:
                         continue
                     data = json.loads(line)
-                    self._events.append(Event(
-                        id=data["id"],
-                        event_type=data["event_type"],
-                        session_id=data.get("session_id", ""),
-                        run_id=data.get("run_id", ""),
-                        plan_id=data.get("plan_id", ""),
-                        step_id=data.get("step_id", ""),
-                        job_id=data.get("job_id", ""),
-                        tool_call_id=data.get("tool_call_id", ""),
-                        subagent_id=data.get("subagent_id", ""),
-                        data=data.get("data", {}),
-                        timestamp=data.get("timestamp", 0.0),
-                    ))
+                    self._events.append(
+                        Event(
+                            id=data["id"],
+                            event_type=data["event_type"],
+                            session_id=data.get("session_id", ""),
+                            run_id=data.get("run_id", ""),
+                            plan_id=data.get("plan_id", ""),
+                            step_id=data.get("step_id", ""),
+                            job_id=data.get("job_id", ""),
+                            tool_call_id=data.get("tool_call_id", ""),
+                            subagent_id=data.get("subagent_id", ""),
+                            data=data.get("data", {}),
+                            timestamp=data.get("timestamp", 0.0),
+                        )
+                    )
         except Exception as e:
             logger.warning(f"Failed to load events: {e}")
 
@@ -111,43 +113,79 @@ class EventTracker:
         self._append_event(event)
         return event
 
-    def emit_plan_created(self, session_id: str, run_id: str, plan_id: str, data: dict | None = None) -> Event:
+    def emit_plan_created(
+        self, session_id: str, run_id: str, plan_id: str, data: dict | None = None
+    ) -> Event:
         return self.emit("plan_created", session_id, run_id, plan_id=plan_id, data=data or {})
 
-    def emit_plan_updated(self, session_id: str, run_id: str, plan_id: str, data: dict | None = None) -> Event:
+    def emit_plan_updated(
+        self, session_id: str, run_id: str, plan_id: str, data: dict | None = None
+    ) -> Event:
         return self.emit("plan_updated", session_id, run_id, plan_id=plan_id, data=data or {})
 
-    def emit_step_started(self, session_id: str, run_id: str, plan_id: str, step_id: str, data: dict | None = None) -> Event:
-        return self.emit("step_started", session_id, run_id, plan_id=plan_id, step_id=step_id, data=data or {})
+    def emit_step_started(
+        self, session_id: str, run_id: str, plan_id: str, step_id: str, data: dict | None = None
+    ) -> Event:
+        return self.emit(
+            "step_started", session_id, run_id, plan_id=plan_id, step_id=step_id, data=data or {}
+        )
 
-    def emit_step_completed(self, session_id: str, run_id: str, plan_id: str, step_id: str, data: dict | None = None) -> Event:
-        return self.emit("step_completed", session_id, run_id, plan_id=plan_id, step_id=step_id, data=data or {})
+    def emit_step_completed(
+        self, session_id: str, run_id: str, plan_id: str, step_id: str, data: dict | None = None
+    ) -> Event:
+        return self.emit(
+            "step_completed", session_id, run_id, plan_id=plan_id, step_id=step_id, data=data or {}
+        )
 
-    def emit_step_failed(self, session_id: str, run_id: str, plan_id: str, step_id: str, data: dict | None = None) -> Event:
-        return self.emit("step_failed", session_id, run_id, plan_id=plan_id, step_id=step_id, data=data or {})
+    def emit_step_failed(
+        self, session_id: str, run_id: str, plan_id: str, step_id: str, data: dict | None = None
+    ) -> Event:
+        return self.emit(
+            "step_failed", session_id, run_id, plan_id=plan_id, step_id=step_id, data=data or {}
+        )
 
-    def emit_replanned(self, session_id: str, run_id: str, plan_id: str, data: dict | None = None) -> Event:
+    def emit_replanned(
+        self, session_id: str, run_id: str, plan_id: str, data: dict | None = None
+    ) -> Event:
         return self.emit("replanned", session_id, run_id, plan_id=plan_id, data=data or {})
 
-    def emit_subagent_spawned(self, session_id: str, run_id: str, subagent_id: str, data: dict | None = None) -> Event:
-        return self.emit("subagent_spawned", session_id, run_id, subagent_id=subagent_id, data=data or {})
+    def emit_subagent_spawned(
+        self, session_id: str, run_id: str, subagent_id: str, data: dict | None = None
+    ) -> Event:
+        return self.emit(
+            "subagent_spawned", session_id, run_id, subagent_id=subagent_id, data=data or {}
+        )
 
-    def emit_subagent_completed(self, session_id: str, run_id: str, subagent_id: str, data: dict | None = None) -> Event:
-        return self.emit("subagent_completed", session_id, run_id, subagent_id=subagent_id, data=data or {})
+    def emit_subagent_completed(
+        self, session_id: str, run_id: str, subagent_id: str, data: dict | None = None
+    ) -> Event:
+        return self.emit(
+            "subagent_completed", session_id, run_id, subagent_id=subagent_id, data=data or {}
+        )
 
-    def emit_job_started(self, session_id: str, run_id: str, job_id: str, data: dict | None = None) -> Event:
+    def emit_job_started(
+        self, session_id: str, run_id: str, job_id: str, data: dict | None = None
+    ) -> Event:
         return self.emit("job_started", session_id, run_id, job_id=job_id, data=data or {})
 
-    def emit_job_checkpointed(self, session_id: str, run_id: str, job_id: str, data: dict | None = None) -> Event:
+    def emit_job_checkpointed(
+        self, session_id: str, run_id: str, job_id: str, data: dict | None = None
+    ) -> Event:
         return self.emit("job_checkpointed", session_id, run_id, job_id=job_id, data=data or {})
 
-    def emit_job_resumed(self, session_id: str, run_id: str, job_id: str, data: dict | None = None) -> Event:
+    def emit_job_resumed(
+        self, session_id: str, run_id: str, job_id: str, data: dict | None = None
+    ) -> Event:
         return self.emit("job_resumed", session_id, run_id, job_id=job_id, data=data or {})
 
-    def emit_provider_fallback(self, session_id: str, run_id: str, data: dict | None = None) -> Event:
+    def emit_provider_fallback(
+        self, session_id: str, run_id: str, data: dict | None = None
+    ) -> Event:
         return self.emit("provider_fallback", session_id, run_id, data=data or {})
 
-    def emit_memory_retrieved(self, session_id: str, run_id: str, data: dict | None = None) -> Event:
+    def emit_memory_retrieved(
+        self, session_id: str, run_id: str, data: dict | None = None
+    ) -> Event:
         return self.emit("memory_retrieved", session_id, run_id, data=data or {})
 
     def emit_skill_selected(self, session_id: str, run_id: str, data: dict | None = None) -> Event:

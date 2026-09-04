@@ -10,6 +10,7 @@ from bahram.providers.base import BaseProvider
 
 logger = logging.getLogger(__name__)
 
+
 class OpenAIProvider(BaseProvider):
     BASE_URL = "https://api.openai.com/v1"
 

@@ -6,9 +6,9 @@ from dataclasses import dataclass
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class CircuitState:
-
     platform: str
     failures: int = 0
     successes: int = 0
@@ -17,8 +17,8 @@ class CircuitState:
     failure_threshold: int = 5
     recovery_timeout: float = 300.0
 
-class CircuitBreaker:
 
+class CircuitBreaker:
     def __init__(self) -> None:
         self._circuits: dict[str, CircuitState] = {}
         self._failure_threshold = 5
@@ -54,7 +54,6 @@ class CircuitBreaker:
             return True, "Circuit closed"
 
         if circuit.state == "open":
-
             if time.time() - circuit.last_failure > circuit.recovery_timeout:
                 circuit.state = "half-open"
                 logger.info(f"Circuit half-open for {platform}")

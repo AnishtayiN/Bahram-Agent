@@ -8,9 +8,9 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class TrajectoryStep:
-
     step_id: int
     action: str
     input: str
@@ -18,9 +18,9 @@ class TrajectoryStep:
     timestamp: float
     duration: float = 0.0
 
+
 @dataclass
 class Trajectory:
-
     id: str
     name: str
     steps: list[TrajectoryStep] = field(default_factory=list)
@@ -28,8 +28,8 @@ class Trajectory:
     end_time: float = 0.0
     status: str = "running"
 
-class TrajectoryGenerator:
 
+class TrajectoryGenerator:
     def __init__(self, data_dir: str = "data/trajectories") -> None:
         self.data_dir = Path(data_dir)
         self.data_dir.mkdir(parents=True, exist_ok=True)
@@ -38,6 +38,7 @@ class TrajectoryGenerator:
 
     def start(self, name: str) -> Trajectory:
         import hashlib
+
         traj_id = hashlib.md5(f"{name}{time.time()}".encode()).hexdigest()[:12]
 
         trajectory = Trajectory(

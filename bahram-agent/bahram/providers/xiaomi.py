@@ -7,7 +7,12 @@ from bahram.providers.compat import OpenAICompatibleProvider
 
 class XiaomiProvider(OpenAICompatibleProvider):
     def __init__(self, api_key: str = "", model: str = "", **kwargs: Any) -> None:
-        super().__init__(api_key=api_key, model=model or "MiLM-6B", base_url="https://api.xiaomi.com/v1", **kwargs)
+        super().__init__(
+            api_key=api_key,
+            model=model or "MiLM-6B",
+            base_url="https://api.xiaomi.com/v1",
+            **kwargs,
+        )
 
     def get_models(self) -> list[str]:
         return ["MiLM-6B"]

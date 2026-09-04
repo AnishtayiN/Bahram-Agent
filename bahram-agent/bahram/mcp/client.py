@@ -9,9 +9,9 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class MCPServerConfig:
-
     name: str
     type: str = "stdio"
     command: list[str] = field(default_factory=list)
@@ -21,16 +21,16 @@ class MCPServerConfig:
     enabled: bool = True
     timeout: int = 30
 
+
 @dataclass
 class MCPTool:
-
     name: str
     description: str
     input_schema: dict[str, Any]
     server_name: str
 
-class MCPClient:
 
+class MCPClient:
     def __init__(self) -> None:
         self.servers: dict[str, MCPServerConfig] = {}
         self.tools: dict[str, MCPTool] = {}
@@ -43,6 +43,7 @@ class MCPClient:
 
         try:
             import yaml
+
             with open(path) as f:
                 data = yaml.safe_load(f)
         except ImportError:
@@ -121,7 +122,6 @@ class MCPClient:
             response = await self._receive_message(config.name)
 
             if response and "result" in response:
-
                 tools_request = {
                     "jsonrpc": "2.0",
                     "id": 2,
@@ -232,9 +232,7 @@ class MCPClient:
         if conn["type"] == "stdio":
             process = conn["process"]
             try:
-                line = await asyncio.wait_for(
-                    process.stdout.readline(), timeout=30
-                )
+                line = await asyncio.wait_for(process.stdout.readline(), timeout=30)
                 if line:
                     return json.loads(line.decode())
             except asyncio.TimeoutError:
@@ -294,14 +292,16 @@ class MCPClient:
     def get_tools_schema(self) -> list[dict[str, Any]]:
         schemas = []
         for name, tool in self.tools.items():
-            schemas.append({
-                "type": "function",
-                "function": {
-                    "name": name,
-                    "description": tool.description,
-                    "parameters": tool.input_schema,
-                },
-            })
+            schemas.append(
+                {
+                    "type": "function",
+                    "function": {
+                        "name": name,
+                        "description": tool.description,
+                        "parameters": tool.input_schema,
+                    },
+                }
+            )
         return schemas
 
     def list_servers(self) -> list[str]:

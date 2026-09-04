@@ -10,18 +10,27 @@ from bahram.providers.base import BaseProvider
 
 logger = logging.getLogger(__name__)
 
+
 class OllamaProvider(BaseProvider):
-    def __init__(self, api_key: str = "", model: str = "", base_url: str = "", **kwargs: Any) -> None:
+    def __init__(
+        self, api_key: str = "", model: str = "", base_url: str = "", **kwargs: Any
+    ) -> None:
         super().__init__(api_key=api_key, model=model or "llama3", **kwargs)
         self.base_url = (base_url or "http://localhost:11434").rstrip("/")
         self.temperature = kwargs.get("temperature", 0.7)
         self.max_tokens = kwargs.get("max_tokens", 4096)
 
     async def _call_api(
-        self, messages: list[dict], system_msg: str, tools: list[dict],
-        model: str | None, temperature: float, max_tokens: int,
+        self,
+        messages: list[dict],
+        system_msg: str,
+        tools: list[dict],
+        model: str | None,
+        temperature: float,
+        max_tokens: int,
     ) -> AgentResponse:
         import httpx
+
         api_messages = []
         if system_msg:
             api_messages.append({"role": "system", "content": system_msg})
@@ -38,7 +47,8 @@ class OllamaProvider(BaseProvider):
             async with httpx.AsyncClient() as client:
                 response = await client.post(
                     f"{self.base_url}/api/chat",
-                    json=payload, timeout=120.0,
+                    json=payload,
+                    timeout=120.0,
                 )
                 if response.status_code == 200:
                     data = response.json()
@@ -48,33 +58,44 @@ class OllamaProvider(BaseProvider):
                     tool_calls = []
                     for tc in tool_calls_raw:
                         func = tc.get("function", {})
-                        tool_calls.append(ToolCall(
-                            id=f"call_{len(tool_calls)}",
-                            name=func.get("name", ""),
-                            arguments=func.get("arguments", {}),
-                        ))
+                        tool_calls.append(
+                            ToolCall(
+                                id=f"call_{len(tool_calls)}",
+                                name=func.get("name", ""),
+                                arguments=func.get("arguments", {}),
+                            )
+                        )
                     return AgentResponse(content=content, tool_calls=tool_calls)
                 raise RuntimeError(f"Ollama API error ({response.status_code}): {response.text}")
         except ImportError:
             raise ImportError("httpx not installed. Run: pip install httpx")
 
     async def _stream_api(
-        self, messages: list[dict], system_msg: str, tools: list[dict],
-        model: str | None, temperature: float, max_tokens: int,
+        self,
+        messages: list[dict],
+        system_msg: str,
+        tools: list[dict],
+        model: str | None,
+        temperature: float,
+        max_tokens: int,
     ) -> AsyncIterator[str]:
         import httpx
+
         api_messages = []
         if system_msg:
             api_messages.append({"role": "system", "content": system_msg})
         api_messages.extend(messages)
         payload: dict[str, Any] = {
-            "model": self._get_model(model), "messages": api_messages,
-            "stream": True, "options": {"temperature": temperature, "num_predict": max_tokens},
+            "model": self._get_model(model),
+            "messages": api_messages,
+            "stream": True,
+            "options": {"temperature": temperature, "num_predict": max_tokens},
         }
         try:
             async with httpx.AsyncClient() as client:
-                async with client.stream("POST", f"{self.base_url}/api/chat",
-                    json=payload, timeout=120.0) as response:
+                async with client.stream(
+                    "POST", f"{self.base_url}/api/chat", json=payload, timeout=120.0
+                ) as response:
                     async for line in response.aiter_lines():
                         if line.strip():
                             try:
@@ -91,4 +112,9 @@ class OllamaProvider(BaseProvider):
         return ["llama3", "llama3.1", "codellama", "mistral"]
 
     def get_provider_info(self) -> dict[str, Any]:
-        return {"name": "ollama", "configured": True, "model": self.model, "base_url": self.base_url}
+        return {
+            "name": "ollama",
+            "configured": True,
+            "model": self.model,
+            "base_url": self.base_url,
+        }

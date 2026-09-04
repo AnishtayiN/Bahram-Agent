@@ -8,16 +8,16 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class Dependency:
-
     name: str
     version: str = ""
     source: str = ""
     is_direct: bool = True
 
-class DependencyAnalyzer:
 
+class DependencyAnalyzer:
     def __init__(self, project_root: str = ".") -> None:
         self.project_root = Path(project_root)
 
@@ -61,6 +61,7 @@ class DependencyAnalyzer:
         pkg_file = self.project_root / "package.json"
         if pkg_file.exists():
             import json
+
             content = json.loads(pkg_file.read_text())
             for name, version in content.get("dependencies", {}).items():
                 deps.append(Dependency(name=name, version=version, source="package.json"))

@@ -19,7 +19,10 @@ class TestLiveBasicToolUse:
         await live_agent.start()
         test_file = tmp_path / "test.txt"
         response = await live_agent.run(
-            f"Write the text 'test content' to the file {test_file} using the write tool, then read it back.",
+            (
+                f"Write the text 'test content' to the file {test_file} using the write tool, then "
+                f"read it back."
+            ),
             model=live_model,
         )
         assert response.content is not None
@@ -41,7 +44,8 @@ class TestLivePlanning:
     async def test_planned_execution(self, live_agent, live_model):
         await live_agent.start()
         response = await live_agent.run(
-            "Plan and execute: create a file called 'countdown.py' that prints numbers from 10 to 1, "
+            "Plan and execute: create a file called 'countdown.py' that prints "
+            "numbers from 10 to 1, "
             "then run it to verify it works.",
             model=live_model,
             use_planning=True,
@@ -69,7 +73,7 @@ class TestLiveMemory:
 
 class TestLiveFailureRecovery:
     @pytest.mark.asyncio
-    async def testHandlesBadCommand(self, live_agent, live_model):
+    async def test_handles_bad_command(self, live_agent, live_model):
         await live_agent.start()
         response = await live_agent.run(
             "Try to run the command 'nonexistent_command_xyz' and handle the error gracefully.",

@@ -8,9 +8,9 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class Task:
-
     task_id: str
     name: str
     status: str = "pending"
@@ -19,8 +19,8 @@ class Task:
     start_time: float = 0.0
     end_time: float = 0.0
 
-class TaskTool:
 
+class TaskTool:
     def __init__(self) -> None:
         self._tasks: dict[str, Task] = {}
         self._callbacks: dict[str, Callable] = {}

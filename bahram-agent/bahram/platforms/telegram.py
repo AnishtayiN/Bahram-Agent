@@ -11,8 +11,8 @@ from bahram.platforms.base import BasePlatform, PlatformMessage
 
 logger = logging.getLogger(__name__)
 
-class TelegramPlatform(BasePlatform):
 
+class TelegramPlatform(BasePlatform):
     def __init__(self, config: Any) -> None:
         super().__init__(config)
         self.app = None
@@ -56,15 +56,11 @@ class TelegramPlatform(BasePlatform):
             self.app.add_handler(
                 MessageHandler(filters.TEXT & ~filters.COMMAND, self._handle_message)
             )
-            self.app.add_handler(
-                MessageHandler(filters.VOICE | filters.AUDIO, self._handle_voice)
-            )
+            self.app.add_handler(MessageHandler(filters.VOICE | filters.AUDIO, self._handle_voice))
             self.app.add_handler(
                 MessageHandler(filters.PHOTO | filters.Document.IMAGE, self._handle_image)
             )
-            self.app.add_handler(
-                MessageHandler(filters.Document.ALL, self._handle_document)
-            )
+            self.app.add_handler(MessageHandler(filters.Document.ALL, self._handle_document))
 
             await self._set_bot_commands()
 
@@ -106,10 +102,11 @@ class TelegramPlatform(BasePlatform):
     async def send_message(self, chat_id: str, content: str, parse_mode: str = "Markdown") -> None:
         if self.bot:
             try:
-
                 max_length = 4096
                 if len(content) > max_length:
-                    chunks = [content[i : i + max_length] for i in range(0, len(content), max_length)]
+                    chunks = [
+                        content[i : i + max_length] for i in range(0, len(content), max_length)
+                    ]
                     for chunk in chunks:
                         await self.bot.send_message(
                             chat_id=chat_id,
@@ -245,17 +242,11 @@ class TelegramPlatform(BasePlatform):
             await update.message.reply_text(f"Model changed to: {model}")
         else:
             await update.message.reply_text(
-                "Usage: /model <model_name>\n"
-                "Example: /model anthropic/claude-sonnet-4-6"
+                "Usage: /model <model_name>\nExample: /model anthropic/claude-sonnet-4-6"
             )
 
     async def _handle_status(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        status = (
-            "Bahram Agent Status\n\n"
-            "Version: 1.0.0\n"
-            "Status: Online\n"
-            "Platform: Telegram\n"
-        )
+        status = "Bahram Agent Status\n\nVersion: 1.0.0\nStatus: Online\nPlatform: Telegram\n"
         await update.message.reply_text(status)
 
     async def _handle_message(self, update_or_message: Any, context: Any = None) -> None:
@@ -311,12 +302,11 @@ class TelegramPlatform(BasePlatform):
             status = "Online"
             if self._agent._budget_manager:
                 usage = self._agent._budget_manager.get_all_usage()
-                total_tokens = sum(
-                    r.get("total_tokens", 0)
-                    for r in usage.get("runs", {}).values()
-                )
+                total_tokens = sum(r.get("total_tokens", 0) for r in usage.get("runs", {}).values())
                 status += f"\nBudget: {total_tokens} tokens used"
-            await self.send_message(chat_id, f"Bahram Agent Status\n\nVersion: 1.0.0\nStatus: {status}")
+            await self.send_message(
+                chat_id, f"Bahram Agent Status\n\nVersion: 1.0.0\nStatus: {status}"
+            )
             return
 
         await self.send_typing(chat_id)

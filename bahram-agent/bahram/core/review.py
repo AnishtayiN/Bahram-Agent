@@ -10,9 +10,9 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class ReviewItem:
-
     conversation_id: str
     timestamp: float
     summary: str
@@ -20,8 +20,8 @@ class ReviewItem:
     suggestions: list[str] = field(default_factory=list)
     reviewed: bool = False
 
-class BackgroundReviewer:
 
+class BackgroundReviewer:
     def __init__(self, data_dir: str = "data/memory") -> None:
         self.data_dir = Path(data_dir)
         self.data_dir.mkdir(parents=True, exist_ok=True)
@@ -82,7 +82,6 @@ class BackgroundReviewer:
                     "suggestions": [],
                 }
         else:
-
             result = self._heuristic_review(messages)
 
         review = ReviewItem(

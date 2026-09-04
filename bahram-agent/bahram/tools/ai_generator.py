@@ -6,16 +6,16 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class GeneratedFile:
-
     path: str
     content: str
     language: str
     description: str = ""
 
-class AICodeGenerator:
 
+class AICodeGenerator:
     def __init__(self) -> None:
         self._templates: dict[str, dict] = {
             "fastapi": {
@@ -61,11 +61,13 @@ class AICodeGenerator:
                 language=file_spec["language"],
                 framework=framework,
             )
-            files.append(GeneratedFile(
-                path=file_spec["path"],
-                content=content,
-                language=file_spec["language"],
-            ))
+            files.append(
+                GeneratedFile(
+                    path=file_spec["path"],
+                    content=content,
+                    language=file_spec["language"],
+                )
+            )
 
         output_path = Path(output_dir)
         output_path.mkdir(parents=True, exist_ok=True)
@@ -101,13 +103,13 @@ class AICodeGenerator:
         return ""
 
     def _generate_fastapi_main(self, description: str) -> str:
-        return ''
+        return ""
 
     def _generate_cli_main(self, description: str) -> str:
-        return ''
+        return ""
 
     def _generate_react_app(self, description: str) -> str:
-        return ''
+        return ""
 
     def _generate_requirements(self, framework: str) -> str:
         requirements = {
@@ -117,11 +119,11 @@ class AICodeGenerator:
         return requirements.get(framework, "")
 
     def _generate_package_json(self, description: str) -> str:
-        return ''
+        return ""
 
     def _generate_dockerfile(self, framework: str) -> str:
         if framework == "fastapi":
-            return ''
+            return ""
         return ""
 
     def _generate_readme(self, description: str, framework: str) -> str:

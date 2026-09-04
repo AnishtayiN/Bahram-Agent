@@ -13,9 +13,9 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class TerminalConfig:
-
     shell: str = "/bin/bash"
     cwd: str = ""
     env: dict[str, str] = field(default_factory=dict)
@@ -23,8 +23,8 @@ class TerminalConfig:
     sudo: bool = False
     timeout: float = 60.0
 
-class PTYManager:
 
+class PTYManager:
     def __init__(self) -> None:
         self._sessions: dict[str, int] = {}
 
@@ -59,8 +59,8 @@ class PTYManager:
         except OSError:
             pass
 
-class SudoManager:
 
+class SudoManager:
     def __init__(self) -> None:
         self._password_cache: dict[str, str] = {}
         self._cache_timeout: float = 300.0
@@ -68,11 +68,13 @@ class SudoManager:
 
     def cache_password(self, hostname: str, password: str) -> None:
         import time
+
         self._password_cache[hostname] = password
         self._cache_timestamps[hostname] = time.time()
 
     def get_password(self, hostname: str) -> str | None:
         import time
+
         if hostname not in self._password_cache:
             return None
 
@@ -88,8 +90,8 @@ class SudoManager:
         self._password_cache.pop(hostname, None)
         self._cache_timestamps.pop(hostname, None)
 
-class ShellInitHandler:
 
+class ShellInitHandler:
     def __init__(self) -> None:
         self._init_commands: list[str] = []
         self._guard_patterns: list[str] = [
@@ -121,8 +123,8 @@ class ShellInitHandler:
         init = self.get_init_script(shell)
         return f"{init}\n{command}"
 
-class TerminalTool:
 
+class TerminalTool:
     def __init__(self) -> None:
         self.pty_manager = PTYManager()
         self.sudo_manager = SudoManager()
@@ -149,7 +151,6 @@ class TerminalTool:
         master_fd, slave_fd = self.pty_manager.create_session(config)
 
         try:
-
             if not config.sudo:
                 wrapped = self.shell_handler.wrap_command(command, config.shell)
             else:
@@ -157,7 +158,6 @@ class TerminalTool:
 
             pid = os.fork()
             if pid == 0:
-
                 os.close(master_fd)
                 os.setsid()
                 fcntl.ioctl(slave_fd, struct.unpack("H", b"TIOCSCTTY")[0], 0)
@@ -168,7 +168,6 @@ class TerminalTool:
 
                 os.execvp(config.shell, [config.shell, "-c", wrapped])
             else:
-
                 os.close(slave_fd)
                 output = ""
                 start = asyncio.get_event_loop().time()
@@ -182,7 +181,6 @@ class TerminalTool:
                     if data:
                         output += data
                     else:
-
                         try:
                             wpid, status = os.waitpid(pid, os.WNOHANG)
                             if wpid:

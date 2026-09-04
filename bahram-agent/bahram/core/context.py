@@ -9,9 +9,9 @@ from bahram.core.engine import Message, MessageRole
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class ContextWindow:
-
     max_turns: int = 20
     max_tokens: int = 8000
     messages: list[Message] = field(default_factory=list)
@@ -51,22 +51,17 @@ class ContextWindow:
         other_msgs = [m for m in self.messages if m.role != MessageRole.SYSTEM]
 
         turn_count = sum(
-            1
-            for m in other_msgs
-            if m.role in (MessageRole.USER, MessageRole.ASSISTANT)
+            1 for m in other_msgs if m.role in (MessageRole.USER, MessageRole.ASSISTANT)
         )
 
         if turn_count > self.max_turns:
-
             msgs_to_summarize = other_msgs[: len(other_msgs) // 2]
             summary = self._summarize_messages(msgs_to_summarize)
             self.summaries.append(summary)
 
             other_msgs = other_msgs[len(msgs_to_summarize) :]
 
-            logger.debug(
-                f"Trimmed context: summarized {len(msgs_to_summarize)} messages"
-            )
+            logger.debug(f"Trimmed context: summarized {len(msgs_to_summarize)} messages")
 
         self.messages = system_msgs + other_msgs
 
@@ -108,8 +103,8 @@ class ContextWindow:
             summaries=data.get("summaries", []),
         )
 
-class Context:
 
+class Context:
     def __init__(self, max_turns: int = 20) -> None:
         self.max_turns = max_turns
         self._contexts: dict[str, ContextWindow] = {}

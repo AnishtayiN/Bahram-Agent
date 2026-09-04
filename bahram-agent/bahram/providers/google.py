@@ -10,6 +10,7 @@ from bahram.providers.base import BaseProvider
 
 logger = logging.getLogger(__name__)
 
+
 class GoogleProvider(BaseProvider):
     BASE_URL = "https://generativelanguage.googleapis.com/v1beta"
 
@@ -19,10 +20,16 @@ class GoogleProvider(BaseProvider):
         self.max_tokens = kwargs.get("max_tokens", 4096)
 
     async def _call_api(
-        self, messages: list[dict], system_msg: str, tools: list[dict],
-        model: str | None, temperature: float, max_tokens: int,
+        self,
+        messages: list[dict],
+        system_msg: str,
+        tools: list[dict],
+        model: str | None,
+        temperature: float,
+        max_tokens: int,
     ) -> AgentResponse:
         import httpx
+
         contents = []
         if system_msg:
             contents.append({"role": "user", "parts": [{"text": system_msg}]})
@@ -38,16 +45,25 @@ class GoogleProvider(BaseProvider):
             "generationConfig": {"temperature": temperature, "maxOutputTokens": max_tokens},
         }
         if tools:
-            payload["tools"] = [{"functionDeclarations": [
-                {"name": t.get("function", t).get("name", ""), "description": t.get("function", t).get("description", ""), "parameters": t.get("function", t).get("parameters", {})}
-                for t in tools
-            ]}]
+            payload["tools"] = [
+                {
+                    "functionDeclarations": [
+                        {
+                            "name": t.get("function", t).get("name", ""),
+                            "description": t.get("function", t).get("description", ""),
+                            "parameters": t.get("function", t).get("parameters", {}),
+                        }
+                        for t in tools
+                    ]
+                }
+            ]
         try:
             async with httpx.AsyncClient() as client:
                 response = await client.post(
                     f"{self.BASE_URL}/models/{model_name}:generateContent?key={self.api_key}",
                     headers={"Content-Type": "application/json"},
-                    json=payload, timeout=120.0,
+                    json=payload,
+                    timeout=120.0,
                 )
                 if response.status_code == 200:
                     data = response.json()
@@ -63,10 +79,16 @@ class GoogleProvider(BaseProvider):
             raise ImportError("httpx not installed. Run: pip install httpx")
 
     async def _stream_api(
-        self, messages: list[dict], system_msg: str, tools: list[dict],
-        model: str | None, temperature: float, max_tokens: int,
+        self,
+        messages: list[dict],
+        system_msg: str,
+        tools: list[dict],
+        model: str | None,
+        temperature: float,
+        max_tokens: int,
     ) -> AsyncIterator[str]:
         import httpx
+
         contents = []
         if system_msg:
             contents.append({"role": "user", "parts": [{"text": system_msg}]})
@@ -87,7 +109,8 @@ class GoogleProvider(BaseProvider):
                     "POST",
                     f"{self.BASE_URL}/models/{model_name}:streamGenerateContent?key={self.api_key}",
                     headers={"Content-Type": "application/json"},
-                    json=payload, timeout=120.0,
+                    json=payload,
+                    timeout=120.0,
                 ) as response:
                     async for line in response.aiter_lines():
                         if line.strip():

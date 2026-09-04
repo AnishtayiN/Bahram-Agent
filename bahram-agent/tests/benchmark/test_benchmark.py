@@ -40,9 +40,14 @@ class TestBasicConversation:
     @pytest.mark.asyncio
     async def test_simple_greeting(self):
         engine = AgentEngine()
-        engine.register_provider("test", _mock_provider([
-            AgentResponse(content="Hello! How can I help you?"),
-        ]))
+        engine.register_provider(
+            "test",
+            _mock_provider(
+                [
+                    AgentResponse(content="Hello! How can I help you?"),
+                ]
+            ),
+        )
         messages = [Message(role=MessageRole.USER, content="Hi")]
         result = await engine.run(messages, model="test/model")
         assert result.state == RunState.COMPLETED
@@ -51,10 +56,15 @@ class TestBasicConversation:
     @pytest.mark.asyncio
     async def test_multi_turn(self):
         engine = AgentEngine()
-        engine.register_provider("test", _mock_provider([
-            AgentResponse(content="I can help with that."),
-            AgentResponse(content="Done! Here's the summary."),
-        ]))
+        engine.register_provider(
+            "test",
+            _mock_provider(
+                [
+                    AgentResponse(content="I can help with that."),
+                    AgentResponse(content="Done! Here's the summary."),
+                ]
+            ),
+        )
         messages = [
             Message(role=MessageRole.USER, content="Write a function"),
             Message(role=MessageRole.ASSISTANT, content="I can help with that."),
@@ -70,6 +80,7 @@ class TestToolExecution:
         class MockTool:
             async def execute(self, **kw):
                 return "42"
+
             def schema(self):
                 return {"name": "mock", "inputSchema": {"type": "object", "properties": {}}}
 
@@ -85,6 +96,7 @@ class TestToolExecution:
             async def execute(self, **kw):
                 await asyncio.sleep(100)
                 return "never"
+
             def schema(self):
                 return {"name": "slow", "inputSchema": {"type": "object", "properties": {}}}
 
@@ -107,6 +119,7 @@ class TestToolExecution:
         class BrokenTool:
             async def execute(self, **kw):
                 raise ValueError("disk full")
+
             def schema(self):
                 return {"name": "broken", "inputSchema": {"type": "object", "properties": {}}}
 
@@ -189,12 +202,21 @@ class TestPersistenceIntegration:
             store = SessionStore(db_path=f"{tmpdir}/test.db")
             store.create_session("s1")
             from bahram.core.engine import TrajectoryStep
+
             t = Trajectory(run_id="r1", session_id="s1", goal="test")
-            t.steps.append(TrajectoryStep(
-                step_id="s1", iteration=0, provider="test", model="m",
-                tool_calls=[], tool_results=[], content_length=10,
-                duration_ms=50.0, timestamp=time.time(),
-            ))
+            t.steps.append(
+                TrajectoryStep(
+                    step_id="s1",
+                    iteration=0,
+                    provider="test",
+                    model="m",
+                    tool_calls=[],
+                    tool_results=[],
+                    content_length=10,
+                    duration_ms=50.0,
+                    timestamp=time.time(),
+                )
+            )
             t.status = "completed"
             t.total_tool_calls = 1
             t.total_duration_ms = 100.0
@@ -231,8 +253,13 @@ class TestRunConfig:
 
     def test_custom_config(self):
         class MockConfig:
-            agent = type("Agent", (), {"max_iterations": 5, "max_runtime_seconds": 60.0, "max_tool_calls": 10})()
+            agent = type(
+                "Agent",
+                (),
+                {"max_iterations": 5, "max_runtime_seconds": 60.0, "max_tool_calls": 10},
+            )()
             tools = type("Tools", (), {"bash_timeout": 30})()
+
         engine = AgentEngine(config=MockConfig())
         cfg = engine._get_run_config()
         assert cfg.max_iterations == 5

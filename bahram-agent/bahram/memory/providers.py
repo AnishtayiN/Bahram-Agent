@@ -9,25 +9,25 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
-class MemoryProviderType(str, Enum):
 
+class MemoryProviderType(str, Enum):
     LOCAL = "local"
     QDRANT = "qdrant"
     PINECONE = "pinecone"
     WEAVIATE = "weaviate"
     REDIS = "redis"
 
+
 @dataclass
 class MemoryEntry:
-
     id: str
     content: str
     metadata: dict = field(default_factory=dict)
     embedding: list[float] = field(default_factory=list)
     timestamp: float = 0.0
 
-class MemoryProvider:
 
+class MemoryProvider:
     def __init__(self, provider_type: MemoryProviderType) -> None:
         self.provider_type = provider_type
 
@@ -46,8 +46,8 @@ class MemoryProvider:
     async def count(self) -> int:
         raise NotImplementedError
 
-class LocalMemoryProvider(MemoryProvider):
 
+class LocalMemoryProvider(MemoryProvider):
     def __init__(self, data_dir: str = "data/memory") -> None:
         super().__init__(MemoryProviderType.LOCAL)
         self.data_dir = Path(data_dir)
@@ -113,8 +113,8 @@ class LocalMemoryProvider(MemoryProvider):
     async def count(self) -> int:
         return len(self._entries)
 
-class MemoryProviderManager:
 
+class MemoryProviderManager:
     def __init__(self, data_dir: str = "data/memory") -> None:
         self.data_dir = data_dir
         self._providers: dict[str, MemoryProvider] = {}

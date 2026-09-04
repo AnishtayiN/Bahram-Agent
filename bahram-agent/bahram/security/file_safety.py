@@ -6,8 +6,8 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
-class FileWriteSafety:
 
+class FileWriteSafety:
     def __init__(self) -> None:
         self._protected_paths: list[str] = [
             "/etc/passwd",

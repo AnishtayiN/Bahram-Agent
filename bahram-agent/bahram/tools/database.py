@@ -5,9 +5,9 @@ from dataclasses import dataclass
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class DBConfig:
-
     db_type: str
     host: str = "localhost"
     port: int = 5432
@@ -15,8 +15,8 @@ class DBConfig:
     user: str = ""
     password: str = ""
 
-class DatabaseTool:
 
+class DatabaseTool:
     def __init__(self, config: DBConfig = None) -> None:
         self.config = config
         self._connection = None
@@ -40,6 +40,7 @@ class DatabaseTool:
     async def _connect_sqlite(self) -> bool:
         try:
             import aiosqlite
+
             self._connection = await aiosqlite.connect(self.config.database)
             return True
         except ImportError:
@@ -49,6 +50,7 @@ class DatabaseTool:
     async def _connect_postgresql(self) -> bool:
         try:
             import asyncpg
+
             self._connection = await asyncpg.connect(
                 host=self.config.host,
                 port=self.config.port,
@@ -64,6 +66,7 @@ class DatabaseTool:
     async def _connect_mysql(self) -> bool:
         try:
             import aiomysql
+
             self._connection = await aiomysql.connect(
                 host=self.config.host,
                 port=self.config.port,

@@ -9,8 +9,8 @@ from bahram.skills.base import BaseSkill
 
 logger = logging.getLogger(__name__)
 
-class SkillManager:
 
+class SkillManager:
     def __init__(self, config: Any) -> None:
         self.config = config
         self.skills: dict[str, BaseSkill] = {}
@@ -44,11 +44,7 @@ class SkillManager:
 
         for attr_name in dir(module):
             attr = getattr(module, attr_name)
-            if (
-                isinstance(attr, type)
-                and issubclass(attr, BaseSkill)
-                and attr is not BaseSkill
-            ):
+            if isinstance(attr, type) and issubclass(attr, BaseSkill) and attr is not BaseSkill:
                 skill = attr()
                 self.skills[skill.metadata.name] = skill
                 logger.info(f"Loaded skill: {skill.metadata.name}")

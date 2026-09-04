@@ -2,6 +2,7 @@
 
 Tests that circuit breaker state persists across instances.
 """
+
 from __future__ import annotations
 
 from bahram.platforms.circuit_breaker import CircuitBreaker, CircuitState

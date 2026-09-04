@@ -2,6 +2,7 @@
 
 Tests the full MCP pipeline: discovery -> normalization -> ToolRegistry -> security -> executor.
 """
+
 from __future__ import annotations
 
 import json
@@ -263,7 +264,11 @@ class TestMCPWithAgentEngine:
                 return "traj result"
 
             def schema(self):
-                return {"name": "traj_tool", "description": "test", "parameters": {"type": "object", "properties": {}}}
+                return {
+                    "name": "traj_tool",
+                    "description": "test",
+                    "parameters": {"type": "object", "properties": {}},
+                }
 
         engine.register_tool("mcp_traj_tool", FakeMCPTool())
 

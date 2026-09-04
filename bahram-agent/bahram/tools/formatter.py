@@ -6,33 +6,39 @@ from dataclasses import dataclass
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class FormatRule:
-
     name: str
     language: str
     pattern: str
     replacement: str
     description: str = ""
 
-class SmartFormatter:
 
+class SmartFormatter:
     def __init__(self) -> None:
         self._rules: dict[str, list[FormatRule]] = {
             "python": [
-                FormatRule("trailing_whitespace", "python", r"[ \t]+$", "", "Remove trailing whitespace"),
+                FormatRule(
+                    "trailing_whitespace", "python", r"[ \t]+$", "", "Remove trailing whitespace"
+                ),
                 FormatRule("blank_lines", "python", r"\n{3,}", "\n\n", "Max 2 blank lines"),
                 FormatRule("import_order", "python", r"^(import|from)", "", "Import ordering"),
                 FormatRule("line_length", "python", r".{80,}", "", "Line length check"),
             ],
             "javascript": [
                 FormatRule("semicolons", "javascript", r"([^;])\s*$", r"\1;", "Add semicolons"),
-                FormatRule("single_quotes", "javascript", r'"([^"]*)"', r"'\1'", "Use single quotes"),
+                FormatRule(
+                    "single_quotes", "javascript", r'"([^"]*)"', r"'\1'", "Use single quotes"
+                ),
                 FormatRule("trailing_comma", "javascript", r",\s*}", "}", "Remove trailing commas"),
             ],
             "typescript": [
                 FormatRule("semicolons", "typescript", r"([^;])\s*$", r"\1;", "Add semicolons"),
-                FormatRule("single_quotes", "typescript", r'"([^"]*)"', r"'\1'", "Use single quotes"),
+                FormatRule(
+                    "single_quotes", "typescript", r'"([^"]*)"', r"'\1'", "Use single quotes"
+                ),
                 FormatRule("type_annotations", "typescript", r":\s*(any)", "", "Avoid 'any' type"),
             ],
         }
@@ -53,11 +59,13 @@ class SmartFormatter:
         for rule in rules_list:
             new_formatted = re.sub(rule.pattern, rule.replacement, formatted, flags=re.MULTILINE)
             if new_formatted != formatted:
-                changes.append({
-                    "rule": rule.name,
-                    "description": rule.description,
-                    "count": len(re.findall(rule.pattern, formatted)),
-                })
+                changes.append(
+                    {
+                        "rule": rule.name,
+                        "description": rule.description,
+                        "count": len(re.findall(rule.pattern, formatted)),
+                    }
+                )
                 formatted = new_formatted
 
         return formatted, changes
@@ -69,11 +77,13 @@ class SmartFormatter:
         for rule in rules_list:
             matches = re.findall(rule.pattern, code, re.MULTILINE)
             if matches:
-                issues.append({
-                    "rule": rule.name,
-                    "description": rule.description,
-                    "count": len(matches),
-                })
+                issues.append(
+                    {
+                        "rule": rule.name,
+                        "description": rule.description,
+                        "count": len(matches),
+                    }
+                )
 
         return issues
 

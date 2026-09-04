@@ -5,8 +5,8 @@ import platform
 
 logger = logging.getLogger(__name__)
 
-class InstallationManager:
 
+class InstallationManager:
     def __init__(self) -> None:
         self._platform = platform.system().lower()
 

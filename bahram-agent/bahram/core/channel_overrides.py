@@ -7,17 +7,17 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class ChannelOverride:
-
     channel_id: str
     model: str = ""
     provider: str = ""
     system_prompt: str = ""
     personality: str = ""
 
-class ChannelOverrideManager:
 
+class ChannelOverrideManager:
     def __init__(self, config_dir: str = "data/gateway") -> None:
         self.config_dir = Path(config_dir)
         self.config_dir.mkdir(parents=True, exist_ok=True)
@@ -91,10 +91,14 @@ class ChannelOverrideManager:
         platforms = [platform] if platform else self._overrides.keys()
         for p in platforms:
             for channel_id, override in self._overrides.get(p, {}).items():
-                results.append({
-                    "platform": p,
-                    "channel_id": channel_id,
-                    "model": override.model,
-                    "system_prompt": override.system_prompt[:50] if override.system_prompt else "",
-                })
+                results.append(
+                    {
+                        "platform": p,
+                        "channel_id": channel_id,
+                        "model": override.model,
+                        "system_prompt": override.system_prompt[:50]
+                        if override.system_prompt
+                        else "",
+                    }
+                )
         return results

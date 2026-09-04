@@ -6,26 +6,26 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class TaskStep:
-
     id: str
     description: str
     dependencies: list[str] = field(default_factory=list)
     status: str = "pending"
     result: Any = None
 
+
 @dataclass
 class TaskPlan:
-
     id: str
     goal: str
     steps: list[TaskStep] = field(default_factory=list)
     status: str = "planning"
     created_at: float = 0.0
 
-class TaskPlanner:
 
+class TaskPlanner:
     def __init__(self) -> None:
         self._plans: dict[str, TaskPlan] = {}
         self._step_counter = 0
@@ -142,7 +142,6 @@ class TaskPlanner:
         if plan:
             for step in plan.steps:
                 if step.status == "pending":
-
                     deps_met = all(
                         any(s.id == dep and s.status == "completed" for s in plan.steps)
                         for dep in step.dependencies

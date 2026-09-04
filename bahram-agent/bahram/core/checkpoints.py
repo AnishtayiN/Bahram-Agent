@@ -9,9 +9,9 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class Checkpoint:
-
     id: str
     name: str
     timestamp: float
@@ -19,8 +19,8 @@ class Checkpoint:
     files: list[str] = field(default_factory=list)
     metadata: dict = field(default_factory=dict)
 
-class CheckpointManager:
 
+class CheckpointManager:
     def __init__(self, data_dir: str = "data/checkpoints", max_checkpoints: int = 10) -> None:
         self.data_dir = Path(data_dir)
         self.data_dir.mkdir(parents=True, exist_ok=True)
@@ -96,15 +96,13 @@ class CheckpointManager:
                 old_snapshot = self._snapshots_dir / old.id
                 if old_snapshot.exists():
                     shutil.rmtree(old_snapshot)
-            self._checkpoints = self._checkpoints[-self._max_checkpoints:]
+            self._checkpoints = self._checkpoints[-self._max_checkpoints :]
 
         self._save()
         return checkpoint
 
     def rollback(self, checkpoint_id: str) -> bool:
-        checkpoint = next(
-            (c for c in self._checkpoints if c.id == checkpoint_id), None
-        )
+        checkpoint = next((c for c in self._checkpoints if c.id == checkpoint_id), None)
         if not checkpoint:
             return False
 
@@ -136,9 +134,7 @@ class CheckpointManager:
         ]
 
     def delete_checkpoint(self, checkpoint_id: str) -> bool:
-        checkpoint = next(
-            (c for c in self._checkpoints if c.id == checkpoint_id), None
-        )
+        checkpoint = next((c for c in self._checkpoints if c.id == checkpoint_id), None)
         if not checkpoint:
             return False
 

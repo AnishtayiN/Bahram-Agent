@@ -6,9 +6,9 @@ from dataclasses import dataclass
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class CodeIssue:
-
     file: str
     line: int
     severity: str
@@ -16,11 +16,10 @@ class CodeIssue:
     message: str
     suggestion: str = ""
 
-class CodeReviewTool:
 
+class CodeReviewTool:
     def __init__(self) -> None:
         self._rules: list[tuple[str, str, str, str]] = [
-
             (r"print\(", "info", "style", "Consider using logging instead of print"),
             (r"except:", "warning", "error", "Bare except clause - specify exception type"),
             (r"TODO", "info", "todo", "TODO comment found"),
@@ -34,7 +33,12 @@ class CodeReviewTool:
             (r"is True", "info", "style", "Use 'if x:' instead of 'if x is True:'"),
             (r"is False", "info", "style", "Use 'if not x:' instead of 'if x is False:'"),
             (r"if .+ is not None", "info", "style", "Consider using 'if x:' pattern"),
-            (r"raise NotImplementedError", "info", "design", "Abstract method - ensure implementation"),
+            (
+                r"raise NotImplementedError",
+                "info",
+                "design",
+                "Abstract method - ensure implementation",
+            ),
             (r"global ", "warning", "style", "Global variable usage - consider alternatives"),
             (r"lambda .+=", "warning", "style", "Lambda assignment - use def instead"),
         ]
@@ -49,14 +53,16 @@ class CodeReviewTool:
             for i, line in enumerate(lines, 1):
                 for pattern, severity, category, message in self._rules:
                     if re.search(pattern, line):
-                        issues.append(CodeIssue(
-                            file=file_path,
-                            line=i,
-                            severity=severity,
-                            category=category,
-                            message=message,
-                            suggestion=self._get_suggestion(category, line),
-                        ))
+                        issues.append(
+                            CodeIssue(
+                                file=file_path,
+                                line=i,
+                                severity=severity,
+                                category=category,
+                                message=message,
+                                suggestion=self._get_suggestion(category, line),
+                            )
+                        )
 
             return issues
 
@@ -71,14 +77,16 @@ class CodeReviewTool:
         for i, line in enumerate(lines, 1):
             for pattern, severity, category, message in self._rules:
                 if re.search(pattern, line):
-                    issues.append(CodeIssue(
-                        file="<code>",
-                        line=i,
-                        severity=severity,
-                        category=category,
-                        message=message,
-                        suggestion=self._get_suggestion(category, line),
-                    ))
+                    issues.append(
+                        CodeIssue(
+                            file="<code>",
+                            line=i,
+                            severity=severity,
+                            category=category,
+                            message=message,
+                            suggestion=self._get_suggestion(category, line),
+                        )
+                    )
 
         return issues
 
@@ -104,12 +112,17 @@ class CodeReviewTool:
 
         lines = ["## Code Review Report", ""]
         summary = self.get_summary(issues)
-        lines.append(f"Errors: {summary['error']} | Warnings: {summary['warning']} | Info: {summary['info']}")
+        lines.append(
+            f"Errors: {summary['error']} | Warnings: {summary['warning']} | Info: {summary['info']}"
+        )
         lines.append("")
 
         for issue in sorted(issues, key=lambda x: (x.severity, x.file, x.line)):
             severity_emoji = {"error": "🔴", "warning": "🟡", "info": "🔵"}
-            lines.append(f"{severity_emoji.get(issue.severity, '⚪')} {issue.file}:{issue.line} - {issue.message}")
+            lines.append(
+                f"{severity_emoji.get(issue.severity, '⚪')} {issue.file}:{issue.line} - "
+                f"{issue.message}"
+            )
             if issue.suggestion:
                 lines.append(f"   💡 {issue.suggestion}")
 

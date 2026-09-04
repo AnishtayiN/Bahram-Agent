@@ -5,8 +5,8 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
-class ContextFiles:
 
+class ContextFiles:
     def __init__(self, workspace_root: str = ".") -> None:
         self.workspace_root = Path(workspace_root)
         self._context_files: list[str] = [

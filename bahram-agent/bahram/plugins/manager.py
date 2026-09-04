@@ -10,8 +10,8 @@ from bahram.plugins.base import BasePlugin
 
 logger = logging.getLogger(__name__)
 
-class PluginManager:
 
+class PluginManager:
     def __init__(self, plugin_dirs: list[str] = None) -> None:
         self.plugin_dirs = plugin_dirs or ["plugins", "~/.bahram/plugins"]
         self.plugins: dict[str, BasePlugin] = {}
@@ -47,11 +47,7 @@ class PluginManager:
 
         for attr_name in dir(module):
             attr = getattr(module, attr_name)
-            if (
-                isinstance(attr, type)
-                and issubclass(attr, BasePlugin)
-                and attr is not BasePlugin
-            ):
+            if isinstance(attr, type) and issubclass(attr, BasePlugin) and attr is not BasePlugin:
                 plugin = attr()
                 self.plugins[plugin.metadata.name] = plugin
                 logger.info(f"Loaded plugin: {plugin.metadata.name}")

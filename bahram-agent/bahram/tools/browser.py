@@ -6,16 +6,16 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class BrowserState:
-
     url: str = ""
     title: str = ""
     content: str = ""
     screenshot: bytes = b""
 
-class BrowserTool:
 
+class BrowserTool:
     def __init__(self) -> None:
         self._browser = None
         self._page = None

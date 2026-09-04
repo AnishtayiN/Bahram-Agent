@@ -10,16 +10,16 @@ from dataclasses import dataclass
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class ProfileResult:
-
     function: str
     calls: int
     total_time: float
     per_call: float
 
-class Profiler:
 
+class Profiler:
     def __init__(self) -> None:
         self._profiler = cProfile.Profile()
         self._results: list[ProfileResult] = []
@@ -40,12 +40,14 @@ class Profiler:
         for key, value in stats.stats.items():
             filename, line, func = key
             cc, nc, tt, ct, callers = value
-            results.append(ProfileResult(
-                function=f"{filename}:{line}({func})",
-                calls=nc,
-                total_time=tt,
-                per_call=tt / nc if nc > 0 else 0,
-            ))
+            results.append(
+                ProfileResult(
+                    function=f"{filename}:{line}({func})",
+                    calls=nc,
+                    total_time=tt,
+                    per_call=tt / nc if nc > 0 else 0,
+                )
+            )
 
         return sorted(results, key=lambda x: x.total_time, reverse=True)
 
@@ -55,7 +57,9 @@ class Profiler:
         lines.append("-" * 90)
 
         for r in results[:20]:
-            lines.append(f"{r.function[:60]:<60} {r.calls:>8} {r.total_time:>10.4f} {r.per_call:>10.6f}")
+            lines.append(
+                f"{r.function[:60]:<60} {r.calls:>8} {r.total_time:>10.4f} {r.per_call:>10.6f}"
+            )
 
         return "\n".join(lines)
 
@@ -63,8 +67,8 @@ class Profiler:
         self._profiler = cProfile.Profile()
         self._results.clear()
 
-class FunctionTimer:
 
+class FunctionTimer:
     def __init__(self) -> None:
         self._timings: dict[str, list[float]] = {}
 
@@ -98,6 +102,7 @@ class FunctionTimer:
             return result
 
         import asyncio
+
         if asyncio.iscoroutinefunction(func):
             return async_wrapper
         return sync_wrapper

@@ -10,6 +10,7 @@ from bahram.tools.base import BaseTool
 
 logger = logging.getLogger(__name__)
 
+
 class ExecuteCodeTool(BaseTool):
     @property
     def name(self) -> str:
@@ -75,15 +76,18 @@ class ExecuteCodeTool(BaseTool):
             temp_path = f.name
         try:
             proc = await asyncio.create_subprocess_exec(
-                "python3", temp_path,
+                "python3",
+                temp_path,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
             )
             try:
-                stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=timeout or self._timeout)
+                stdout, stderr = await asyncio.wait_for(
+                    proc.communicate(), timeout=timeout or self._timeout
+                )
                 return {
-                    "stdout": stdout.decode("utf-8", errors="replace")[:self._max_output],
-                    "stderr": stderr.decode("utf-8", errors="replace")[:self._max_output],
+                    "stdout": stdout.decode("utf-8", errors="replace")[: self._max_output],
+                    "stderr": stderr.decode("utf-8", errors="replace")[: self._max_output],
                     "exit_code": proc.returncode,
                 }
             except asyncio.TimeoutError:
@@ -94,13 +98,17 @@ class ExecuteCodeTool(BaseTool):
 
     async def _execute_bash(self, code: str, timeout: float = None) -> dict[str, Any]:
         proc = await asyncio.create_subprocess_shell(
-            code, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
+            code,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
         )
         try:
-            stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=timeout or self._timeout)
+            stdout, stderr = await asyncio.wait_for(
+                proc.communicate(), timeout=timeout or self._timeout
+            )
             return {
-                "stdout": stdout.decode("utf-8", errors="replace")[:self._max_output],
-                "stderr": stderr.decode("utf-8", errors="replace")[:self._max_output],
+                "stdout": stdout.decode("utf-8", errors="replace")[: self._max_output],
+                "stderr": stderr.decode("utf-8", errors="replace")[: self._max_output],
                 "exit_code": proc.returncode,
             }
         except asyncio.TimeoutError:

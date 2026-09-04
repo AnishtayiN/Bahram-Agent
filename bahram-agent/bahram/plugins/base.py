@@ -7,23 +7,20 @@ from typing import Any
 
 @dataclass
 class PluginMetadata:
-
     name: str
     version: str = "1.0.0"
     description: str = ""
     author: str = ""
     hooks: list[str] = field(default_factory=list)
 
-class BasePlugin(ABC):
 
+class BasePlugin(ABC):
     @property
     @abstractmethod
-    def metadata(self) -> PluginMetadata:
-        ...
+    def metadata(self) -> PluginMetadata: ...
 
     @abstractmethod
-    async def register(self, context: Any) -> None:
-        ...
+    async def register(self, context: Any) -> None: ...
 
     async def on_startup(self) -> None:
         pass

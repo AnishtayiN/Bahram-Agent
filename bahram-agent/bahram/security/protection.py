@@ -6,8 +6,8 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
-class SSRFProtector:
 
+class SSRFProtector:
     BLOCKED_RANGES = [
         ("10.0.0.0", "10.255.255.255"),
         ("172.16.0.0", "172.31.255.255"),
@@ -87,8 +87,8 @@ class SSRFProtector:
             raise ValueError("Not IPv4")
         return (int(parts[0]) << 24) + (int(parts[1]) << 16) + (int(parts[2]) << 8) + int(parts[3])
 
-class PromptInjectionDetector:
 
+class PromptInjectionDetector:
     SUSPICIOUS_PATTERNS = [
         (r"ignore\s+(all\s+)?previous\s+instructions", "instruction override"),
         (r"disregard\s+(all\s+)?previous", "instruction override"),
@@ -124,13 +124,11 @@ class PromptInjectionDetector:
             logger.error(f"Failed to scan file {filepath}: {e}")
             return False, []
 
-class SecurityManager:
 
+class SecurityManager:
     def __init__(self, config: dict = None) -> None:
         config = config or {}
-        self.ssrf = SSRFProtector(
-            allow_private=config.get("allow_private_urls", False)
-        )
+        self.ssrf = SSRFProtector(allow_private=config.get("allow_private_urls", False))
         self.injection = PromptInjectionDetector()
 
     def check_url(self, url: str) -> tuple[bool, str]:

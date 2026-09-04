@@ -5,8 +5,8 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-class ClarifyTool:
 
+class ClarifyTool:
     def __init__(self) -> None:
         self._pending_clarifications: dict[str, dict] = {}
         self._clarification_history: list[dict] = []
@@ -49,11 +49,13 @@ class ClarifyTool:
     ) -> bool:
         if clarification_id in self._pending_clarifications:
             clarification = self._pending_clarifications.pop(clarification_id)
-            self._clarification_history.append({
-                "question": clarification["question"],
-                "answer": answer,
-                "timestamp": clarification["timestamp"],
-            })
+            self._clarification_history.append(
+                {
+                    "question": clarification["question"],
+                    "answer": answer,
+                    "timestamp": clarification["timestamp"],
+                }
+            )
             return True
         return False
 

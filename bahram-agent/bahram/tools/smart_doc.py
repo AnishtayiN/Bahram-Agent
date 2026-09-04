@@ -7,15 +7,15 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class DocSection:
-
     name: str
     content: str
     level: int = 1
 
-class SmartDocGenerator:
 
+class SmartDocGenerator:
     def __init__(self) -> None:
         self._templates: dict[str, str] = {
             "markdown": "# {title}\n\n{content}\n",
@@ -58,10 +58,12 @@ class SmartDocGenerator:
         sections = []
 
         docstring = self._extract_module_docstring(content)
-        sections.append(DocSection(
-            name="Overview",
-            content=docstring or f"Documentation for {filename}",
-        ))
+        sections.append(
+            DocSection(
+                name="Overview",
+                content=docstring or f"Documentation for {filename}",
+            )
+        )
 
         classes = self._extract_classes(content)
         if classes:
@@ -69,10 +71,12 @@ class SmartDocGenerator:
             for cls in classes:
                 class_doc = self._document_class(cls)
                 class_content.append(class_doc)
-            sections.append(DocSection(
-                name="Classes",
-                content="\n\n".join(class_content),
-            ))
+            sections.append(
+                DocSection(
+                    name="Classes",
+                    content="\n\n".join(class_content),
+                )
+            )
 
         functions = self._extract_functions(content)
         if functions:
@@ -80,18 +84,22 @@ class SmartDocGenerator:
             for func in functions:
                 func_doc = self._document_function(func)
                 func_content.append(func_doc)
-            sections.append(DocSection(
-                name="Functions",
-                content="\n\n".join(func_content),
-            ))
+            sections.append(
+                DocSection(
+                    name="Functions",
+                    content="\n\n".join(func_content),
+                )
+            )
 
         if include_examples:
             examples = self._generate_examples(classes, functions)
             if examples:
-                sections.append(DocSection(
-                    name="Examples",
-                    content=examples,
-                ))
+                sections.append(
+                    DocSection(
+                        name="Examples",
+                        content=examples,
+                    )
+                )
 
         return sections
 
@@ -108,11 +116,13 @@ class SmartDocGenerator:
         classes = []
         pattern = r'class\s+(\w+)\s*(?:\(([^)]*)\))?:\s*\n(?:\s+"")?'
         for match in re.finditer(pattern, content, re.DOTALL):
-            classes.append({
-                "name": match.group(1),
-                "parent": match.group(2),
-                "docstring": match.group(3) or "",
-            })
+            classes.append(
+                {
+                    "name": match.group(1),
+                    "parent": match.group(2),
+                    "docstring": match.group(3) or "",
+                }
+            )
         return classes
 
     def _extract_functions(self, content: str) -> list[dict]:
@@ -120,12 +130,14 @@ class SmartDocGenerator:
         pattern = r'def\s+(\w+)\s*\(([^)]*)\)(?:\s*->\s*(\w+))?:\s*\n(?:\s+"")?'
         for match in re.finditer(pattern, content, re.DOTALL):
             if not match.group(1).startswith("_"):
-                functions.append({
-                    "name": match.group(1),
-                    "args": match.group(2),
-                    "return_type": match.group(3),
-                    "docstring": match.group(4) or "",
-                })
+                functions.append(
+                    {
+                        "name": match.group(1),
+                        "args": match.group(2),
+                        "return_type": match.group(3),
+                        "docstring": match.group(4) or "",
+                    }
+                )
         return functions
 
     def _document_class(self, cls: dict) -> str:

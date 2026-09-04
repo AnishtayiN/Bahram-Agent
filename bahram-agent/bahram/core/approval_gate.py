@@ -6,9 +6,9 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class ApprovalGate:
-
     name: str
     pattern: str
     description: str
@@ -16,8 +16,8 @@ class ApprovalGate:
     auto_approve: bool = False
     approver: str = ""
 
-class ApprovalGateManager:
 
+class ApprovalGateManager:
     def __init__(self, data_dir: str = "data/security") -> None:
         self.data_dir = Path(data_dir)
         self.data_dir.mkdir(parents=True, exist_ok=True)
@@ -75,16 +75,13 @@ class ApprovalGateManager:
 
         for p in patterns:
             if p.startswith("**/"):
-
                 suffix = p[3:]
                 if path_str.endswith(suffix) or path.match(p):
                     return True
             elif p.startswith("/"):
-
                 if path_str.startswith(p):
                     return True
             else:
-
                 if path_str.endswith(p):
                     return True
 
@@ -111,11 +108,7 @@ class ApprovalGateManager:
         return False
 
     def get_pending(self) -> list[dict]:
-        return [
-            {"id": k, **v}
-            for k, v in self._pending.items()
-            if v["status"] == "pending"
-        ]
+        return [{"id": k, **v} for k, v in self._pending.items() if v["status"] == "pending"]
 
     def add_gate(self, gate: ApprovalGate) -> None:
         self._gates.append(gate)

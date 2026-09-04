@@ -4,8 +4,8 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-class WebSearchTool:
 
+class WebSearchTool:
     def __init__(self) -> None:
         self._search_engine: str = "google"
         self._max_results: int = 10
@@ -36,19 +36,23 @@ class WebSearchTool:
                     results = []
 
                     if data.get("Abstract"):
-                        results.append({
-                            "title": data.get("Heading", ""),
-                            "content": data["Abstract"],
-                            "url": data.get("AbstractURL", ""),
-                        })
+                        results.append(
+                            {
+                                "title": data.get("Heading", ""),
+                                "content": data["Abstract"],
+                                "url": data.get("AbstractURL", ""),
+                            }
+                        )
 
-                    for topic in data.get("RelatedTopics", [])[:num_results or self._max_results]:
+                    for topic in data.get("RelatedTopics", [])[: num_results or self._max_results]:
                         if isinstance(topic, dict) and "Text" in topic:
-                            results.append({
-                                "title": topic.get("Text", "")[:100],
-                                "content": topic.get("Text", ""),
-                                "url": topic.get("FirstURL", ""),
-                            })
+                            results.append(
+                                {
+                                    "title": topic.get("Text", "")[:100],
+                                    "content": topic.get("Text", ""),
+                                    "url": topic.get("FirstURL", ""),
+                                }
+                            )
 
                     return results
                 else:

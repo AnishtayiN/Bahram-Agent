@@ -6,8 +6,8 @@ from bahram.platforms.base import BasePlatform, PlatformMessage
 
 logger = logging.getLogger(__name__)
 
-class DiscordPlatform(BasePlatform):
 
+class DiscordPlatform(BasePlatform):
     @property
     def name(self) -> str:
         return "discord"
@@ -44,9 +44,7 @@ class DiscordPlatform(BasePlatform):
                     chat_id=str(message.channel.id),
                     message_id=str(message.id),
                     timestamp=message.created_at.timestamp(),
-                    reply_to=str(message.reference.message_id)
-                    if message.reference
-                    else None,
+                    reply_to=str(message.reference.message_id) if message.reference else None,
                 )
 
                 await self._handle_message(msg)

@@ -2,6 +2,7 @@
 
 Tests that SmartContext actually affects model requests.
 """
+
 from __future__ import annotations
 
 from bahram.core.engine import MessageRole

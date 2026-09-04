@@ -3,6 +3,7 @@
 Tests that memory is properly isolated between users and sessions,
 and that no cross-boundary leakage occurs.
 """
+
 from __future__ import annotations
 
 import tempfile
@@ -18,6 +19,7 @@ class TestMemoryIsolation:
 
     def teardown_method(self):
         import shutil
+
         for d in self._tmpdirs:
             shutil.rmtree(d, ignore_errors=True)
 
@@ -85,8 +87,7 @@ class TestMemoryIsolation:
 
         if results:
             found_db = any(
-                "PostgreSQL" in r.content or "database" in r.content.lower()
-                for r in results
+                "PostgreSQL" in r.content or "database" in r.content.lower() for r in results
             )
             assert found_db, "Search should return database-related memory"
 

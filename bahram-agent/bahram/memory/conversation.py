@@ -10,8 +10,8 @@ from bahram.memory.base import BaseMemory, MemoryEntry
 
 logger = logging.getLogger(__name__)
 
-class ConversationMemory(BaseMemory):
 
+class ConversationMemory(BaseMemory):
     def __init__(self, storage_path: str = "data/conversations.json") -> None:
         self.storage_path = Path(storage_path)
         self._memories: dict[str, MemoryEntry] = {}

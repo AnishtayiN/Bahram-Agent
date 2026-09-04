@@ -2,6 +2,7 @@
 
 Adds real cost estimation to BudgetManager based on provider/model pricing.
 """
+
 from __future__ import annotations
 
 import logging

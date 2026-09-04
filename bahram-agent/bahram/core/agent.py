@@ -36,13 +36,15 @@ class Agent:
 
         self.engine = AgentEngine(self.config)
         self.context = Context(max_turns=self.config.memory.max_context_turns)
-        max_ctx_tokens = getattr(self.config.memory, 'max_context_tokens', 8192)
+        max_ctx_tokens = getattr(self.config.memory, "max_context_tokens", 8192)
         self.smart_context = SmartContextManager(max_tokens=max_ctx_tokens)
         self.compressor = ContextCompressor()
         self.sessions: dict[str, Session] = {}
         _memory_db = self.config.memory.database
         _session_db = (
-            ":memory:" if _memory_db == ":memory:" else _memory_db.replace("memory.db", "sessions.db")
+            ":memory:"
+            if _memory_db == ":memory:"
+            else _memory_db.replace("memory.db", "sessions.db")
         )
         self._store = SessionStore(db_path=_session_db)
         self._memory = None
@@ -103,9 +105,7 @@ class Agent:
         self._skill_lifecycle = SkillLifecycle(self._learning_engine)
 
         self._planner = Planner()
-        self._replanner = Replanner(
-            self._planner, self._verification_engine, max_replan_attempts=3
-        )
+        self._replanner = Replanner(self._planner, self._verification_engine, max_replan_attempts=3)
         self._plan_executor = PlanExecutor(
             engine=self.engine,
             planner=self._planner,
@@ -125,6 +125,7 @@ class Agent:
         providers = list(self.engine.providers.values())
         if len(providers) >= 2:
             from bahram.providers.fallback import FallbackProvider
+
             primary = providers[0]
             fallbacks = providers[1:]
             fallback_provider = FallbackProvider(primary, fallbacks)
@@ -144,10 +145,11 @@ class Agent:
     async def _init_mcp_tools(self) -> None:
         try:
             from bahram.mcp.client import MCPClient
-            mcp_config = getattr(self.config, 'mcp', None)
+
+            mcp_config = getattr(self.config, "mcp", None)
             if mcp_config is None:
                 return
-            servers = getattr(mcp_config, 'servers', [])
+            servers = getattr(mcp_config, "servers", [])
             if not servers:
                 return
             client = MCPClient()
@@ -158,7 +160,10 @@ class Agent:
                     for tool_def in tools:
                         name = f"mcp_{tool_def.get('name', 'unknown')}"
                         self.engine.register_tool(name, _MCPToolAdapter(client, tool_def))
-                    logger.info(f"Registered {len(tools)} MCP tools from {server_cfg.get('name', 'unknown')}")
+                    logger.info(
+                        f"Registered {len(tools)} MCP tools from "
+                        f"{server_cfg.get('name', 'unknown')}"
+                    )
                 except Exception as e:
                     logger.warning(f"MCP server connection failed: {e}")
         except ImportError:
@@ -176,20 +181,24 @@ class Agent:
 
     async def _init_providers(self) -> None:
         from bahram.providers import init_providers
+
         await init_providers(self.engine, self.config)
 
     async def _init_tools(self) -> None:
         from bahram.tools import init_tools
+
         await init_tools(self.engine, self.config)
 
     async def _init_memory(self) -> None:
         if self.config.memory.enabled:
             from bahram.memory.semantic import SemanticMemory
+
             self._memory = SemanticMemory(data_dir=self.config.memory.database)
 
     async def _init_skills(self) -> None:
         if self.config.skills.enabled:
             from bahram.skills.manager import SkillManager
+
             self._skills = SkillManager(self.config.skills)
             await self._skills.load_skills()
 
@@ -206,7 +215,9 @@ class Agent:
             return self.sessions[session_id]
         stored = self._store.get_session(session_id)
         if stored:
-            session = Session(id=session_id, created_at=stored["created_at"], updated_at=stored["updated_at"])
+            session = Session(
+                id=session_id, created_at=stored["created_at"], updated_at=stored["updated_at"]
+            )
             self.sessions[session_id] = session
             return session
         return None
@@ -247,7 +258,9 @@ class Agent:
             self.smart_context.add_context(memories, priority=3, metadata={"source": "memory"})
         if skills_context:
             enhanced_message = f"[Relevant skills]\n{skills_context}\n\n{enhanced_message}"
-            self.smart_context.add_context(skills_context, priority=2, metadata={"source": "skills"})
+            self.smart_context.add_context(
+                skills_context, priority=2, metadata={"source": "skills"}
+            )
 
         user_msg = Message(role=MessageRole.USER, content=enhanced_message)
         ctx.add_message(user_msg)
@@ -258,7 +271,9 @@ class Agent:
         usage = self.smart_context.get_usage()
         if usage["remaining"] < 500:
             logger.warning(f"Smart context nearly full: {usage['remaining']} tokens remaining")
-            if self._event_tracker is not None and hasattr(self._event_tracker, 'emit_budget_warning'):
+            if self._event_tracker is not None and hasattr(
+                self._event_tracker, "emit_budget_warning"
+            ):
                 self._event_tracker.emit_budget_warning(
                     session_id, "", {"message": f"Context window low: {usage['remaining']} tokens"}
                 )
@@ -275,12 +290,16 @@ class Agent:
                 result = await self.compressor.compress(msg_dicts, target_tokens=4000)
                 if result.compressed_tokens < result.original_tokens:
                     import json as _json
+
                     compressed = _json.loads(result.compressed)
                     messages = []
                     for md in compressed:
                         role = MessageRole(md.get("role", "user"))
                         messages.append(Message(role=role, content=md.get("content", "")))
-                    logger.info(f"Context compressed: {result.original_tokens} -> {result.compressed_tokens} tokens")
+                    logger.info(
+                        f"Context compressed: {result.original_tokens} -> "
+                        f"{result.compressed_tokens} tokens"
+                    )
             except Exception as e:
                 logger.warning(f"Context compression failed: {e}")
 
@@ -294,7 +313,11 @@ class Agent:
             )
 
             plan = await self._plan_executor.execute_plan(
-                plan, messages, model=model, session_id=session_id, run_id=run_id,
+                plan,
+                messages,
+                model=model,
+                session_id=session_id,
+                run_id=run_id,
             )
 
             if self._learning_engine is not None:
@@ -328,7 +351,8 @@ class Agent:
             response = await self.engine.run(messages, model=model, session_id=session_id)
 
         assistant_msg = Message(
-            role=MessageRole.ASSISTANT, content=response.content,
+            role=MessageRole.ASSISTANT,
+            content=response.content,
             metadata={"tool_calls": response.tool_calls} if response.tool_calls else {},
         )
         ctx.add_message(assistant_msg)
@@ -341,7 +365,10 @@ class Agent:
         return response
 
     async def chat(
-        self, message: str, session_id: str | None = None, model: str | None = None,
+        self,
+        message: str,
+        session_id: str | None = None,
+        model: str | None = None,
     ) -> AgentResponse:
         return await self.run(message, session_id, model)
 
@@ -420,7 +447,9 @@ class Agent:
             raise RuntimeError("Recovery manager not initialized")
 
         return self._recovery_manager.checkpoint(
-            run_id=run_id, plan=plan, context_summary=context_summary,
+            run_id=run_id,
+            plan=plan,
+            context_summary=context_summary,
         )
 
     def _summarize_plan_result(self, plan: Any) -> str:
@@ -447,7 +476,10 @@ class Agent:
         return "\n".join(lines)
 
     async def chat_streaming(
-        self, message: str, session_id: str | None = None, model: str | None = None,
+        self,
+        message: str,
+        session_id: str | None = None,
+        model: str | None = None,
     ) -> AsyncIterator[str]:
         if session_id is None:
             session = self.create_session()
@@ -496,7 +528,8 @@ class Agent:
             base_prompt = (
                 "You are Bahram, an advanced AI agent. You are helpful, capable, and autonomous. "
                 "You can use tools to accomplish tasks. When given a goal, you reason about it, "
-                "plan the steps, execute tools, observe results, and continue until the task is complete."
+                "plan the steps, execute tools, observe results, and continue until "
+                "the task is complete."
             )
 
         tools_info = "\n\nAvailable tools:\n"
@@ -532,7 +565,9 @@ class Agent:
             try:
                 skill = self._skills.find_skill(task)
                 if skill and hasattr(skill, "metadata"):
-                    skill_descriptions.append(f"Skill '{skill.metadata.name}': {skill.metadata.description}")
+                    skill_descriptions.append(
+                        f"Skill '{skill.metadata.name}': {skill.metadata.description}"
+                    )
             except Exception as e:
                 logger.warning(f"Skill retrieval failed: {e}")
 
@@ -540,8 +575,10 @@ class Agent:
             try:
                 trusted = self._skill_lifecycle.get_trusted_skills()
                 for ts in trusted[:3]:
-                    if hasattr(ts, 'name') and hasattr(ts, 'instructions'):
-                        skill_descriptions.append(f"Learned skill '{ts.name}': {ts.instructions[:200]}")
+                    if hasattr(ts, "name") and hasattr(ts, "instructions"):
+                        skill_descriptions.append(
+                            f"Learned skill '{ts.name}': {ts.instructions[:200]}"
+                        )
             except Exception as e:
                 logger.warning(f"Skill lifecycle retrieval failed: {e}")
 
@@ -560,9 +597,14 @@ class Agent:
         logger.info(f"Executing command: {command}")
         if self.engine._tool_executor is None:
             from bahram.core.engine import ToolExecutor
-            self.engine._tool_executor = ToolExecutor(self.engine.tools, self.engine._approval_system)
+
+            self.engine._tool_executor = ToolExecutor(
+                self.engine.tools, self.engine._approval_system
+            )
         tc = ToolCall(
-            id=f"cmd_{int(time.time() * 1000)}", name=command, arguments=kwargs,
+            id=f"cmd_{int(time.time() * 1000)}",
+            name=command,
+            arguments=kwargs,
         )
         result = await self.engine._tool_executor.execute(tc)
         return {"content": result.content, "success": result.success, "error": result.error}

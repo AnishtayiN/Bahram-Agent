@@ -7,16 +7,16 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class GitCommit:
-
     hash: str
     author: str
     date: str
     message: str
 
-class GitTool:
 
+class GitTool:
     def __init__(self, repo_path: str = ".") -> None:
         self.repo_path = repo_path
 
@@ -50,12 +50,14 @@ class GitTool:
             if line:
                 parts = line.split("|", 3)
                 if len(parts) >= 4:
-                    commits.append(GitCommit(
-                        hash=parts[0],
-                        author=parts[1],
-                        date=parts[2],
-                        message=parts[3],
-                    ))
+                    commits.append(
+                        GitCommit(
+                            hash=parts[0],
+                            author=parts[1],
+                            date=parts[2],
+                            message=parts[3],
+                        )
+                    )
         return commits
 
     async def diff(self, file_path: str = None) -> str:

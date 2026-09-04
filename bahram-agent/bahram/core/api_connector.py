@@ -6,9 +6,9 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class APIConfig:
-
     name: str
     base_url: str
     auth_type: str = "bearer"
@@ -16,8 +16,8 @@ class APIConfig:
     headers: dict[str, str] = field(default_factory=dict)
     timeout: float = 30.0
 
-class APIConnector:
 
+class APIConnector:
     def __init__(self) -> None:
         self._apis: dict[str, APIConfig] = {}
         self._cache: dict[str, Any] = {}
@@ -54,6 +54,7 @@ class APIConnector:
                 headers["X-API-Key"] = config.auth_value
             elif config.auth_type == "basic":
                 import base64
+
                 auth = base64.b64encode(config.auth_value.encode()).decode()
                 headers["Authorization"] = f"Basic {auth}"
 
@@ -70,7 +71,9 @@ class APIConnector:
                 result = {
                     "status": response.status_code,
                     "headers": dict(response.headers),
-                    "data": response.json() if response.headers.get("content-type", "").startswith("application/json") else response.text,
+                    "data": response.json()
+                    if response.headers.get("content-type", "").startswith("application/json")
+                    else response.text,
                 }
 
                 if use_cache and response.status_code == 200:

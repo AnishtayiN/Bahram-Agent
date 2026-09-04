@@ -19,9 +19,9 @@ def _make_plan(goal: str = "test goal", num_steps: int = 3) -> Plan:
     plan = Plan(id=f"plan_{uuid.uuid4().hex[:8]}", run_id=run_id, goal=goal)
     for i in range(num_steps):
         step = PlanStep(
-            id=f"step_{i+1}",
+            id=f"step_{i + 1}",
             plan_id=plan.id,
-            objective=f"Objective for step {i+1}",
+            objective=f"Objective for step {i + 1}",
         )
         plan.add_step(step)
     return plan
@@ -257,7 +257,9 @@ class TestVerificationEngine:
     async def test_command_verification_safe(self, engine: VerificationEngine) -> None:
         results = await engine.verify(
             result="",
-            criteria=[{"type": "command", "params": {"command": "echo ok", "expected_exit_code": 0}}],
+            criteria=[
+                {"type": "command", "params": {"command": "echo ok", "expected_exit_code": 0}}
+            ],
         )
         assert len(results) == 1
         assert results[0].passed is True
@@ -267,7 +269,9 @@ class TestVerificationEngine:
     async def test_command_verification_fails_on_bad_exit(self, engine: VerificationEngine) -> None:
         results = await engine.verify(
             result="",
-            criteria=[{"type": "command", "params": {"command": "exit 1", "expected_exit_code": 0}}],
+            criteria=[
+                {"type": "command", "params": {"command": "exit 1", "expected_exit_code": 0}}
+            ],
         )
         assert results[0].passed is False
 
@@ -284,7 +288,12 @@ class TestVerificationEngine:
     async def test_file_not_exists_verification(self, engine: VerificationEngine) -> None:
         results = await engine.verify(
             result="",
-            criteria=[{"type": "file_exists", "params": {"path": "/nonexistent/path/xyz", "exists": False}}],
+            criteria=[
+                {
+                    "type": "file_exists",
+                    "params": {"path": "/nonexistent/path/xyz", "exists": False},
+                }
+            ],
         )
         assert results[0].passed is True
 
@@ -506,12 +515,14 @@ class TestPlanStepDependencyResolution:
         )
         for i in range(4):
             deps = [f"step_{i}"] if i > 0 else []
-            plan.add_step(PlanStep(
-                id=f"step_{i+1}",
-                plan_id=plan.id,
-                objective=f"step {i+1}",
-                dependencies=deps,
-            ))
+            plan.add_step(
+                PlanStep(
+                    id=f"step_{i + 1}",
+                    plan_id=plan.id,
+                    objective=f"step {i + 1}",
+                    dependencies=deps,
+                )
+            )
 
         ready = plan.get_ready_steps()
         assert len(ready) == 1

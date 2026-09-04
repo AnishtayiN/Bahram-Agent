@@ -11,6 +11,7 @@ from bahram.core.engine import AgentResponse, Message, MessageRole, ToolCall
 
 logger = logging.getLogger(__name__)
 
+
 class BaseProvider(ABC):
     def __init__(self, api_key: str = "", model: str = "", **kwargs: Any) -> None:
         self.api_key = api_key
@@ -28,7 +29,9 @@ class BaseProvider(ABC):
     ) -> AgentResponse:
         raw_messages, system_msg = self._prepare_messages(messages)
         tool_schemas = self._prepare_tools(tools)
-        return await self._call_api(raw_messages, system_msg, tool_schemas, model, temperature, max_tokens)
+        return await self._call_api(
+            raw_messages, system_msg, tool_schemas, model, temperature, max_tokens
+        )
 
     async def stream(
         self,
@@ -41,7 +44,9 @@ class BaseProvider(ABC):
     ) -> AsyncIterator[str]:
         raw_messages, system_msg = self._prepare_messages(messages)
         tool_schemas = self._prepare_tools(tools)
-        async for chunk in self._stream_api(raw_messages, system_msg, tool_schemas, model, temperature, max_tokens):
+        async for chunk in self._stream_api(
+            raw_messages, system_msg, tool_schemas, model, temperature, max_tokens
+        ):
             yield chunk
 
     def _prepare_messages(self, messages: list[Message]) -> tuple[list[dict], str]:
@@ -52,11 +57,13 @@ class BaseProvider(ABC):
                 system_msg = msg.content
                 continue
             if msg.role == MessageRole.TOOL:
-                raw.append({
-                    "role": "tool",
-                    "tool_call_id": msg.tool_call_id or "",
-                    "content": msg.content,
-                })
+                raw.append(
+                    {
+                        "role": "tool",
+                        "tool_call_id": msg.tool_call_id or "",
+                        "content": msg.content,
+                    }
+                )
             elif msg.role == MessageRole.ASSISTANT:
                 entry: dict[str, Any] = {"role": "assistant", "content": msg.content}
                 if msg.metadata and "tool_calls" in msg.metadata:
@@ -67,7 +74,11 @@ class BaseProvider(ABC):
                             "type": "function",
                             "function": {
                                 "name": tc.name if hasattr(tc, "name") else tc.get("name", ""),
-                                "arguments": json.dumps(tc.arguments if hasattr(tc, "arguments") else tc.get("arguments", {})),
+                                "arguments": json.dumps(
+                                    tc.arguments
+                                    if hasattr(tc, "arguments")
+                                    else tc.get("arguments", {})
+                                ),
                             },
                         }
                         for tc in tc_list
@@ -87,14 +98,16 @@ class BaseProvider(ABC):
             if "type" in t:
                 formatted.append(t)
             elif "name" in t:
-                formatted.append({
-                    "type": "function",
-                    "function": {
-                        "name": t["name"],
-                        "description": t.get("description", ""),
-                        "parameters": t.get("parameters", {}),
-                    },
-                })
+                formatted.append(
+                    {
+                        "type": "function",
+                        "function": {
+                            "name": t["name"],
+                            "description": t.get("description", ""),
+                            "parameters": t.get("parameters", {}),
+                        },
+                    }
+                )
             else:
                 formatted.append(t)
         return formatted
@@ -108,8 +121,7 @@ class BaseProvider(ABC):
         model: str | None,
         temperature: float,
         max_tokens: int,
-    ) -> AgentResponse:
-        ...
+    ) -> AgentResponse: ...
 
     async def _stream_api(
         self,
@@ -134,11 +146,13 @@ class BaseProvider(ABC):
                 args = json.loads(func.get("arguments", "{}"))
             except json.JSONDecodeError:
                 args = {}
-            tool_calls.append(ToolCall(
-                id=tc.get("id", f"call_{int(time.time() * 1000)}"),
-                name=func.get("name", ""),
-                arguments=args,
-            ))
+            tool_calls.append(
+                ToolCall(
+                    id=tc.get("id", f"call_{int(time.time() * 1000)}"),
+                    name=func.get("name", ""),
+                    arguments=args,
+                )
+            )
         return AgentResponse(content=content, tool_calls=tool_calls)
 
     def _get_model(self, model: str | None) -> str:

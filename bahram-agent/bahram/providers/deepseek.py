@@ -7,7 +7,12 @@ from bahram.providers.compat import OpenAICompatibleProvider
 
 class DeepSeekProvider(OpenAICompatibleProvider):
     def __init__(self, api_key: str = "", model: str = "", **kwargs: Any) -> None:
-        super().__init__(api_key=api_key, model=model or "deepseek-chat", base_url="https://api.deepseek.com", **kwargs)
+        super().__init__(
+            api_key=api_key,
+            model=model or "deepseek-chat",
+            base_url="https://api.deepseek.com",
+            **kwargs,
+        )
 
     def get_models(self) -> list[str]:
         return ["deepseek-chat", "deepseek-coder", "deepseek-reasoner"]

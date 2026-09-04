@@ -9,9 +9,9 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class PairingRequest:
-
     code: str
     platform: str
     user_id: str
@@ -19,8 +19,8 @@ class PairingRequest:
     expires_at: float
     used: bool = False
 
-class DMPairingManager:
 
+class DMPairingManager:
     def __init__(self, data_dir: str = "data/security") -> None:
         self.data_dir = Path(data_dir)
         self.data_dir.mkdir(parents=True, exist_ok=True)
@@ -60,11 +60,7 @@ class DMPairingManager:
 
     def verify_code(self, code: str) -> dict | None:
         for request in self._requests:
-            if (
-                request.code == code
-                and not request.used
-                and time.time() < request.expires_at
-            ):
+            if request.code == code and not request.used and time.time() < request.expires_at:
                 request.used = True
 
                 user_key = f"{request.platform}:{request.user_id}"

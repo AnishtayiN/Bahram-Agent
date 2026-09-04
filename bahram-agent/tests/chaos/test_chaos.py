@@ -24,6 +24,7 @@ from bahram.platforms.circuit_breaker import CircuitBreaker
 # Helpers – real components, not mocks of the system under test
 # ---------------------------------------------------------------------------
 
+
 class AlwaysFailProvider:
     """LLM provider that always raises."""
 
@@ -109,6 +110,7 @@ class FastTool:
 # 1. Provider failure → engine should fallback or fail gracefully
 # ---------------------------------------------------------------------------
 
+
 class TestProviderFailure:
     @pytest.mark.asyncio
     async def test_single_provider_failure_no_fallback(self):
@@ -139,6 +141,7 @@ class TestProviderFailure:
 # 2. Tool failure → engine should continue with error in context
 # ---------------------------------------------------------------------------
 
+
 class TestToolFailure:
     @pytest.mark.asyncio
     async def test_tool_error_appears_in_context(self):
@@ -155,6 +158,7 @@ class TestToolFailure:
                         tool_calls=[ToolCall(id="tc1", name="raising_tool", arguments={})],
                     )
                 return AgentResponse(content="got error, moving on")
+
             async def stream(self, messages, tools=None, **kwargs):
                 yield ""
 
@@ -171,6 +175,7 @@ class TestToolFailure:
 # ---------------------------------------------------------------------------
 # 3. Budget exhaustion → engine should stop
 # ---------------------------------------------------------------------------
+
 
 class TestBudgetExhaustion:
     @pytest.mark.asyncio
@@ -208,6 +213,7 @@ class TestBudgetExhaustion:
         class TokenHogProvider:
             async def complete(self, messages, tools=None, **kwargs):
                 return AgentResponse(content="x" * 400)
+
             async def stream(self, messages, tools=None, **kwargs):
                 yield ""
 
@@ -223,6 +229,7 @@ class TestBudgetExhaustion:
 # ---------------------------------------------------------------------------
 # 4. Circuit breaker: repeated failures → circuit opens → fallback used
 # ---------------------------------------------------------------------------
+
 
 class TestCircuitBreakerChaos:
     @pytest.mark.asyncio
@@ -273,6 +280,7 @@ class TestCircuitBreakerChaos:
 # 5. Subagent timeout → should return timeout status
 # ---------------------------------------------------------------------------
 
+
 class TestSubagentTimeout:
     @pytest.mark.asyncio
     async def test_slow_provider_times_out(self):
@@ -282,6 +290,7 @@ class TestSubagentTimeout:
             async def complete(self, messages, tools=None, **kwargs):
                 await asyncio.sleep(10)
                 return AgentResponse(content="too slow")
+
             async def stream(self, messages, tools=None, **kwargs):
                 yield ""
 
@@ -317,9 +326,11 @@ class TestSubagentTimeout:
 # 6. DB write failure → should handle gracefully
 # ---------------------------------------------------------------------------
 
+
 class TestDBWriteFailure:
     def test_job_engine_readonly_dir(self):
         from bahram.autonomy.jobs import JobEngine
+
         with tempfile.TemporaryDirectory() as td:
             readonly = os.path.join(td, "readonly_db")
             os.makedirs(readonly)
@@ -335,6 +346,7 @@ class TestDBWriteFailure:
 
     def test_semantic_memory_readonly_dir(self):
         from bahram.memory.semantic import SemanticMemory
+
         with tempfile.TemporaryDirectory() as td:
             readonly = os.path.join(td, "readonly_mem")
             os.makedirs(readonly)
@@ -354,6 +366,7 @@ class TestDBWriteFailure:
 # ---------------------------------------------------------------------------
 # 7. Context overflow → should compress and survive
 # ---------------------------------------------------------------------------
+
 
 class TestContextOverflow:
     def test_tiny_max_tokens_survives(self):
@@ -389,6 +402,7 @@ class TestContextOverflow:
 # ---------------------------------------------------------------------------
 # 8. Concurrent provider failures → should fail safely
 # ---------------------------------------------------------------------------
+
 
 class TestConcurrentProviderFailures:
     @pytest.mark.asyncio
@@ -426,6 +440,7 @@ class TestConcurrentProviderFailures:
 # 9. Tool timeout → should be killed
 # ---------------------------------------------------------------------------
 
+
 class TestToolTimeout:
     @pytest.mark.asyncio
     async def test_slow_tool_killed_by_timeout(self):
@@ -450,6 +465,7 @@ class TestToolTimeout:
 # 10. Cancellation during tool execution → should stop
 # ---------------------------------------------------------------------------
 
+
 class TestCancellationDuringTool:
     @pytest.mark.asyncio
     async def test_cancel_event_stops_engine(self):
@@ -458,6 +474,7 @@ class TestCancellationDuringTool:
         class CancelProvider:
             def __init__(self):
                 self.call_count = 0
+
             async def complete(self, messages, tools=None, **kwargs):
                 self.call_count += 1
                 if self.call_count == 1:
@@ -467,6 +484,7 @@ class TestCancellationDuringTool:
                         tool_calls=[ToolCall(id="tc1", name="fast", arguments={})],
                     )
                 return AgentResponse(content="should not run")
+
             async def stream(self, messages, tools=None, **kwargs):
                 yield ""
 
@@ -485,6 +503,7 @@ class TestCancellationDuringTool:
         class ToolProvider:
             def __init__(self):
                 self.call_count = 0
+
             async def complete(self, messages, tools=None, **kwargs):
                 self.call_count += 1
                 if self.call_count == 1:
@@ -494,6 +513,7 @@ class TestCancellationDuringTool:
                         tool_calls=[ToolCall(id="tc1", name="fast_tool", arguments={})],
                     )
                 return AgentResponse(content="should not run")
+
             async def stream(self, messages, tools=None, **kwargs):
                 yield ""
 

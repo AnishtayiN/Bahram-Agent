@@ -10,25 +10,30 @@ logger = logging.getLogger(__name__)
 _website_policy = None
 _ssrf_checker = None
 
+
 def _get_website_policy():
     global _website_policy
     if _website_policy is None:
         try:
             from bahram.security.website_policy import WebsitePolicy
+
             _website_policy = WebsitePolicy()
         except Exception:
             pass
     return _website_policy
+
 
 def _get_ssrf_checker():
     global _ssrf_checker
     if _ssrf_checker is None:
         try:
             from bahram.security.protection import SSRFProtector
+
             _ssrf_checker = SSRFProtector()
         except Exception:
             pass
     return _ssrf_checker
+
 
 class WebFetchTool(BaseTool):
     def __init__(self, config: Any = None) -> None:
@@ -99,6 +104,7 @@ class WebFetchTool(BaseTool):
                     return response.text
                 elif format_type == "markdown":
                     import re
+
                     text = response.text
                     text = re.sub(r"<[^>]+>", " ", text)
                     text = re.sub(r"\s+", " ", text).strip()
@@ -106,10 +112,12 @@ class WebFetchTool(BaseTool):
                 else:
                     try:
                         from readability import Document
+
                         doc = Document(response.text)
                         return doc.summary()
                     except ImportError:
                         import re
+
                         text = response.text
                         text = re.sub(r"<[^>]+>", " ", text)
                         text = re.sub(r"\s+", " ", text).strip()
@@ -121,6 +129,7 @@ class WebFetchTool(BaseTool):
             return f"Error: HTTP {e.response.status_code}"
         except Exception as e:
             return f"Error fetching URL: {e}"
+
 
 class WebSearchTool(BaseTool):
     def __init__(self, config: Any = None) -> None:

@@ -2,6 +2,7 @@
 
 Tests that background jobs survive process restart and resume correctly.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -20,6 +21,7 @@ class TestJobRecovery:
 
     def teardown_method(self):
         import shutil
+
         for d in self._tmpdirs:
             shutil.rmtree(d, ignore_errors=True)
 
@@ -180,11 +182,15 @@ class TestJobRecovery:
         engine = self._make_engine()
 
         low_job = await engine.enqueue(
-            job_type="test", run_id="r1", session_id="s1",
+            job_type="test",
+            run_id="r1",
+            session_id="s1",
             priority=JobPriority.LOW,
         )
         high_job = await engine.enqueue(
-            job_type="test", run_id="r2", session_id="s1",
+            job_type="test",
+            run_id="r2",
+            session_id="s1",
             priority=JobPriority.HIGH,
         )
 
@@ -201,7 +207,9 @@ class TestJobRecovery:
 
         for i in range(3):
             await engine.enqueue(
-                job_type="test", run_id=f"run_{i}", session_id="s1",
+                job_type="test",
+                run_id=f"run_{i}",
+                session_id="s1",
             )
 
         depth = engine.get_queue_depth()
@@ -233,7 +241,9 @@ class TestJobRecovery:
         engine.register_handler("success_job", success_handler)
 
         job = await engine.enqueue(
-            job_type="success_job", run_id="r1", session_id="s1",
+            job_type="success_job",
+            run_id="r1",
+            session_id="s1",
             payload={"type": "success_job"},
         )
 
@@ -269,7 +279,9 @@ class TestJobRecovery:
         engine = self._make_engine()
 
         job = await engine.enqueue(
-            job_type="test", run_id="r1", session_id="s1",
+            job_type="test",
+            run_id="r1",
+            session_id="s1",
             payload={"key": "value"},
         )
 

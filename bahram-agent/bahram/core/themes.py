@@ -7,15 +7,16 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class Theme:
-
     name: str
     display_name: str
     description: str = ""
     colors: dict[str, str] = field(default_factory=dict)
     emoji: dict[str, str] = field(default_factory=dict)
     is_default: bool = False
+
 
 DEFAULT_THEME = Theme(
     name="default",
@@ -94,8 +95,8 @@ PERSIAN_THEME = Theme(
     },
 )
 
-class ThemeManager:
 
+class ThemeManager:
     def __init__(self, config_dir: str = "config") -> None:
         self.config_dir = Path(config_dir)
         self.config_dir.mkdir(parents=True, exist_ok=True)

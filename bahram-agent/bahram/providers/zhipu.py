@@ -7,7 +7,12 @@ from bahram.providers.compat import OpenAICompatibleProvider
 
 class ZhipuProvider(OpenAICompatibleProvider):
     def __init__(self, api_key: str = "", model: str = "", **kwargs: Any) -> None:
-        super().__init__(api_key=api_key, model=model or "glm-4", base_url="https://open.bigmodel.cn/api/paas/v4", **kwargs)
+        super().__init__(
+            api_key=api_key,
+            model=model or "glm-4",
+            base_url="https://open.bigmodel.cn/api/paas/v4",
+            **kwargs,
+        )
 
     def get_models(self) -> list[str]:
         return ["glm-4", "glm-3-turbo"]

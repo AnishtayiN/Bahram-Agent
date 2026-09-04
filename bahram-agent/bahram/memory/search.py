@@ -6,8 +6,8 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
-class SessionSearch:
 
+class SessionSearch:
     def __init__(self, data_dir: str = "data/sessions") -> None:
         self.data_dir = Path(data_dir)
         self.data_dir.mkdir(parents=True, exist_ok=True)
@@ -46,7 +46,6 @@ class SessionSearch:
 
                 content = data.get("content", "").lower()
                 if query_lower in content:
-
                     messages = data.get("messages", [])
                     matches = []
                     for msg in messages:
@@ -54,11 +53,13 @@ class SessionSearch:
                             matches.append(msg)
 
                     if matches:
-                        results.append({
-                            "session_id": data.get("id", index_file.stem),
-                            "matches": matches[:5],
-                            "match_count": len(matches),
-                        })
+                        results.append(
+                            {
+                                "session_id": data.get("id", index_file.stem),
+                                "matches": matches[:5],
+                                "match_count": len(matches),
+                            }
+                        )
             except Exception as e:
                 logger.warning(f"Failed to search {index_file}: {e}")
 

@@ -5,9 +5,9 @@ from dataclasses import dataclass, field
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class APIEndpoint:
-
     path: str
     method: str
     handler: str
@@ -15,8 +15,8 @@ class APIEndpoint:
     parameters: list[dict] = field(default_factory=list)
     response_schema: dict = field(default_factory=dict)
 
-class APIGenerator:
 
+class APIGenerator:
     def __init__(self) -> None:
         self._endpoints: list[APIEndpoint] = []
         self._templates: dict[str, str] = {
@@ -54,7 +54,9 @@ class APIGenerator:
             if param.get("required"):
                 params.append(f"{param['name']}: {param.get('type', 'str')}")
             else:
-                params.append(f"{param['name']}: {param.get('type', 'str')} = {param.get('default', 'None')}")
+                params.append(
+                    f"{param['name']}: {param.get('type', 'str')} = {param.get('default', 'None')}"
+                )
         return ", ".join(params)
 
     def _get_fastapi_template(self) -> str:

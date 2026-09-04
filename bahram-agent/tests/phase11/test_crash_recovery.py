@@ -3,6 +3,7 @@
 Tests that background jobs survive actual process termination and restart.
 Uses real subprocess spawning and SIGTERM signals.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -15,7 +16,7 @@ from pathlib import Path
 
 from bahram.autonomy.jobs import JobEngine, JobStatus
 
-WORKER_SCRIPT = '''
+WORKER_SCRIPT = """
 import asyncio
 import json
 import sys
@@ -61,7 +62,12 @@ async def main():
         job_type="long_task",
         run_id="crash_run_1",
         session_id="crash_sess_1",
-        payload={{"type": "long_task", "data_dir": data_dir, "total_steps": total_steps, "crash_at_step": crash_at}},
+        payload={{
+            "type": "long_task",
+            "data_dir": data_dir,
+            "total_steps": total_steps,
+            "crash_at_step": crash_at,
+        }},
     )
 
     print(f"JOB_CREATED job_id={{job.id}}", flush=True)
@@ -69,14 +75,18 @@ async def main():
 
     while True:
         final_job = engine.get_job(job.id)
-        if final_job and final_job.state in (JobStatus.COMPLETED.value, JobStatus.FAILED.value, JobStatus.CANCELLED.value):
+        if final_job and final_job.state in (
+            JobStatus.COMPLETED.value,
+            JobStatus.FAILED.value,
+            JobStatus.CANCELLED.value,
+        ):
             print(f"JOB_DONE state={{final_job.state}}", flush=True)
             break
         await asyncio.sleep(0.1)
 
 if __name__ == "__main__":
     asyncio.run(main())
-'''
+"""
 
 
 class TestCrashInjection:
@@ -87,6 +97,7 @@ class TestCrashInjection:
 
     def teardown_method(self):
         import shutil
+
         for d in self._tmpdirs:
             shutil.rmtree(d, ignore_errors=True)
 
@@ -100,9 +111,13 @@ class TestCrashInjection:
         tmpdir = self._make_tmpdir()
         repo_path = str(Path(__file__).parent.parent.parent)
 
-        script_content = WORKER_SCRIPT.format(
-            repo_path=repo_path,
-        ).replace("{", "{").replace("}", "}")
+        script_content = (
+            WORKER_SCRIPT.format(
+                repo_path=repo_path,
+            )
+            .replace("{", "{")
+            .replace("}", "}")
+        )
 
         script_path = Path(tmpdir) / "worker.py"
         script_path.write_text(script_content)
@@ -234,7 +249,7 @@ class TestCrashInjection:
         le1 = LearningEngine(data_dir=tmpdir)
         sl1 = SkillLifecycle(le1)
 
-        lesson_id = asyncio.run(
+        asyncio.run(
             le1.analyze_outcome(
                 run_id="skill_run",
                 goal="test skill persistence",
@@ -246,10 +261,8 @@ class TestCrashInjection:
 
         lessons = le1.get_lessons()
         if lessons:
-            lesson_ids = [l.id for l in lessons[:2]]
-            skill = asyncio.run(
-                sl1.generate_from_lessons(lesson_ids, "test skill persistence")
-            )
+            lesson_ids = [lesson.id for lesson in lessons[:2]]
+            skill = asyncio.run(sl1.generate_from_lessons(lesson_ids, "test skill persistence"))
             if skill:
                 le2 = LearningEngine(data_dir=tmpdir)
                 sl2 = SkillLifecycle(le2)

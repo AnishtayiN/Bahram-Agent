@@ -5,8 +5,8 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-class ToolSearch:
 
+class ToolSearch:
     def __init__(self) -> None:
         self._tools: dict[str, dict[str, Any]] = {}
 
@@ -34,7 +34,6 @@ class ToolSearch:
         results = []
 
         for tool in self._tools.values():
-
             if category and tool["category"] != category:
                 continue
 

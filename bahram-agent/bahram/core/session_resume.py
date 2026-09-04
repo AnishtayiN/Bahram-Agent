@@ -8,9 +8,9 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class SessionState:
-
     session_id: str
     platform: str
     chat_id: str
@@ -19,8 +19,8 @@ class SessionState:
     context: dict = field(default_factory=dict)
     conversation_history: list[dict] = field(default_factory=list)
 
-class SessionResumeManager:
 
+class SessionResumeManager:
     def __init__(self, data_dir: str = "data/gateway") -> None:
         self.data_dir = Path(data_dir)
         self.data_dir.mkdir(parents=True, exist_ok=True)
@@ -99,7 +99,8 @@ class SessionResumeManager:
     def cleanup_old(self, max_age_seconds: int = 86400) -> int:
         now = time.time()
         to_remove = [
-            sid for sid, session in self._sessions.items()
+            sid
+            for sid, session in self._sessions.items()
             if (now - session.timestamp) > max_age_seconds
         ]
         for sid in to_remove:

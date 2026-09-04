@@ -6,8 +6,8 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-class VoiceTranscriber:
 
+class VoiceTranscriber:
     def __init__(self, provider: str = "openai", api_key: str = "") -> None:
         self.provider = provider
         self.api_key = api_key
@@ -51,8 +51,8 @@ class VoiceTranscriber:
             else:
                 return {"error": f"API error: {response.status_code}"}
 
-class TextToSpeech:
 
+class TextToSpeech:
     def __init__(self, provider: str = "openai", api_key: str = "") -> None:
         self.provider = provider
         self.api_key = api_key

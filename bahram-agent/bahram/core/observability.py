@@ -34,8 +34,14 @@ class Observability:
         self._events: list[ObservabilityEvent] = []
         self._event_file = os.path.join(data_dir, "events.jsonl")
 
-    def emit(self, event_type: str, session_id: str = "", run_id: str = "",
-             correlation_id: str = "", **data: Any) -> ObservabilityEvent:
+    def emit(
+        self,
+        event_type: str,
+        session_id: str = "",
+        run_id: str = "",
+        correlation_id: str = "",
+        **data: Any,
+    ) -> ObservabilityEvent:
         event = ObservabilityEvent(
             event_id=str(uuid.uuid4())[:12],
             event_type=event_type,
@@ -50,16 +56,21 @@ class Observability:
 
     def _persist(self, event: ObservabilityEvent) -> None:
         try:
-            with open(self._event_file, 'a') as f:
-                f.write(json.dumps({
-                    "event_id": event.event_id,
-                    "event_type": event.event_type,
-                    "session_id": event.session_id,
-                    "run_id": event.run_id,
-                    "data": event.data,
-                    "timestamp": event.timestamp,
-                    "correlation_id": event.correlation_id,
-                }) + "\n")
+            with open(self._event_file, "a") as f:
+                f.write(
+                    json.dumps(
+                        {
+                            "event_id": event.event_id,
+                            "event_type": event.event_type,
+                            "session_id": event.session_id,
+                            "run_id": event.run_id,
+                            "data": event.data,
+                            "timestamp": event.timestamp,
+                            "correlation_id": event.correlation_id,
+                        }
+                    )
+                    + "\n"
+                )
         except Exception as e:
             logger.warning(f"Failed to persist observability event: {e}")
 
@@ -75,40 +86,56 @@ class Observability:
     def emit_context_built(self, session_id: str, run_id: str, **data: Any) -> ObservabilityEvent:
         return self.emit("context_built", session_id, run_id, **data)
 
-    def emit_plan_created(self, session_id: str, run_id: str, plan_id: str = "", **data: Any) -> ObservabilityEvent:
+    def emit_plan_created(
+        self, session_id: str, run_id: str, plan_id: str = "", **data: Any
+    ) -> ObservabilityEvent:
         e = self.emit("plan_created", session_id, run_id, **data)
         e.plan_id = plan_id
         return e
 
-    def emit_step_started(self, session_id: str, run_id: str, step_id: str = "", **data: Any) -> ObservabilityEvent:
+    def emit_step_started(
+        self, session_id: str, run_id: str, step_id: str = "", **data: Any
+    ) -> ObservabilityEvent:
         e = self.emit("step_started", session_id, run_id, **data)
         e.step_id = step_id
         return e
 
-    def emit_step_completed(self, session_id: str, run_id: str, step_id: str = "", **data: Any) -> ObservabilityEvent:
+    def emit_step_completed(
+        self, session_id: str, run_id: str, step_id: str = "", **data: Any
+    ) -> ObservabilityEvent:
         e = self.emit("step_completed", session_id, run_id, **data)
         e.step_id = step_id
         return e
 
-    def emit_step_failed(self, session_id: str, run_id: str, step_id: str = "", **data: Any) -> ObservabilityEvent:
+    def emit_step_failed(
+        self, session_id: str, run_id: str, step_id: str = "", **data: Any
+    ) -> ObservabilityEvent:
         e = self.emit("step_failed", session_id, run_id, **data)
         e.step_id = step_id
         return e
 
-    def emit_tool_selected(self, session_id: str, run_id: str, tool_name: str = "", **data: Any) -> ObservabilityEvent:
+    def emit_tool_selected(
+        self, session_id: str, run_id: str, tool_name: str = "", **data: Any
+    ) -> ObservabilityEvent:
         return self.emit("tool_selected", session_id, run_id, tool_name=tool_name, **data)
 
-    def emit_tool_started(self, session_id: str, run_id: str, tool_call_id: str = "", **data: Any) -> ObservabilityEvent:
+    def emit_tool_started(
+        self, session_id: str, run_id: str, tool_call_id: str = "", **data: Any
+    ) -> ObservabilityEvent:
         e = self.emit("tool_started", session_id, run_id, **data)
         e.tool_call_id = tool_call_id
         return e
 
-    def emit_tool_completed(self, session_id: str, run_id: str, tool_call_id: str = "", **data: Any) -> ObservabilityEvent:
+    def emit_tool_completed(
+        self, session_id: str, run_id: str, tool_call_id: str = "", **data: Any
+    ) -> ObservabilityEvent:
         e = self.emit("tool_completed", session_id, run_id, **data)
         e.tool_call_id = tool_call_id
         return e
 
-    def emit_tool_failed(self, session_id: str, run_id: str, tool_call_id: str = "", **data: Any) -> ObservabilityEvent:
+    def emit_tool_failed(
+        self, session_id: str, run_id: str, tool_call_id: str = "", **data: Any
+    ) -> ObservabilityEvent:
         e = self.emit("tool_failed", session_id, run_id, **data)
         e.tool_call_id = tool_call_id
         return e
@@ -116,12 +143,16 @@ class Observability:
     def emit_replanned(self, session_id: str, run_id: str, **data: Any) -> ObservabilityEvent:
         return self.emit("replanned", session_id, run_id, **data)
 
-    def emit_subagent_spawned(self, session_id: str, run_id: str, subagent_id: str = "", **data: Any) -> ObservabilityEvent:
+    def emit_subagent_spawned(
+        self, session_id: str, run_id: str, subagent_id: str = "", **data: Any
+    ) -> ObservabilityEvent:
         e = self.emit("subagent_spawned", session_id, run_id, **data)
         e.subagent_id = subagent_id
         return e
 
-    def emit_subagent_completed(self, session_id: str, run_id: str, subagent_id: str = "", **data: Any) -> ObservabilityEvent:
+    def emit_subagent_completed(
+        self, session_id: str, run_id: str, subagent_id: str = "", **data: Any
+    ) -> ObservabilityEvent:
         e = self.emit("subagent_completed", session_id, run_id, **data)
         e.subagent_id = subagent_id
         return e
@@ -129,7 +160,9 @@ class Observability:
     def emit_provider_failed(self, session_id: str, run_id: str, **data: Any) -> ObservabilityEvent:
         return self.emit("provider_failed", session_id, run_id, **data)
 
-    def emit_provider_fallback(self, session_id: str, run_id: str, **data: Any) -> ObservabilityEvent:
+    def emit_provider_fallback(
+        self, session_id: str, run_id: str, **data: Any
+    ) -> ObservabilityEvent:
         return self.emit("provider_fallback", session_id, run_id, **data)
 
     def emit_circuit_opened(self, session_id: str, run_id: str, **data: Any) -> ObservabilityEvent:
@@ -144,7 +177,9 @@ class Observability:
     def emit_budget_exceeded(self, session_id: str, run_id: str, **data: Any) -> ObservabilityEvent:
         return self.emit("budget_exceeded", session_id, run_id, **data)
 
-    def emit_context_compressed(self, session_id: str, run_id: str, **data: Any) -> ObservabilityEvent:
+    def emit_context_compressed(
+        self, session_id: str, run_id: str, **data: Any
+    ) -> ObservabilityEvent:
         return self.emit("context_compressed", session_id, run_id, **data)
 
     def emit_lesson_created(self, session_id: str, run_id: str, **data: Any) -> ObservabilityEvent:
@@ -156,14 +191,19 @@ class Observability:
     def emit_run_completed(self, session_id: str, run_id: str, **data: Any) -> ObservabilityEvent:
         return self.emit("run_completed", session_id, run_id, **data)
 
-    def emit_approval_requested(self, session_id: str, run_id: str, **data: Any) -> ObservabilityEvent:
+    def emit_approval_requested(
+        self, session_id: str, run_id: str, **data: Any
+    ) -> ObservabilityEvent:
         return self.emit("approval_requested", session_id, run_id, **data)
 
-    def emit_approval_granted(self, session_id: str, run_id: str, **data: Any) -> ObservabilityEvent:
+    def emit_approval_granted(
+        self, session_id: str, run_id: str, **data: Any
+    ) -> ObservabilityEvent:
         return self.emit("approval_granted", session_id, run_id, **data)
 
-    def query_events(self, session_id: str = "", run_id: str = "",
-                     event_type: str = "", limit: int = 100) -> list[ObservabilityEvent]:
+    def query_events(
+        self, session_id: str = "", run_id: str = "", event_type: str = "", limit: int = 100
+    ) -> list[ObservabilityEvent]:
         results = self._events
         if session_id:
             results = [e for e in results if e.session_id == session_id]

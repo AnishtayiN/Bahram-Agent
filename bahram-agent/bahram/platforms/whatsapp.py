@@ -6,9 +6,11 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-class WhatsAppAdapter:
 
-    def __init__(self, phone_number_id: str = "", access_token: str = "", verify_token: str = "") -> None:
+class WhatsAppAdapter:
+    def __init__(
+        self, phone_number_id: str = "", access_token: str = "", verify_token: str = ""
+    ) -> None:
         self.phone_number_id = phone_number_id
         self.access_token = access_token
         self.verify_token = verify_token

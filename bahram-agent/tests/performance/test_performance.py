@@ -33,7 +33,11 @@ class MockProvider:
 
 class MockTool:
     def schema(self):
-        return {"name": "mock", "description": "mock", "parameters": {"type": "object", "properties": {}}}
+        return {
+            "name": "mock",
+            "description": "mock",
+            "parameters": {"type": "object", "properties": {}},
+        }
 
     async def execute(self, **kwargs):
         return "ok"
@@ -58,19 +62,22 @@ class TestProviderLatency:
     async def test_tool_call_latency(self):
         engine = AgentEngine()
         from bahram.core.engine import ToolCall
-        provider = MockProvider(responses=[
-            AgentResponse(
-                content="",
-                tool_calls=[ToolCall(id="tc1", name="mock", arguments={})],
-            ),
-            AgentResponse(content="done"),
-        ])
+
+        provider = MockProvider(
+            responses=[
+                AgentResponse(
+                    content="",
+                    tool_calls=[ToolCall(id="tc1", name="mock", arguments={})],
+                ),
+                AgentResponse(content="done"),
+            ]
+        )
         engine.providers["test"] = provider
         engine.register_tool("mock", MockTool())
 
         start = time.time()
         messages = [Message(role=MessageRole.USER, content="test")]
-        response = await engine.run(messages, model="test/model")
+        await engine.run(messages, model="test/model")
         latency = time.time() - start
         assert latency < 5.0
         assert provider.call_count == 2
@@ -79,6 +86,7 @@ class TestProviderLatency:
 class TestSmartContextPerformance:
     def test_context_build_latency(self):
         from bahram.core.smart_context import SmartContextManager
+
         scm = SmartContextManager(max_tokens=10000)
         scm.set_system_prompt("System prompt " * 100)
 
@@ -94,12 +102,13 @@ class TestSmartContextPerformance:
 
     def test_context_optimization_latency(self):
         from bahram.core.smart_context import SmartContextManager
+
         scm = SmartContextManager(max_tokens=1000)
         for i in range(100):
             scm.add_context(f"Context {i} " * 100, priority=i % 5)
 
         start = time.time()
-        removed = scm.optimize()
+        scm.optimize()
         latency = time.time() - start
         assert latency < 0.5
 
@@ -107,6 +116,7 @@ class TestSmartContextPerformance:
 class TestBudgetTracking:
     def test_budget_recording_latency(self):
         from bahram.autonomy.budget import BudgetManager
+
         bm = BudgetManager()
 
         start = time.time()
@@ -118,6 +128,7 @@ class TestBudgetTracking:
 
     def test_budget_check_latency(self):
         from bahram.autonomy.budget import BudgetManager
+
         bm = BudgetManager()
         for i in range(100):
             bm.record_model_call("run1", input_tokens=100, output_tokens=50)
@@ -132,6 +143,7 @@ class TestBudgetTracking:
 class TestEventTracking:
     def test_event_emission_latency(self):
         from bahram.autonomy.events import EventTracker
+
         et = EventTracker()
 
         start = time.time()
@@ -142,6 +154,7 @@ class TestEventTracking:
 
     def test_event_query_latency(self):
         from bahram.autonomy.events import EventTracker
+
         et = EventTracker()
         for i in range(500):
             et.emit("test_event", f"session_{i % 10}", f"run_{i}", data={"index": i})

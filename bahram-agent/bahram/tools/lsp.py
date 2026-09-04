@@ -8,16 +8,16 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class LSPServer:
-
     name: str
     command: str
     language: str
     process: Any = None
 
-class LSPTool:
 
+class LSPTool:
     def __init__(self) -> None:
         self._servers: dict[str, LSPServer] = {}
         self._initialized: dict[str, bool] = {}

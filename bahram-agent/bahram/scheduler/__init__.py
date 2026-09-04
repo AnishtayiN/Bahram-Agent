@@ -8,9 +8,9 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class ScheduledTask:
-
     id: str
     name: str
     command: str
@@ -20,8 +20,8 @@ class ScheduledTask:
     next_run: datetime | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
 
-class Scheduler:
 
+class Scheduler:
     def __init__(self, config: Any = None) -> None:
         self.config = config
         self.tasks: dict[str, ScheduledTask] = {}
@@ -72,7 +72,6 @@ class Scheduler:
             task.last_run = datetime.now()
 
             try:
-
                 logger.info(f"Task {task.name} completed")
             except Exception as e:
                 logger.error(f"Task {task.name} failed: {e}")
@@ -90,7 +89,6 @@ class Scheduler:
         elif schedule == "weekly":
             return now + timedelta(weeks=1)
         elif schedule.startswith("every "):
-
             parts = schedule.split()
             if len(parts) >= 3:
                 try:

@@ -8,21 +8,22 @@ from enum import Enum
 
 logger = logging.getLogger(__name__)
 
-class ApprovalMode(str, Enum):
 
+class ApprovalMode(str, Enum):
     SMART = "smart"
     MANUAL = "manual"
     OFF = "off"
 
+
 @dataclass
 class ApprovalConfig:
-
     mode: ApprovalMode = ApprovalMode.SMART
     timeout: int = 300
     cron_mode: str = "deny"
     single_query_mode: str = "deny"
     deny: list[str] = field(default_factory=list)
     allowlist: list[str] = field(default_factory=list)
+
 
 HARDLINE_BLOCKLIST = [
     "rm -rf /",
@@ -34,66 +35,64 @@ HARDLINE_BLOCKLIST = [
 ]
 
 DANGEROUS_PATTERNS = [
-
-    (r"rm\s+(-[a-zA-Z]*r[a-zA-Z]*|-[a-zA-Z]*\s+-[a-zA-Z]*r|-[a-zA-Z]*\s+--recursive)\s+", "Recursive delete"),
+    (
+        r"rm\s+(-[a-zA-Z]*r[a-zA-Z]*|-[a-zA-Z]*\s+-[a-zA-Z]*r|-[a-zA-Z]*\s+--recursive)\s+",
+        "Recursive delete",
+    ),
     (r"rm\s+.*\s+/", "Delete in root path"),
-
     (r"chmod\s+(777|666|o\+w|a\+w)", "Unsafe permissions"),
     (r"chmod\s+--recursive\s+", "Recursive chmod"),
     (r"chown\s+(-R|--recursive)\s+root", "Recursive chown to root"),
-
     (r"mkfs", "Format filesystem"),
     (r"dd\s+if=", "Disk copy"),
     (r">\s*/dev/sd", "Write to block device"),
-
     (r"DROP\s+(TABLE|DATABASE)", "SQL DROP"),
     (r"DELETE\s+FROM\s+.*\s+(?!WHERE)", "SQL DELETE without WHERE"),
     (r"TRUNCATE\s+TABLE", "SQL TRUNCATE"),
-
     (r">\s*/etc/", "Overwrite system config"),
     (r"systemctl\s+(stop|restart|disable|mask)", "System service control"),
     (r"kill\s+-9\s+-1", "Kill all processes"),
     (r"pkill\s+-9", "Force kill processes"),
-
     (r":\(\)\s*\{", "Fork bomb pattern"),
-
     (r"bash\s+-[cC]", "Shell command execution"),
     (r"sh\s+-[cC]", "Shell command execution"),
     (r"zsh\s+-c", "Shell command execution"),
     (r"python\s+-e", "Script execution"),
     (r"perl\s+-e", "Script execution"),
     (r"ruby\s+-e", "Script execution"),
-
     (r"curl\s+.*\|\s*sh", "Pipe remote content to shell"),
     (r"wget\s+.*\|\s*sh", "Pipe remote content to shell"),
     (r"bash\s*<\(curl", "Execute remote script"),
     (r"sh\s*<\(wget", "Execute remote script"),
-
     (r"tee\s+.*(/etc/|~/.ssh/|~/.hermes/\.env)", "Overwrite sensitive file"),
     (r">\s*~/.ssh/", "Overwrite SSH file"),
     (r">\s*~/.hermes/\.env", "Overwrite env file"),
-
     (r"find\s+.*-exec\s+rm", "Find with rm"),
     (r"find\s+.*-delete", "Find delete"),
-
     (r"docker\s+(stop|kill|restart)", "Container lifecycle"),
     (r"docker\s+compose\s+(down|stop|kill|restart)", "Container lifecycle"),
     (r"(DOCKER_HOST|DOCKER_CONTEXT)=", "Docker daemon redirect"),
-
     # Path traversal inside shell commands (e.g. `cat ../../../etc/passwd`)
-    (r"(^|[;&|`()\s])(cd|cat|ls|head|tail|more|less|cp|mv|rm|echo|grep|sed|awk|vim|nano)\s+[^\n]*\.\./", "Path traversal"),
-
+    (
+        r"(^|[;&|`()\s])(cd|cat|ls|head|tail|more|less|cp|mv|rm|echo|grep|sed|awk|vim|nano)\s+[^\n]*\.\./",
+        "Path traversal",
+    ),
     # Reading sensitive system files
-    (r"cat\s+(/etc/shadow|/etc/passwd|/etc/sudoers|/etc/sudo\.conf|~/.ssh/)", "Read sensitive file"),
-
+    (
+        r"cat\s+(/etc/shadow|/etc/passwd|/etc/sudoers|/etc/sudo\.conf|~/.ssh/)",
+        "Read sensitive file",
+    ),
     # Data exfiltration attempts (pipe or argument to network tools)
     (r"\|[^\n]*(curl|wget|nc|netcat)\b", "Exfiltrate data via pipe"),
     (r"(curl|wget)\s+.*-d\s+@", "Exfiltrate file via curl"),
-    (r"(curl|wget|nc|netcat)\s+[^\n]*(shadow|passwd|sudoers|\.env|credential)", "Data exfiltration attempt"),
+    (
+        r"(curl|wget|nc|netcat)\s+[^\n]*(shadow|passwd|sudoers|\.env|credential)",
+        "Data exfiltration attempt",
+    ),
 ]
 
-class ApprovalSystem:
 
+class ApprovalSystem:
     def __init__(self, config: ApprovalConfig = None) -> None:
         self.config = config or ApprovalConfig()
         self._session_allowlist: list[str] = []

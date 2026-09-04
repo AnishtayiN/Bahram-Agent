@@ -30,6 +30,7 @@ INIT_TOOLS_NAMES = set(ALL_TOOL_CLASSES.keys())
 def _make_tools_config(disabled: list[str] | None = None):
     class FakeToolsConfig:
         pass
+
     cfg = FakeToolsConfig()
     cfg.disabled = disabled or []
     return cfg
@@ -38,6 +39,7 @@ def _make_tools_config(disabled: list[str] | None = None):
 def _make_config(disabled: list[str] | None = None):
     class FakeConfig:
         pass
+
     cfg = FakeConfig()
     cfg.tools = _make_tools_config(disabled)
     return cfg
@@ -83,6 +85,7 @@ class TestToolDiscovery:
 class TestInitToolsRegistration:
     async def test_init_tools_registers_all_expected_tools(self, engine: AgentEngine):
         from bahram.tools import init_tools
+
         await init_tools(engine, _make_config(), strict=True)
 
         for name in INIT_TOOLS_NAMES:
@@ -90,6 +93,7 @@ class TestInitToolsRegistration:
 
     async def test_no_missing_tools(self, engine: AgentEngine):
         from bahram.tools import init_tools
+
         await init_tools(engine, _make_config(), strict=True)
 
         registered = set(engine.tools.keys())
@@ -101,6 +105,7 @@ class TestInitToolsRegistration:
 
     async def test_disabled_tools_not_registered(self, engine: AgentEngine):
         from bahram.tools import init_tools
+
         await init_tools(engine, _make_config(disabled=["bash", "git"]), strict=True)
 
         assert "bash" not in engine.tools
@@ -110,6 +115,7 @@ class TestInitToolsRegistration:
 
     async def test_disabled_tools_actually_excluded(self, engine: AgentEngine):
         from bahram.tools import init_tools
+
         await init_tools(engine, _make_config(disabled=["bash", "read", "edit"]), strict=True)
 
         assert "bash" not in engine.tools
@@ -121,6 +127,7 @@ class TestInitToolsRegistration:
 class TestToolExecutorIsOnlyExecutionPath:
     async def test_engine_creates_tool_executor(self, engine: AgentEngine):
         from bahram.tools import init_tools
+
         await init_tools(engine, _make_config(), strict=True)
 
         assert engine._tool_executor is not None, "AgentEngine._tool_executor was not created"
@@ -130,6 +137,7 @@ class TestToolExecutorIsOnlyExecutionPath:
 
     async def test_tool_executor_has_all_tools(self, engine: AgentEngine):
         from bahram.tools import init_tools
+
         await init_tools(engine, _make_config(), strict=True)
 
         executor_tools = set(engine._tool_executor.tools.keys())
@@ -141,5 +149,7 @@ class TestToolExecutorIsOnlyExecutionPath:
     def test_register_tool_recreates_executor(self, engine: AgentEngine):
         old_executor = engine._tool_executor
         engine.register_tool("custom_tool", BashTool())
-        assert engine._tool_executor is not old_executor, "register_tool did not recreate ToolExecutor"
+        assert engine._tool_executor is not old_executor, (
+            "register_tool did not recreate ToolExecutor"
+        )
         assert "custom_tool" in engine._tool_executor.tools

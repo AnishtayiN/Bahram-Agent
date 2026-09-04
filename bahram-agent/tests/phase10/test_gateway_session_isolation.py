@@ -3,6 +3,7 @@
 Tests that concurrent sessions from different users are properly isolated:
 no cross-session messages, no cross-user memory, no job crossover.
 """
+
 from __future__ import annotations
 
 import tempfile
@@ -21,6 +22,7 @@ class TestGatewaySessionIsolation:
 
     def teardown_method(self):
         import shutil
+
         for d in self._tmpdirs:
             shutil.rmtree(d, ignore_errors=True)
 
@@ -167,7 +169,7 @@ class TestGatewaySessionIsolation:
 
         assert agent.smart_context is not None
 
-        session_a = agent.create_session()
+        agent.create_session()
         agent.smart_context.add_context("Alice context", priority=3)
 
         usage = agent.smart_context.get_usage()

@@ -6,9 +6,9 @@ from dataclasses import dataclass, field
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class AgentConfig:
-
     name: str
     model: str = ""
     provider: str = ""
@@ -16,16 +16,16 @@ class AgentConfig:
     temperature: float = 0.7
     max_tokens: int = 4096
 
+
 @dataclass
 class MoAResult:
-
     final_response: str
     agent_responses: list[dict[str, str]] = field(default_factory=list)
     rounds: int = 0
     consensus_reached: bool = False
 
-class MixtureOfAgents:
 
+class MixtureOfAgents:
     def __init__(self) -> None:
         self._agents: list[AgentConfig] = []
         self._proposer_count: int = 3
@@ -58,15 +58,19 @@ class MixtureOfAgents:
             agent = self._get_agent("proposer", i)
             if agent:
                 response = await llm_fn(agent.model, prompt)
-                proposer_responses.append({
-                    "agent": agent.name,
-                    "response": response,
-                })
-                result.agent_responses.append({
-                    "agent": agent.name,
-                    "phase": "proposer",
-                    "response": response[:200],
-                })
+                proposer_responses.append(
+                    {
+                        "agent": agent.name,
+                        "response": response,
+                    }
+                )
+                result.agent_responses.append(
+                    {
+                        "agent": agent.name,
+                        "phase": "proposer",
+                        "response": response[:200],
+                    }
+                )
 
         if not proposer_responses:
             return result
@@ -81,9 +85,11 @@ class MixtureOfAgents:
                 agent = self._get_agent("verifier", i)
                 if agent:
                     combined = "\n\n".join(
-                        f"Response {j+1}:\n{r}" for j, r in enumerate(current_responses)
+                        f"Response {j + 1}:\n{r}" for j, r in enumerate(current_responses)
                     )
-                    critique_prompt = f"Review these responses and identify strengths/weaknesses:\n\n{combined}"
+                    critique_prompt = (
+                        f"Review these responses and identify strengths/weaknesses:\n\n{combined}"
+                    )
                     response = await llm_fn(agent.model, critique_prompt)
                     verifier_feedback.append(response)
 
@@ -93,7 +99,10 @@ class MixtureOfAgents:
                 for i in range(self._proposer_count):
                     agent = self._get_agent("proposer", i)
                     if agent:
-                        refine_prompt = f"Original prompt: {prompt}\n\nFeedback:\n{feedback_summary}\n\nProvide an improved response:"
+                        refine_prompt = (
+                            f"Original prompt: {prompt}\n\nFeedback:\n"
+                            f"{feedback_summary}\n\nProvide an improved response:"
+                        )
                         response = await llm_fn(agent.model, refine_prompt)
                         refined.append(response)
                 current_responses = refined
@@ -101,7 +110,7 @@ class MixtureOfAgents:
         aggregator = self._get_agent("aggregator", 0)
         if aggregator:
             combined = "\n\n".join(
-                f"Response {i+1}:\n{r}" for i, r in enumerate(current_responses)
+                f"Response {i + 1}:\n{r}" for i, r in enumerate(current_responses)
             )
             aggregate_prompt = f"Synthesize these responses into one best response:\n\n{combined}"
             result.final_response = await llm_fn(aggregator.model, aggregate_prompt)
@@ -121,7 +130,4 @@ class MixtureOfAgents:
         return None
 
     def list_agents(self) -> list[dict]:
-        return [
-            {"name": a.name, "model": a.model, "role": a.role}
-            for a in self._agents
-        ]
+        return [{"name": a.name, "model": a.model, "role": a.role} for a in self._agents]

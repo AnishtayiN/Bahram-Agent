@@ -7,7 +7,12 @@ from bahram.providers.compat import OpenAICompatibleProvider
 
 class MistralProvider(OpenAICompatibleProvider):
     def __init__(self, api_key: str = "", model: str = "", **kwargs: Any) -> None:
-        super().__init__(api_key=api_key, model=model or "mistral-large-latest", base_url="https://api.mistral.ai/v1", **kwargs)
+        super().__init__(
+            api_key=api_key,
+            model=model or "mistral-large-latest",
+            base_url="https://api.mistral.ai/v1",
+            **kwargs,
+        )
 
     def get_models(self) -> list[str]:
         return ["mistral-large-latest", "mistral-medium-latest", "mistral-small-latest"]

@@ -28,7 +28,13 @@ class TestBaseProvider:
 
     def test_prepare_tools(self):
         provider = OpenAIProvider(api_key="test", model="gpt-4o")
-        tools = [{"name": "bash", "description": "Run bash", "parameters": {"type": "object", "properties": {}}}]
+        tools = [
+            {
+                "name": "bash",
+                "description": "Run bash",
+                "parameters": {"type": "object", "properties": {}},
+            }
+        ]
         result = provider._prepare_tools(tools)
         assert len(result) == 1
         assert result[0]["type"] == "function"
@@ -37,15 +43,19 @@ class TestBaseProvider:
     def test_parse_openai_response(self):
         provider = OpenAIProvider(api_key="test", model="gpt-4o")
         data = {
-            "choices": [{
-                "message": {
-                    "content": "Hello!",
-                    "tool_calls": [{
-                        "id": "call_123",
-                        "function": {"name": "bash", "arguments": '{"command": "ls"}'}
-                    }]
+            "choices": [
+                {
+                    "message": {
+                        "content": "Hello!",
+                        "tool_calls": [
+                            {
+                                "id": "call_123",
+                                "function": {"name": "bash", "arguments": '{"command": "ls"}'},
+                            }
+                        ],
+                    }
                 }
-            }]
+            ]
         }
         response = provider._parse_openai_response(data)
         assert response.content == "Hello!"
@@ -93,7 +103,12 @@ class TestAnthropicProvider:
 
     def test_convert_tools(self):
         p = AnthropicProvider(api_key="test")
-        tools = [{"type": "function", "function": {"name": "bash", "description": "Run", "parameters": {}}}]
+        tools = [
+            {
+                "type": "function",
+                "function": {"name": "bash", "description": "Run", "parameters": {}},
+            }
+        ]
         result = p._convert_tools(tools)
         assert result[0]["name"] == "bash"
         assert "input_schema" in result[0]
@@ -163,7 +178,9 @@ class TestGoogleProvider:
 
 class TestOpenAICompatibleProvider:
     def test_init(self):
-        p = OpenAICompatibleProvider(api_key="test", model="test-model", base_url="http://localhost:8000")
+        p = OpenAICompatibleProvider(
+            api_key="test", model="test-model", base_url="http://localhost:8000"
+        )
         assert p.api_key == "test"
         assert p.model == "test-model"
         assert p.base_url == "http://localhost:8000"

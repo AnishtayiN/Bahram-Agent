@@ -8,7 +8,6 @@ from typing import Any
 
 @dataclass
 class MemoryEntry:
-
     id: str
     content: str
     timestamp: datetime = field(default_factory=datetime.now)
@@ -17,35 +16,28 @@ class MemoryEntry:
     access_count: int = 0
     last_accessed: datetime | None = None
 
+
 class BaseMemory(ABC):
+    @abstractmethod
+    async def add(self, content: str, metadata: dict[str, Any] | None = None) -> str: ...
 
     @abstractmethod
-    async def add(self, content: str, metadata: dict[str, Any] | None = None) -> str:
-        ...
+    async def get(self, memory_id: str) -> MemoryEntry | None: ...
 
     @abstractmethod
-    async def get(self, memory_id: str) -> MemoryEntry | None:
-        ...
+    async def search(self, query: str, limit: int = 10) -> list[MemoryEntry]: ...
 
     @abstractmethod
-    async def search(self, query: str, limit: int = 10) -> list[MemoryEntry]:
-        ...
+    async def update(self, memory_id: str, content: str) -> bool: ...
 
     @abstractmethod
-    async def update(self, memory_id: str, content: str) -> bool:
-        ...
+    async def delete(self, memory_id: str) -> bool: ...
 
     @abstractmethod
-    async def delete(self, memory_id: str) -> bool:
-        ...
+    async def list_all(self, limit: int = 100) -> list[MemoryEntry]: ...
 
     @abstractmethod
-    async def list_all(self, limit: int = 100) -> list[MemoryEntry]:
-        ...
-
-    @abstractmethod
-    async def clear(self) -> None:
-        ...
+    async def clear(self) -> None: ...
 
     def calculate_importance(self, content: str, metadata: dict[str, Any]) -> float:
 

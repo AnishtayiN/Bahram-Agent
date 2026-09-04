@@ -11,9 +11,9 @@ from dataclasses import dataclass
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class PTYSession:
-
     session_id: str
     pid: int
     fd: int
@@ -21,8 +21,8 @@ class PTYSession:
     created_at: str = ""
     interactive: bool = True
 
-class PTYManager:
 
+class PTYManager:
     def __init__(self) -> None:
         self._sessions: dict[str, PTYSession] = {}
 
@@ -44,11 +44,9 @@ class PTYManager:
         fcntl.ioctl(fd, termios.TIOCSWINSZ, winsize)
 
         if child_pid == 0:
-
             os.chdir(cwd)
             os.execvp(command, [command])
         else:
-
             session = PTYSession(
                 session_id=session_id,
                 pid=child_pid,
@@ -120,8 +118,8 @@ class PTYManager:
             for s in self._sessions.values()
         ]
 
-class SudoManager:
 
+class SudoManager:
     def __init__(self) -> None:
         self._cached_password: str | None = None
         self._cache_ttl: int = 300
@@ -129,11 +127,13 @@ class SudoManager:
 
     def set_password(self, password: str) -> None:
         import time
+
         self._cached_password = password
         self._last_auth = time.time()
 
     def get_password(self) -> str | None:
         import time
+
         if self._cached_password and (time.time() - self._last_auth < self._cache_ttl):
             return self._cached_password
         return None
@@ -143,10 +143,13 @@ class SudoManager:
 
     def is_cached(self) -> bool:
         import time
-        return self._cached_password is not None and (time.time() - self._last_auth < self._cache_ttl)
+
+        return self._cached_password is not None and (
+            time.time() - self._last_auth < self._cache_ttl
+        )
+
 
 class ShellInitHandler:
-
     @staticmethod
     def get_non_interactive_guard() -> str:
         return ""
@@ -158,6 +161,15 @@ class ShellInitHandler:
     @staticmethod
     def get_env_passthrough_vars() -> list[str]:
         return [
-            "PATH", "HOME", "USER", "LANG", "LC_ALL", "TERM", "SHELL", "TMPDIR",
-            "XDG_CONFIG_HOME", "XDG_DATA_HOME", "XDG_CACHE_HOME",
+            "PATH",
+            "HOME",
+            "USER",
+            "LANG",
+            "LC_ALL",
+            "TERM",
+            "SHELL",
+            "TMPDIR",
+            "XDG_CONFIG_HOME",
+            "XDG_DATA_HOME",
+            "XDG_CACHE_HOME",
         ]

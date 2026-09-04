@@ -121,12 +121,21 @@ class BudgetManager:
             session_budget.cost_usd += cost
             session_budget.model_calls += 1
 
-            if session_budget.total_tokens >= self._config.max_total_tokens * self._config.warning_threshold:
-                w = f"Session token usage at {session_budget.total_tokens}/{self._config.max_total_tokens}"
+            if (
+                session_budget.total_tokens
+                >= self._config.max_total_tokens * self._config.warning_threshold
+            ):
+                w = (
+                    f"Session token usage at "
+                    f"{session_budget.total_tokens}/{self._config.max_total_tokens}"
+                )
                 warnings.append(w)
                 session_budget.warnings.append(w)
 
-        if run_budget.total_tokens >= self._config.max_total_tokens * self._config.warning_threshold:
+        if (
+            run_budget.total_tokens
+            >= self._config.max_total_tokens * self._config.warning_threshold
+        ):
             w = f"Run token usage at {run_budget.total_tokens}/{self._config.max_total_tokens}"
             warnings.append(w)
             run_budget.warnings.append(w)
@@ -136,14 +145,23 @@ class BudgetManager:
             warnings.append(w)
             run_budget.warnings.append(w)
 
-        if run_budget.estimated_cost_usd >= self._config.max_cost_usd * self._config.warning_threshold:
+        if (
+            run_budget.estimated_cost_usd
+            >= self._config.max_cost_usd * self._config.warning_threshold
+        ):
             w = f"Run cost at ${run_budget.estimated_cost_usd:.4f}/${self._config.max_cost_usd:.2f}"
             warnings.append(w)
             run_budget.warnings.append(w)
 
         if session_id:
-            if session_budget.estimated_cost_usd >= self._config.max_cost_usd * self._config.warning_threshold:
-                w = f"Session cost at ${session_budget.estimated_cost_usd:.4f}/${self._config.max_cost_usd:.2f}"
+            if (
+                session_budget.estimated_cost_usd
+                >= self._config.max_cost_usd * self._config.warning_threshold
+            ):
+                w = (
+                    f"Session cost at "
+                    f"${session_budget.estimated_cost_usd:.4f}/${self._config.max_cost_usd:.2f}"
+                )
                 warnings.append(w)
                 session_budget.warnings.append(w)
 
@@ -168,8 +186,14 @@ class BudgetManager:
         run_budget = self.get_run_budget(run_id)
         run_budget.subagent_calls += 1
 
-        if run_budget.subagent_calls >= self._config.max_subagent_calls * self._config.warning_threshold:
-            w = f"Run subagent calls at {run_budget.subagent_calls}/{self._config.max_subagent_calls}"
+        if (
+            run_budget.subagent_calls
+            >= self._config.max_subagent_calls * self._config.warning_threshold
+        ):
+            w = (
+                f"Run subagent calls at "
+                f"{run_budget.subagent_calls}/{self._config.max_subagent_calls}"
+            )
             warnings.append(w)
             run_budget.warnings.append(w)
 
@@ -235,10 +259,6 @@ class BudgetManager:
 
     def get_all_usage(self) -> dict[str, Any]:
         return {
-            "sessions": {
-                k: v.to_dict() for k, v in self._session_budgets.items()
-            },
-            "runs": {
-                k: v.to_dict() for k, v in self._run_budgets.items()
-            },
+            "sessions": {k: v.to_dict() for k, v in self._session_budgets.items()},
+            "runs": {k: v.to_dict() for k, v in self._run_budgets.items()},
         }

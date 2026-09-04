@@ -3,6 +3,7 @@
 Tests that concurrent database operations do not cause corruption,
 deadlocks, lost updates, or duplicate records.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -25,6 +26,7 @@ class TestDatabaseConcurrency:
 
     def teardown_method(self):
         import shutil
+
         for d in self._tmpdirs:
             shutil.rmtree(d, ignore_errors=True)
 
@@ -133,6 +135,7 @@ class TestDatabaseConcurrency:
                 assert retrieved is not None
 
                 from bahram.core.engine import Message, MessageRole
+
                 msg = Message(role=MessageRole.USER, content=f"Message from user {idx}")
                 store.add_message(session_id, msg)
 
@@ -201,7 +204,7 @@ class TestDatabaseConcurrency:
             )
             conn.commit()
 
-        results = await asyncio.gather(
+        await asyncio.gather(
             transition_to_running(),
             transition_to_running(),
             transition_to_running(),

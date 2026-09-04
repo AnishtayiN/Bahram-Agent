@@ -157,10 +157,7 @@ class RecoveryManager:
 
     def cleanup_old(self, max_age_hours: float = 24) -> int:
         cutoff = time.time() - (max_age_hours * 3600)
-        to_remove = [
-            run_id for run_id, cp in self._checkpoints.items()
-            if cp.timestamp < cutoff
-        ]
+        to_remove = [run_id for run_id, cp in self._checkpoints.items() if cp.timestamp < cutoff]
         for run_id in to_remove:
             del self._checkpoints[run_id]
         if to_remove:

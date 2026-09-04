@@ -6,19 +6,18 @@ from dataclasses import dataclass, field
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class ScanResult:
-
     safe: bool
     issues: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
     blocked: list[str] = field(default_factory=list)
 
-class TirithScanner:
 
+class TirithScanner:
     def __init__(self) -> None:
         self._dangerous_patterns: list[tuple[str, str, str]] = [
-
             (r"rm\s+-rf\s+/", "critical", "Recursive delete from root"),
             (r"mkfs\.", "critical", "Format filesystem"),
             (r"dd\s+if=.*of=/dev/", "critical", "Direct disk write"),

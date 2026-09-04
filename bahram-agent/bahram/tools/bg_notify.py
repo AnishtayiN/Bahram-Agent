@@ -9,9 +9,9 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class BackgroundTask:
-
     task_id: str
     name: str
     status: str = "pending"
@@ -22,8 +22,8 @@ class BackgroundTask:
     notify_chat_id: str = ""
     notify_platform: str = ""
 
-class BackgroundNotifier:
 
+class BackgroundNotifier:
     def __init__(self) -> None:
         self._tasks: dict[str, BackgroundTask] = {}
         self._notify_fn: Callable | None = None
@@ -104,9 +104,9 @@ class BackgroundNotifier:
     def cleanup_old(self, max_age_seconds: int = 3600) -> int:
         now = time.time()
         to_remove = [
-            tid for tid, task in self._tasks.items()
-            if task.status in ("completed", "failed")
-            and (now - task.end_time) > max_age_seconds
+            tid
+            for tid, task in self._tasks.items()
+            if task.status in ("completed", "failed") and (now - task.end_time) > max_age_seconds
         ]
         for tid in to_remove:
             del self._tasks[tid]

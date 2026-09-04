@@ -7,16 +7,16 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class ContextRef:
-
     id: str
     content: str
     source: str
     metadata: dict = field(default_factory=dict)
 
-class ContextRefs:
 
+class ContextRefs:
     def __init__(self, data_dir: str = "data/context") -> None:
         self.data_dir = Path(data_dir)
         self.data_dir.mkdir(parents=True, exist_ok=True)

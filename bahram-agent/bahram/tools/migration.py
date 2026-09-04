@@ -8,32 +8,68 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class MigrationRule:
-
     name: str
     source_pattern: str
     target_pattern: str
     language: str
     description: str = ""
 
-class CodeMigration:
 
+class CodeMigration:
     def __init__(self) -> None:
         self._rules: dict[str, list[MigrationRule]] = {
             "python2_to_3": [
-                MigrationRule("print_function", r"print\s+(.+)", r"print(\1)", "python", "Convert print statement to function"),
-                MigrationRule("except_syntax", r"except\s+(\w+)\s*,\s*(\w+)", r"except \1 as \2", "python", "Convert except syntax"),
-                MigrationRule("unicode_literal", r"u\"(.+)\"", r"\"\1\"", "python", "Remove unicode prefix"),
-                MigrationRule("xrange", r"xrange\(", r"range(", "python", "Replace xrange with range"),
-                MigrationRule("raw_input", r"raw_input\(", r"input(", "python", "Replace raw_input with input"),
+                MigrationRule(
+                    "print_function",
+                    r"print\s+(.+)",
+                    r"print(\1)",
+                    "python",
+                    "Convert print statement to function",
+                ),
+                MigrationRule(
+                    "except_syntax",
+                    r"except\s+(\w+)\s*,\s*(\w+)",
+                    r"except \1 as \2",
+                    "python",
+                    "Convert except syntax",
+                ),
+                MigrationRule(
+                    "unicode_literal", r"u\"(.+)\"", r"\"\1\"", "python", "Remove unicode prefix"
+                ),
+                MigrationRule(
+                    "xrange", r"xrange\(", r"range(", "python", "Replace xrange with range"
+                ),
+                MigrationRule(
+                    "raw_input", r"raw_input\(", r"input(", "python", "Replace raw_input with input"
+                ),
             ],
             "fastapi_migration": [
-                MigrationRule("router", r"@app\.(get|post|put|delete)\(", r"@router.\1(", "python", "Migrate to router-based routing"),
+                MigrationRule(
+                    "router",
+                    r"@app\.(get|post|put|delete)\(",
+                    r"@router.\1(",
+                    "python",
+                    "Migrate to router-based routing",
+                ),
             ],
             "pydantic_v1_to_v2": [
-                MigrationRule("validator", r"@validator\((.+)\)", r"@field_validator(\1, mode='before')", "python", "Migrate Pydantic v1 to v2"),
-                MigrationRule("class_config", r"class Config:", r"model_config = ConfigDict(", "python", "Migrate Config class"),
+                MigrationRule(
+                    "validator",
+                    r"@validator\((.+)\)",
+                    r"@field_validator(\1, mode='before')",
+                    "python",
+                    "Migrate Pydantic v1 to v2",
+                ),
+                MigrationRule(
+                    "class_config",
+                    r"class Config:",
+                    r"model_config = ConfigDict(",
+                    "python",
+                    "Migrate Config class",
+                ),
             ],
         }
 
@@ -72,11 +108,13 @@ class CodeMigration:
                 if rule.language == "python" or source.suffix == ".py":
                     new_content = re.sub(rule.source_pattern, rule.target_pattern, content)
                     if new_content != content:
-                        changes.append({
-                            "rule": rule.name,
-                            "description": rule.description,
-                            "count": len(re.findall(rule.source_pattern, content)),
-                        })
+                        changes.append(
+                            {
+                                "rule": rule.name,
+                                "description": rule.description,
+                                "count": len(re.findall(rule.source_pattern, content)),
+                            }
+                        )
                         content = new_content
 
             target = Path(target_path)

@@ -8,7 +8,6 @@ from typing import Any
 
 @dataclass
 class PlatformMessage:
-
     platform: str
     user_id: str
     user_name: str
@@ -18,32 +17,27 @@ class PlatformMessage:
     timestamp: float
     reply_to: str | None = None
 
-class BasePlatform(ABC):
 
+class BasePlatform(ABC):
     def __init__(self, config: Any) -> None:
         self.config = config
         self._message_handler: Callable | None = None
 
     @property
     @abstractmethod
-    def name(self) -> str:
-        ...
+    def name(self) -> str: ...
 
     @abstractmethod
-    async def start(self) -> None:
-        ...
+    async def start(self) -> None: ...
 
     @abstractmethod
-    async def stop(self) -> None:
-        ...
+    async def stop(self) -> None: ...
 
     @abstractmethod
-    async def send_message(self, chat_id: str, content: str) -> None:
-        ...
+    async def send_message(self, chat_id: str, content: str) -> None: ...
 
     @abstractmethod
-    async def reply(self, message: PlatformMessage, content: str) -> None:
-        ...
+    async def reply(self, message: PlatformMessage, content: str) -> None: ...
 
     def set_message_handler(self, handler: Callable) -> None:
         self._message_handler = handler

@@ -5,8 +5,8 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
-class Personality:
 
+class Personality:
     def __init__(self, workspace_root: str = ".") -> None:
         self.workspace_root = Path(workspace_root)
         self._soul_content: str = ""

@@ -5,8 +5,8 @@ from collections.abc import Callable
 
 logger = logging.getLogger(__name__)
 
-class RestartNotifier:
 
+class RestartNotifier:
     def __init__(self) -> None:
         self._notify_fns: dict[str, Callable] = {}
         self._enabled: dict[str, bool] = {}
@@ -35,7 +35,9 @@ class RestartNotifier:
 
             try:
                 if was_interrupted:
-                    message = "🔄 Bahram Agent restarted after interruption. Send any message to resume."
+                    message = (
+                        "🔄 Bahram Agent restarted after interruption. Send any message to resume."
+                    )
                 else:
                     message = "✅ Bahram Agent is back online."
 

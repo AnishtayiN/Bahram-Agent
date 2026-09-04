@@ -5,8 +5,8 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
-class CursorRules:
 
+class CursorRules:
     def __init__(self, project_root: str = ".") -> None:
         self.project_root = Path(project_root)
         self._rules: list[str] = []

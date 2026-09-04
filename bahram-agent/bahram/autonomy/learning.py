@@ -129,7 +129,7 @@ class LearningEngine:
         try:
             lessons_file = self._data_dir / "lessons.json"
             with open(lessons_file, "w") as f:
-                json.dump([l.to_dict() for l in self._lessons.values()], f, indent=2)
+                json.dump([lesson.to_dict() for lesson in self._lessons.values()], f, indent=2)
 
             skills_file = self._data_dir / "skill_candidates.json"
             with open(skills_file, "w") as f:
@@ -155,17 +155,15 @@ class LearningEngine:
             "successful_tools": [
                 r.get("tool", "") for r in tool_results if r.get("success", False)
             ],
-            "failed_tools": [
-                r.get("tool", "") for r in tool_results if not r.get("success", True)
-            ],
+            "failed_tools": [r.get("tool", "") for r in tool_results if not r.get("success", True)],
             "lessons_extracted": [],
         }
 
         if success:
             if len(tool_results) > 0:
-                success_rate = sum(
-                    1 for r in tool_results if r.get("success", False)
-                ) / len(tool_results)
+                success_rate = sum(1 for r in tool_results if r.get("success", False)) / len(
+                    tool_results
+                )
                 if success_rate < 0.8:
                     lesson = await self._extract_lesson(
                         run_id, goal, tool_results, "Tool success rate was low"
@@ -175,8 +173,7 @@ class LearningEngine:
 
             if len(trajectory_steps) > 5:
                 lesson = await self._extract_lesson(
-                    run_id, goal, tool_results,
-                    "Task required many iterations"
+                    run_id, goal, tool_results, "Task required many iterations"
                 )
                 if lesson:
                     analysis["lessons_extracted"].append(lesson.id)
@@ -184,8 +181,10 @@ class LearningEngine:
             failed_tools = [r for r in tool_results if not r.get("success", True)]
             for ft in failed_tools[:3]:
                 lesson = await self._extract_lesson(
-                    run_id, goal, tool_results,
-                    f"Tool '{ft.get('tool', '')}' failed: {ft.get('error', 'unknown')}"
+                    run_id,
+                    goal,
+                    tool_results,
+                    f"Tool '{ft.get('tool', '')}' failed: {ft.get('error', 'unknown')}",
                 )
                 if lesson:
                     analysis["lessons_extracted"].append(lesson.id)
@@ -200,8 +199,9 @@ class LearningEngine:
         observation: str,
     ) -> Lesson | None:
         existing = [
-            l for l in self._lessons.values()
-            if l.source_run == run_id or observation.lower() in l.content.lower()
+            lesson
+            for lesson in self._lessons.values()
+            if lesson.source_run == run_id or observation.lower() in lesson.content.lower()
         ]
         if existing:
             return None
@@ -236,7 +236,7 @@ class LearningEngine:
         if not lessons:
             return None
 
-        combined_content = " ".join(l.content for l in lessons)
+        combined_content = " ".join(lesson.content for lesson in lessons)
 
         skill = SkillCandidate(
             id=f"skill_{uuid.uuid4().hex[:8]}",
@@ -246,7 +246,7 @@ class LearningEngine:
             triggers=self._generate_triggers(combined_content),
             prerequisites=[],
             required_capabilities=[],
-            source_lessons=[l.id for l in lessons],
+            source_lessons=[lesson.id for lesson in lessons],
             provenance={"generated_from": "learning_loop", "lesson_count": len(lessons)},
         )
 
@@ -257,15 +257,88 @@ class LearningEngine:
 
     def _generate_skill_name(self, content: str) -> str:
         words = content.lower().split()
-        stop_words = {"the", "a", "an", "is", "was", "were", "are", "be", "been", "being",
-                       "have", "has", "had", "do", "does", "did", "will", "would", "could",
-                       "should", "may", "might", "shall", "can", "need", "dare", "ought",
-                       "used", "to", "of", "in", "for", "on", "with", "at", "by", "from",
-                       "as", "into", "through", "during", "before", "after", "above", "below",
-                       "between", "out", "off", "over", "under", "again", "further", "then",
-                       "once", "here", "there", "when", "where", "why", "how", "all", "both",
-                       "each", "few", "more", "most", "other", "some", "such", "no", "nor",
-                       "not", "only", "own", "same", "so", "than", "too", "very", "just"}
+        stop_words = {
+            "the",
+            "a",
+            "an",
+            "is",
+            "was",
+            "were",
+            "are",
+            "be",
+            "been",
+            "being",
+            "have",
+            "has",
+            "had",
+            "do",
+            "does",
+            "did",
+            "will",
+            "would",
+            "could",
+            "should",
+            "may",
+            "might",
+            "shall",
+            "can",
+            "need",
+            "dare",
+            "ought",
+            "used",
+            "to",
+            "of",
+            "in",
+            "for",
+            "on",
+            "with",
+            "at",
+            "by",
+            "from",
+            "as",
+            "into",
+            "through",
+            "during",
+            "before",
+            "after",
+            "above",
+            "below",
+            "between",
+            "out",
+            "off",
+            "over",
+            "under",
+            "again",
+            "further",
+            "then",
+            "once",
+            "here",
+            "there",
+            "when",
+            "where",
+            "why",
+            "how",
+            "all",
+            "both",
+            "each",
+            "few",
+            "more",
+            "most",
+            "other",
+            "some",
+            "such",
+            "no",
+            "nor",
+            "not",
+            "only",
+            "own",
+            "same",
+            "so",
+            "than",
+            "too",
+            "very",
+            "just",
+        }
         meaningful = [w for w in words if w not in stop_words and len(w) > 2][:5]
         return "_".join(meaningful) if meaningful else "auto_skill"
 
@@ -336,7 +409,7 @@ class LearningEngine:
                 score = relevance * lesson.confidence
                 scored.append((score, lesson))
         scored.sort(key=lambda x: x[0], reverse=True)
-        return [l for _, l in scored[:limit]]
+        return [lesson for _, lesson in scored[:limit]]
 
     def get_lessons(self) -> list[Lesson]:
         return list(self._lessons.values())
@@ -357,7 +430,7 @@ class LearningEngine:
             "candidate_skills": sum(1 for s in skills if s.status == "candidate"),
             "rejected_skills": sum(1 for s in skills if s.status == "rejected"),
             "avg_lesson_confidence": (
-                sum(l.confidence for l in lessons) / len(lessons) if lessons else 0
+                sum(lesson.confidence for lesson in lessons) / len(lessons) if lessons else 0
             ),
             "avg_skill_confidence": (
                 sum(s.confidence for s in skills) / len(skills) if skills else 0

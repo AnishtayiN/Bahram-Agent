@@ -8,16 +8,16 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class SupplyChainIssue:
-
     package: str
     severity: str
     description: str
     recommendation: str
 
-class SupplyChainChecker:
 
+class SupplyChainChecker:
     def __init__(self, data_dir: str = "data/security") -> None:
         self.data_dir = Path(data_dir)
         self.data_dir.mkdir(parents=True, exist_ok=True)
@@ -27,7 +27,6 @@ class SupplyChainChecker:
         issues = []
 
         try:
-
             result = subprocess.run(
                 ["pip", "list", "--format=json"],
                 capture_output=True,
@@ -43,12 +42,14 @@ class SupplyChainChecker:
                     name = pkg.get("name", "").lower()
                     version = pkg.get("version", "")
                     if name in vulnerable:
-                        issues.append(SupplyChainIssue(
-                            package=f"{name}=={version}",
-                            severity="high",
-                            description=f"Known vulnerability in {name}",
-                            recommendation=f"Update {name} to latest version",
-                        ))
+                        issues.append(
+                            SupplyChainIssue(
+                                package=f"{name}=={version}",
+                                severity="high",
+                                description=f"Known vulnerability in {name}",
+                                recommendation=f"Update {name} to latest version",
+                            )
+                        )
         except Exception as e:
             logger.warning(f"Failed to check packages: {e}")
 
@@ -68,20 +69,24 @@ class SupplyChainChecker:
         file_path = Path(path)
 
         if file_path.exists():
-
             import stat
+
             mode = file_path.stat().st_mode
             if mode & stat.S_IWOTH:
-                issues.append(SupplyChainIssue(
-                    package=str(path),
-                    severity="medium",
-                    description="File is world-writable",
-                    recommendation="Remove world-write permission",
-                ))
+                issues.append(
+                    SupplyChainIssue(
+                        package=str(path),
+                        severity="medium",
+                        description="File is world-writable",
+                        recommendation="Remove world-write permission",
+                    )
+                )
 
         return issues
 
-    def scan_dependencies(self, requirements_file: str = "requirements.txt") -> list[SupplyChainIssue]:
+    def scan_dependencies(
+        self, requirements_file: str = "requirements.txt"
+    ) -> list[SupplyChainIssue]:
         issues = []
         req_path = Path(requirements_file)
 
@@ -91,14 +96,15 @@ class SupplyChainChecker:
                 for line in content.split("\n"):
                     line = line.strip()
                     if line and not line.startswith("#"):
-
                         if "==" not in line and ">=" not in line and "<=" not in line:
-                            issues.append(SupplyChainIssue(
-                                package=line,
-                                severity="low",
-                                description="Unpinned dependency version",
-                                recommendation=f"Pin version for {line}",
-                            ))
+                            issues.append(
+                                SupplyChainIssue(
+                                    package=line,
+                                    severity="low",
+                                    description="Unpinned dependency version",
+                                    recommendation=f"Pin version for {line}",
+                                )
+                            )
             except Exception as e:
                 logger.warning(f"Failed to scan dependencies: {e}")
 

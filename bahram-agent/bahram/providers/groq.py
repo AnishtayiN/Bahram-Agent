@@ -10,6 +10,7 @@ from bahram.providers.base import BaseProvider
 
 logger = logging.getLogger(__name__)
 
+
 class GroqProvider(BaseProvider):
     BASE_URL = "https://api.groq.com/openai/v1"
 
@@ -19,10 +20,16 @@ class GroqProvider(BaseProvider):
         self.max_tokens = kwargs.get("max_tokens", 4096)
 
     async def _call_api(
-        self, messages: list[dict], system_msg: str, tools: list[dict],
-        model: str | None, temperature: float, max_tokens: int,
+        self,
+        messages: list[dict],
+        system_msg: str,
+        tools: list[dict],
+        model: str | None,
+        temperature: float,
+        max_tokens: int,
     ) -> AgentResponse:
         import httpx
+
         api_messages = []
         if system_msg:
             api_messages.append({"role": "system", "content": system_msg})
@@ -39,8 +46,12 @@ class GroqProvider(BaseProvider):
             async with httpx.AsyncClient() as client:
                 response = await client.post(
                     f"{self.BASE_URL}/chat/completions",
-                    headers={"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"},
-                    json=payload, timeout=60.0,
+                    headers={
+                        "Authorization": f"Bearer {self.api_key}",
+                        "Content-Type": "application/json",
+                    },
+                    json=payload,
+                    timeout=60.0,
                 )
                 if response.status_code == 200:
                     return self._parse_openai_response(response.json())
@@ -50,23 +61,39 @@ class GroqProvider(BaseProvider):
             raise ImportError("httpx not installed. Run: pip install httpx")
 
     async def _stream_api(
-        self, messages: list[dict], system_msg: str, tools: list[dict],
-        model: str | None, temperature: float, max_tokens: int,
+        self,
+        messages: list[dict],
+        system_msg: str,
+        tools: list[dict],
+        model: str | None,
+        temperature: float,
+        max_tokens: int,
     ) -> AsyncIterator[str]:
         import httpx
+
         api_messages = []
         if system_msg:
             api_messages.append({"role": "system", "content": system_msg})
         api_messages.extend(messages)
         payload: dict[str, Any] = {
-            "model": self._get_model(model), "messages": api_messages,
-            "temperature": temperature, "max_tokens": max_tokens, "stream": True,
+            "model": self._get_model(model),
+            "messages": api_messages,
+            "temperature": temperature,
+            "max_tokens": max_tokens,
+            "stream": True,
         }
         try:
             async with httpx.AsyncClient() as client:
-                async with client.stream("POST", f"{self.BASE_URL}/chat/completions",
-                    headers={"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"},
-                    json=payload, timeout=60.0) as response:
+                async with client.stream(
+                    "POST",
+                    f"{self.BASE_URL}/chat/completions",
+                    headers={
+                        "Authorization": f"Bearer {self.api_key}",
+                        "Content-Type": "application/json",
+                    },
+                    json=payload,
+                    timeout=60.0,
+                ) as response:
                     async for line in response.aiter_lines():
                         if line.startswith("data: "):
                             data = line[6:]

@@ -6,8 +6,8 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-class SignalAdapter:
 
+class SignalAdapter:
     def __init__(self, number: str = "", api_url: str = "http://localhost:8080") -> None:
         self.number = number
         self.api_url = api_url.rstrip("/")

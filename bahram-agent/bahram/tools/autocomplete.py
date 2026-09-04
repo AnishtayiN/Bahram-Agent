@@ -5,34 +5,83 @@ from dataclasses import dataclass
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class Completion:
-
     text: str
     description: str = ""
     priority: int = 0
     category: str = ""
 
-class AutoComplete:
 
+class AutoComplete:
     def __init__(self) -> None:
         self._history: list[str] = []
         self._patterns: dict[str, list[str]] = {
             "python": [
-                "def ", "class ", "import ", "from ", "if ", "else:", "elif ",
-                "for ", "while ", "try:", "except:", "finally:", "with ",
-                "return ", "yield ", "raise ", "assert ", "pass",
-                "print(", "len(", "range(", "str(", "int(", "float(",
+                "def ",
+                "class ",
+                "import ",
+                "from ",
+                "if ",
+                "else:",
+                "elif ",
+                "for ",
+                "while ",
+                "try:",
+                "except:",
+                "finally:",
+                "with ",
+                "return ",
+                "yield ",
+                "raise ",
+                "assert ",
+                "pass",
+                "print(",
+                "len(",
+                "range(",
+                "str(",
+                "int(",
+                "float(",
             ],
             "javascript": [
-                "function ", "const ", "let ", "var ", "if ", "else ",
-                "for ", "while ", "return ", "import ", "export ",
-                "class ", "async ", "await ", "try ", "catch ",
+                "function ",
+                "const ",
+                "let ",
+                "var ",
+                "if ",
+                "else ",
+                "for ",
+                "while ",
+                "return ",
+                "import ",
+                "export ",
+                "class ",
+                "async ",
+                "await ",
+                "try ",
+                "catch ",
             ],
             "bash": [
-                "ls", "cd", "pwd", "mkdir", "rm", "cp", "mv", "cat",
-                "grep", "find", "echo", "export", "chmod", "chown",
-                "git", "docker", "npm", "pip", "python",
+                "ls",
+                "cd",
+                "pwd",
+                "mkdir",
+                "rm",
+                "cp",
+                "mv",
+                "cat",
+                "grep",
+                "find",
+                "echo",
+                "export",
+                "chmod",
+                "chown",
+                "git",
+                "docker",
+                "npm",
+                "pip",
+                "python",
             ],
         }
 
@@ -53,21 +102,25 @@ class AutoComplete:
         patterns = self._patterns.get(language, [])
         for pattern in patterns:
             if pattern.lower().startswith(text.lower()):
-                completions.append(Completion(
-                    text=pattern,
-                    description="Keyword",
-                    priority=1,
-                    category="keyword",
-                ))
+                completions.append(
+                    Completion(
+                        text=pattern,
+                        description="Keyword",
+                        priority=1,
+                        category="keyword",
+                    )
+                )
 
         for hist in reversed(self._history):
             if text.lower() in hist.lower() and hist != text:
-                completions.append(Completion(
-                    text=hist,
-                    description="From history",
-                    priority=2,
-                    category="history",
-                ))
+                completions.append(
+                    Completion(
+                        text=hist,
+                        description="From history",
+                        priority=2,
+                        category="history",
+                    )
+                )
 
         seen = set()
         unique = []
@@ -84,35 +137,63 @@ class AutoComplete:
     def complete_import(self, text: str) -> list[Completion]:
         completions = []
         common_modules = [
-            "os", "sys", "json", "logging", "asyncio", "pathlib",
-            "typing", "dataclasses", "datetime", "time", "re",
-            "collections", "itertools", "functools", "hashlib",
+            "os",
+            "sys",
+            "json",
+            "logging",
+            "asyncio",
+            "pathlib",
+            "typing",
+            "dataclasses",
+            "datetime",
+            "time",
+            "re",
+            "collections",
+            "itertools",
+            "functools",
+            "hashlib",
         ]
         for module in common_modules:
             if module.startswith(text.split(".")[-1]):
-                completions.append(Completion(
-                    text=module,
-                    description="Module",
-                    priority=1,
-                    category="import",
-                ))
+                completions.append(
+                    Completion(
+                        text=module,
+                        description="Module",
+                        priority=1,
+                        category="import",
+                    )
+                )
         return completions
 
     def complete_function(self, text: str, context: str = "") -> list[Completion]:
         completions = []
         common_functions = [
-            "print()", "len()", "range()", "str()", "int()", "float()",
-            "list()", "dict()", "set()", "tuple()", "type()",
-            "isinstance()", "hasattr()", "getattr()", "setattr()",
+            "print()",
+            "len()",
+            "range()",
+            "str()",
+            "int()",
+            "float()",
+            "list()",
+            "dict()",
+            "set()",
+            "tuple()",
+            "type()",
+            "isinstance()",
+            "hasattr()",
+            "getattr()",
+            "setattr()",
         ]
         for func in common_functions:
             if func.lower().startswith(text.lower()):
-                completions.append(Completion(
-                    text=func,
-                    description="Function",
-                    priority=1,
-                    category="function",
-                ))
+                completions.append(
+                    Completion(
+                        text=func,
+                        description="Function",
+                        priority=1,
+                        category="function",
+                    )
+                )
         return completions
 
     def get_suggestions(self, text: str) -> list[str]:

@@ -7,7 +7,6 @@ from typing import Any
 
 @dataclass
 class ToolSchema:
-
     name: str
     description: str
     parameters: dict[str, Any]
@@ -18,6 +17,7 @@ class ToolSchema:
             "description": self.description,
             "parameters": self.parameters,
         }
+
 
 class BaseTool(ABC):
     """Abstract base class for every Bahram tool.
@@ -40,18 +40,15 @@ class BaseTool(ABC):
 
     @property
     @abstractmethod
-    def name(self) -> str:
-        ...
+    def name(self) -> str: ...
 
     @property
     @abstractmethod
-    def description(self) -> str:
-        ...
+    def description(self) -> str: ...
 
     @property
     @abstractmethod
-    def parameters(self) -> dict[str, Any]:
-        ...
+    def parameters(self) -> dict[str, Any]: ...
 
     def schema(self) -> dict[str, Any]:
         return {
@@ -64,8 +61,7 @@ class BaseTool(ABC):
         }
 
     @abstractmethod
-    async def execute(self, **kwargs: Any) -> str:
-        ...
+    async def execute(self, **kwargs: Any) -> str: ...
 
     def validate_args(self, **kwargs: Any) -> bool:
 

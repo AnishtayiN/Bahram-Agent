@@ -44,6 +44,7 @@ except ImportError:
     console = _MockConsole()
 
 if HAS_CLI:
+
     @app.command()
     def chat(
         message: str | None = typer.Argument(None, help="Message to send"),
@@ -87,7 +88,6 @@ if HAS_CLI:
         list_skills: bool = typer.Option(False, "--list", "-l", help="List available skills"),
         skill_name: str | None = typer.Argument(None, help="Skill name"),
     ) -> None:
-
 
         if list_skills:
             console.print("[bold]Available skills:[/bold]")
@@ -134,6 +134,7 @@ if HAS_CLI:
             p = DiscordPlatform(platform_config)
         elif platform == "slack":
             from bahram.platforms.slack import SlackAdapter
+
             platform_config = config.platforms.get("slack")
             if not platform_config or not platform_config.enabled:
                 console.print("[error]Slack not configured[/error]")
@@ -150,7 +151,7 @@ if HAS_CLI:
             return
 
         agent = Agent(config=config)
-        if hasattr(p, 'set_agent'):
+        if hasattr(p, "set_agent"):
             p.set_agent(agent)
 
         async def _run_gateway():
@@ -166,6 +167,7 @@ if HAS_CLI:
 
         console.print(f"[bold]Bahram Agent[/bold] v{__version__}")
 
+
 async def _chat_async(
     agent: Agent,
     message: str | None,
@@ -176,7 +178,6 @@ async def _chat_async(
     await agent.start()
 
     if message:
-
         response = await agent.chat(message, session_id=session, model=model)
         _print_response(response)
         return
@@ -212,9 +213,7 @@ async def _chat_async(
 
             console.print("\n[bold cyan]Bahram[/bold cyan] ", end="")
 
-            async for chunk in agent.chat_streaming(
-                user_input, session_id=session_id, model=model
-            ):
+            async for chunk in agent.chat_streaming(user_input, session_id=session_id, model=model):
                 console.print(chunk, end="", highlight=False)
 
             console.print()
@@ -226,6 +225,7 @@ async def _chat_async(
             break
 
     await agent.stop()
+
 
 def _print_response(response: AgentResponse) -> None:
     console.print(
@@ -241,11 +241,16 @@ def _print_response(response: AgentResponse) -> None:
         for tc in response.tool_calls:
             console.print(f"  - {tc.name}({tc.arguments})")
 
+
 def main() -> None:
     if app:
         app()
     else:
-        console.print("[error]CLI dependencies not installed. Install with: pip install 'bahram-agent[cli]'[/error]")
+        console.print(
+            "[error]CLI dependencies not installed. Install with: pip install "
+            "'bahram-agent[cli]'[/error]"
+        )
+
 
 if __name__ == "__main__":
     main()

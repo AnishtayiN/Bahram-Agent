@@ -13,16 +13,16 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-class JobState(str, Enum):
 
+class JobState(str, Enum):
     SCHEDULED = "scheduled"
     PAUSED = "paused"
     RUNNING = "running"
     COMPLETED = "completed"
 
+
 @dataclass
 class CronJob:
-
     id: str = field(default_factory=lambda: str(uuid.uuid4())[:8])
     name: str = ""
     prompt: str = ""
@@ -40,8 +40,8 @@ class CronJob:
     next_run: str | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
 
-class CronScheduler:
 
+class CronScheduler:
     def __init__(self, data_dir: str = "data/cron") -> None:
         self.data_dir = Path(data_dir)
         self.data_dir.mkdir(parents=True, exist_ok=True)
@@ -213,7 +213,6 @@ class CronScheduler:
         job.run_count += 1
 
         try:
-
             result = await self._execute_job(job)
 
             await self._deliver_result(job, result)

@@ -5,16 +5,16 @@ from dataclasses import dataclass, field
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class ErrorSolution:
-
     error_type: str
     solution: str
     confidence: float
     steps: list[str] = field(default_factory=list)
 
-class ErrorHandler:
 
+class ErrorHandler:
     def __init__(self) -> None:
         self._solutions: dict[str, list[ErrorSolution]] = {
             "ModuleNotFoundError": [
@@ -54,7 +54,11 @@ class ErrorHandler:
                     error_type="TypeError",
                     solution="Check function arguments and types",
                     confidence=0.85,
-                    steps=["Check function signature", "Verify argument types", "Check return values"],
+                    steps=[
+                        "Check function signature",
+                        "Verify argument types",
+                        "Check return values",
+                    ],
                 ),
             ],
             "ValueError": [
