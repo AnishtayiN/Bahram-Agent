@@ -42,6 +42,7 @@ class BrowserTool:
         """
         self._browser = None
         self._page = None
+        self._playwright = None
         self._headless: bool = True
 
     async def start(self, headless: bool = True) -> bool:

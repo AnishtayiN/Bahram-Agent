@@ -93,18 +93,23 @@ class AnnotationManager:
         ]
 
     def get_annotation(self, tool_call_id: str, key: str) -> Any | None:
-        """
-        Return the annotation.
+        """Return the *most recent* annotation recorded for ``key``.
+
+        Annotations are append-only, so ``set_exit_code``/``set_output_size``
+        may store several values for the same key.  Callers read the value
+        they last wrote, therefore the newest entry wins.  The previous
+        implementation returned the oldest, which meant a re-annotated
+        ``exit_code`` would keep reporting the first (stale) value.
 
         Args:
             tool_call_id (str): tool call id string.
             key (str): key string.
 
         Returns:
-            Any | None: the resulting object, or ``None`` when it is not available.
+            Any | None: the newest value, or ``None`` when the key is absent.
         """
         annotations = self._annotations.get(tool_call_id, [])
-        for a in annotations:
+        for a in reversed(annotations):
             if a.key == key:
                 return a.value
         return None

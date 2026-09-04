@@ -58,41 +58,52 @@ class PTYManager:
         cols: int = 80,
         rows: int = 24,
     ) -> PTYSession:
-        """
-        Create session.
+        """Fork a child process attached to a new pseudo-terminal.
 
         Args:
-            command (str): shell command to execute. Defaults to ``'/bin/bash'``.
+            command (str): program to run in the session. Defaults to
+                ``'/bin/bash'``.
             cwd (str): cwd string. Defaults to ``'.'``.
             cols (int): numeric value for cols. Defaults to ``80``.
             rows (int): numeric value for rows. Defaults to ``24``.
 
         Returns:
             PTYSession: the resulting PTYSession.
+
+        Note:
+            ``pty.fork()`` returns ``(0, master_fd)`` inside the child and
+            ``(child_pid, master_fd)`` inside the parent.  The previous
+            implementation used ``pty.openpty()``, which returns
+            ``(master_fd, slave_fd)`` and forks nothing, so the master file
+            descriptor was stored in ``PTYSession.pid``.  ``close_session()``
+            then called ``os.kill(<fd number>, SIGTERM)`` - signalling an
+            unrelated process that happened to own that pid.
         """
         import uuid
         from datetime import datetime
 
         session_id = str(uuid.uuid4())[:8]
 
-        child_pid, fd = pty.openpty()
+        child_pid, fd = pty.fork()
+        if child_pid == 0:  # pragma: no cover - only runs in the forked child
+            try:
+                os.chdir(cwd)
+                os.execvp(command, [command])
+            finally:
+                os._exit(127)
 
         winsize = struct.pack("HHHH", rows, cols, 0, 0)
         fcntl.ioctl(fd, termios.TIOCSWINSZ, winsize)
 
-        if child_pid == 0:
-            os.chdir(cwd)
-            os.execvp(command, [command])
-        else:
-            session = PTYSession(
-                session_id=session_id,
-                pid=child_pid,
-                fd=fd,
-                cwd=cwd,
-                created_at=datetime.now().isoformat(),
-            )
-            self._sessions[session_id] = session
-            return session
+        session = PTYSession(
+            session_id=session_id,
+            pid=child_pid,
+            fd=fd,
+            cwd=os.path.abspath(cwd),
+            created_at=datetime.now().isoformat(),
+        )
+        self._sessions[session_id] = session
+        return session
 
     async def read_output(self, session_id: str, timeout: float = 0.1) -> str:
         """

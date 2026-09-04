@@ -74,9 +74,12 @@ class DependencyAnalyzer:
             for line in content.split("\n"):
                 line = line.strip()
                 if line and not line.startswith("#"):
-                    parts = re.split(r"[>=<~!]", line)
+                    # Split on the first comparator only and swallow a
+                    # trailing "=" so ">=" / "==" / "~=" yield a clean version
+                    # ("0.104.0") instead of "" or "=0.104.0".
+                    parts = re.split(r"[><~!]=?|==?", line, maxsplit=1)
                     name = parts[0].strip()
-                    version = parts[1] if len(parts) > 1 else ""
+                    version = parts[1].strip() if len(parts) > 1 else ""
                     deps.append(Dependency(name=name, version=version, source="requirements.txt"))
 
         pyproject = self.project_root / "pyproject.toml"

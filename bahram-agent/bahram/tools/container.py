@@ -40,6 +40,18 @@ class ContainerConfig:
     working_dir: str = "/workspace"
 
 
+class DockerUnavailableError(RuntimeError):
+    """Raised when the ``docker`` CLI cannot be executed.
+
+    ``asyncio.create_subprocess_exec("docker", ...)`` raises a bare
+    ``FileNotFoundError`` when the CLI is absent, which surfaced to callers as
+    an opaque crash.  Every command in this module now funnels through
+    :func:`ContainerResources._run_docker`, which converts that condition into
+    this explicit, loggable error so a missing runtime is reported as a
+    diagnostic instead of an unhandled exception.
+    """
+
+
 class ContainerResources:
     """
     Container resources.
@@ -51,6 +63,41 @@ class ContainerResources:
         """
         self._active_containers: dict[str, dict] = {}
 
+    async def _run_docker(self, *args: str, timeout: float | None = None) -> tuple[int, str, str]:
+        """Run ``docker <args>`` and return ``(returncode, stdout, stderr)``.
+
+        Args:
+            *args (str): arguments passed to the ``docker`` CLI.
+            timeout (float | None): optional timeout in seconds.
+
+        Returns:
+            tuple[int, str, str]: exit status, stdout and stderr, decoded as
+            UTF-8 with replacement.
+
+        Raises:
+            DockerUnavailableError: if the ``docker`` CLI is not installed or is not
+                executable.
+
+        Note:
+            Coroutine - must be awaited.
+        """
+        try:
+            proc = await asyncio.create_subprocess_exec(
+                "docker",
+                *args,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+        except (FileNotFoundError, PermissionError) as exc:
+            raise DockerUnavailableError("docker CLI is not available on this host") from exc
+
+        stdout, stderr = await proc.communicate()
+        return (
+            proc.returncode,
+            stdout.decode("utf-8", errors="replace"),
+            stderr.decode("utf-8", errors="replace"),
+        )
+
     async def create_container(self, config: ContainerConfig) -> str:
         """
         Create container.
@@ -59,10 +106,11 @@ class ContainerResources:
             config (ContainerConfig): configuration object.
 
         Returns:
-            str: the rendered string.
+            str: the name the container was created under.
 
         Raises:
-            RuntimeError: if the operation cannot be completed.
+            RuntimeError: if ``docker create`` exits non-zero.
+            DockerUnavailable: if the ``docker`` CLI is not installed.
 
         Note:
             Coroutine - must be awaited.
@@ -71,8 +119,7 @@ class ContainerResources:
 
         name = config.name or f"bahram-agent-{uuid.uuid4().hex[:8]}"
 
-        cmd = [
-            "docker",
+        cmd: list[str] = [
             "create",
             "--name",
             name,
@@ -94,22 +141,12 @@ class ContainerResources:
 
         cmd.append(config.image)
 
-        proc = await asyncio.create_subprocess_exec(
-            *cmd,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-        )
-        stdout, stderr = await proc.communicate()
+        returncode, stdout, stderr = await self._run_docker(*cmd)
+        if returncode != 0:
+            raise RuntimeError(f"Failed to create container: {stderr}")
 
-        if proc.returncode == 0:
-            container_id = stdout.decode().strip()
-            self._active_containers[name] = {
-                "id": container_id,
-                "config": config,
-            }
-            return name
-        else:
-            raise RuntimeError(f"Failed to create container: {stderr.decode()}")
+        self._active_containers[name] = {"id": stdout.strip(), "config": config}
+        return name
 
     async def start_container(self, name: str) -> bool:
         """
@@ -124,15 +161,14 @@ class ContainerResources:
         Note:
             Coroutine - must be awaited.
         """
-        proc = await asyncio.create_subprocess_exec(
-            "docker",
-            "start",
-            name,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-        )
-        await proc.communicate()
-        return proc.returncode == 0
+        try:
+            returncode, _stdout, stderr = await self._run_docker("start", name)
+        except DockerUnavailableError as exc:
+            logger.warning("Cannot start container %s: %s", name, exc)
+            return False
+        if returncode != 0:
+            logger.warning("docker start %s failed: %s", name, stderr)
+        return returncode == 0
 
     async def stop_container(self, name: str, timeout: int = 10) -> bool:
         """
@@ -148,17 +184,14 @@ class ContainerResources:
         Note:
             Coroutine - must be awaited.
         """
-        proc = await asyncio.create_subprocess_exec(
-            "docker",
-            "stop",
-            "-t",
-            str(timeout),
-            name,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-        )
-        await proc.communicate()
-        return proc.returncode == 0
+        try:
+            returncode, _stdout, stderr = await self._run_docker("stop", "-t", str(timeout), name)
+        except DockerUnavailableError as exc:
+            logger.warning("Cannot stop container %s: %s", name, exc)
+            return False
+        if returncode != 0:
+            logger.warning("docker stop %s failed: %s", name, stderr)
+        return returncode == 0
 
     async def remove_container(self, name: str, force: bool = False) -> bool:
         """
@@ -174,22 +207,23 @@ class ContainerResources:
         Note:
             Coroutine - must be awaited.
         """
-        cmd = ["docker", "rm"]
+        cmd = ["rm"]
         if force:
             cmd.append("-f")
         cmd.append(name)
 
-        proc = await asyncio.create_subprocess_exec(
-            *cmd,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-        )
-        await proc.communicate()
+        try:
+            returncode, _stdout, stderr = await self._run_docker(*cmd)
+        except DockerUnavailableError as exc:
+            logger.warning("Cannot remove container %s: %s", name, exc)
+            return False
 
-        if proc.returncode == 0:
-            self._active_containers.pop(name, None)
-            return True
-        return False
+        if returncode != 0:
+            logger.warning("docker rm %s failed: %s", name, stderr)
+            return False
+
+        self._active_containers.pop(name, None)
+        return True
 
     async def exec_in_container(
         self,
@@ -206,27 +240,33 @@ class ContainerResources:
             timeout (float): timeout in seconds. Defaults to ``60.0``.
 
         Returns:
-            dict[str, Any]: a mapping of str, Any.
+            dict[str, Any]: ``stdout``, ``stderr`` and ``exit_code`` keys; an
+            ``error`` key explains the failure when docker is unavailable.
 
         Note:
             Coroutine - must be awaited.
         """
-        proc = await asyncio.create_subprocess_exec(
-            "docker",
-            "exec",
-            name,
-            "sh",
-            "-c",
-            command,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-        )
+        try:
+            proc = await asyncio.create_subprocess_exec(
+                "docker",
+                "exec",
+                name,
+                "sh",
+                "-c",
+                command,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+        except (FileNotFoundError, PermissionError) as exc:
+            return {
+                "stdout": "",
+                "stderr": "",
+                "exit_code": -1,
+                "error": f"docker CLI is not available on this host: {exc}",
+            }
 
         try:
-            stdout, stderr = await asyncio.wait_for(
-                proc.communicate(),
-                timeout=timeout,
-            )
+            stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=timeout)
             return {
                 "stdout": stdout.decode("utf-8", errors="replace"),
                 "stderr": stderr.decode("utf-8", errors="replace"),
@@ -248,25 +288,25 @@ class ContainerResources:
             name (str): name of the object.
 
         Returns:
-            dict[str, Any]: a mapping of str, Any.
+            dict[str, Any]: cpu/memory/network/block usage, or ``{"error": ...}``
+            when docker is unavailable or the container does not exist.
 
         Note:
             Coroutine - must be awaited.
         """
-        proc = await asyncio.create_subprocess_exec(
-            "docker",
-            "stats",
-            name,
-            "--no-stream",
-            "--format",
-            "{{.CPUPerc}}|{{.MemUsage}}|{{.NetIO}}|{{.BlockIO}}",
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-        )
-        stdout, _ = await proc.communicate()
+        try:
+            returncode, stdout, _stderr = await self._run_docker(
+                "stats",
+                name,
+                "--no-stream",
+                "--format",
+                "{{.CPUPerc}}|{{.MemUsage}}|{{.NetIO}}|{{.BlockIO}}",
+            )
+        except DockerUnavailableError as exc:
+            return {"error": str(exc)}
 
-        if proc.returncode == 0:
-            parts = stdout.decode().strip().split("|")
+        if returncode == 0:
+            parts = stdout.strip().split("|")
             if len(parts) >= 4:
                 return {
                     "cpu_percent": parts[0],
@@ -284,25 +324,25 @@ class ContainerResources:
             all (bool): when ``True``, enable all. Defaults to ``False``.
 
         Returns:
-            list[dict]: a sequence of dict entries (empty when there is nothing to report).
+            list[dict]: one entry per container; empty when docker is
+            unavailable or no containers exist.
 
         Note:
             Coroutine - must be awaited.
         """
-        cmd = ["docker", "ps", "--format", "{{.Names}}|{{.Image}}|{{.Status}}"]
+        cmd = ["ps", "--format", "{{.Names}}|{{.Image}}|{{.Status}}"]
         if all:
             cmd.append("-a")
 
-        proc = await asyncio.create_subprocess_exec(
-            *cmd,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-        )
-        stdout, _ = await proc.communicate()
+        try:
+            returncode, stdout, _stderr = await self._run_docker(*cmd)
+        except DockerUnavailableError as exc:
+            logger.warning("Cannot list containers: %s", exc)
+            return []
 
-        containers = []
-        if proc.returncode == 0:
-            for line in stdout.decode().strip().split("\n"):
+        containers: list[dict] = []
+        if returncode == 0:
+            for line in stdout.strip().split("\n"):
                 if line:
                     parts = line.split("|")
                     if len(parts) >= 3:

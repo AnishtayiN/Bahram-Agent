@@ -15,6 +15,7 @@ import pty
 import select
 import signal
 import struct
+import termios
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -70,7 +71,7 @@ class PTYManager:
         fcntl.fcntl(master_fd, fcntl.F_SETFL, flags | os.O_NONBLOCK)
 
         winsize = struct.pack("HHHH", 24, 80, 0, 0)
-        fcntl.ioctl(slave_fd, struct.unpack("H", b"TIOCSWINSZ")[0], winsize)
+        fcntl.ioctl(slave_fd, termios.TIOCSWINSZ, winsize)
 
         return master_fd, slave_fd
 
@@ -293,7 +294,7 @@ class TerminalTool:
             if pid == 0:
                 os.close(master_fd)
                 os.setsid()
-                fcntl.ioctl(slave_fd, struct.unpack("H", b"TIOCSCTTY")[0], 0)
+                fcntl.ioctl(slave_fd, termios.TIOCSCTTY, 0)
                 os.dup2(slave_fd, 0)
                 os.dup2(slave_fd, 1)
                 os.dup2(slave_fd, 2)
