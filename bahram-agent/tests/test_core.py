@@ -1,22 +1,17 @@
 from __future__ import annotations
 
-import asyncio
-import time
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from bahram.core.config import Config, ProviderConfig
+from bahram.core.config import Config
 from bahram.core.engine import (
     AgentEngine,
-    AgentResponse,
     Message,
     MessageRole,
     ToolCall,
     ToolExecutor,
     ToolResult,
-    Trajectory,
-    TrajectoryStep,
 )
 
 

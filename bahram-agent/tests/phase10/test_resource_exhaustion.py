@@ -8,8 +8,6 @@ from __future__ import annotations
 import asyncio
 from unittest.mock import MagicMock
 
-import pytest
-
 from bahram.autonomy.budget import BudgetConfig, BudgetManager
 from bahram.core.engine import AgentEngine, AgentResponse, RunState, ToolCall
 

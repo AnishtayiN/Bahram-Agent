@@ -19,9 +19,8 @@ import asyncio
 import json
 import sys
 import time
-import uuid
 from collections.abc import AsyncIterator
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -37,10 +36,7 @@ if str(_PROJECT_ROOT) not in sys.path:
 
 from bahram.core.engine import (
     AgentResponse,
-    Message,
-    MessageRole,
     RunState,
-    ToolCall,
 )
 
 
@@ -175,7 +171,7 @@ async def run_demo() -> list[str]:
     )
 
     # -- 5. PLAN CREATED ----------------------------------------------------
-    from bahram.autonomy.plan import Plan, PlanStatus, PlanStep, StepStatus
+    from bahram.autonomy.plan import PlanStatus, StepStatus
     from bahram.autonomy.planner import Planner
 
     planner = Planner(provider=None)  # None -> deterministic fallback path

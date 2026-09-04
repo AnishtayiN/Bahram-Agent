@@ -4,21 +4,18 @@ import asyncio
 import os
 import tempfile
 import time
-import uuid
 
 import pytest
 
 from bahram.autonomy.budget import BudgetConfig, BudgetManager
-from bahram.autonomy.subagent import SubagentEngine, SubagentTask
+from bahram.autonomy.subagent import SubagentEngine
 from bahram.core.engine import (
     AgentEngine,
     AgentResponse,
     Message,
     MessageRole,
-    RunConfig,
     ToolCall,
     ToolExecutor,
-    ToolResult,
 )
 from bahram.core.smart_context import SmartContextManager
 from bahram.platforms.circuit_breaker import CircuitBreaker

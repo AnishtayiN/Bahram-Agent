@@ -1,13 +1,11 @@
 from __future__ import annotations
 
 import base64
-import hashlib
 import json
 import logging
 import os
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -68,7 +66,6 @@ class SecretsManager:
             for k, s in self._secrets.items()
         })
 
-        import time
         encrypted = bytes(b ^ self._key[i % len(self._key)] for i, b in enumerate(data.encode()))
         secrets_file.write_text(base64.b64encode(encrypted).decode())
         secrets_file.chmod(0o600)

@@ -5,8 +5,6 @@ results cannot override security policy or grant unauthorized capabilities.
 """
 from __future__ import annotations
 
-import pytest
-
 from bahram.security.approval import ApprovalConfig, ApprovalMode, ApprovalSystem
 
 

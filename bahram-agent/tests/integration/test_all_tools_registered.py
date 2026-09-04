@@ -1,8 +1,5 @@
 from __future__ import annotations
 
-import inspect
-from unittest.mock import patch
-
 import pytest
 
 from bahram.core.engine import AgentEngine, ToolExecutor
@@ -46,16 +43,6 @@ def _make_config(disabled: list[str] | None = None):
     return cfg
 
 
-def _patch_write_tool_init():
-    """Patch WriteTool.__init__ to accept config kwarg (it's missing in the codebase)."""
-    original_init = WriteTool.__init__ if hasattr(WriteTool, '__init__') else None
-
-    def patched_init(self, config=None):
-        pass
-
-    return patch.object(WriteTool, '__init__', patched_init)
-
-
 class TestToolDiscovery:
     def test_all_tool_classes_discoverable(self):
         assert len(ALL_TOOL_CLASSES) == 11, f"Expected 11 tools, got {len(ALL_TOOL_CLASSES)}"
@@ -78,14 +65,14 @@ class TestToolDiscovery:
     @pytest.mark.parametrize("name", list(ALL_TOOL_CLASSES.keys()))
     def test_tool_has_description(self, name: str):
         cls = ALL_TOOL_CLASSES[name]
-        instance = cls() if cls not in (BashTool, WebFetchTool, WebSearchTool) else cls(config=None)
+        instance = cls(config=None)
         desc = instance.description
         assert desc and len(desc) > 5, f"{name} has empty or too-short description"
 
     @pytest.mark.parametrize("name", list(ALL_TOOL_CLASSES.keys()))
     def test_tool_schema_has_function_key(self, name: str):
         cls = ALL_TOOL_CLASSES[name]
-        instance = cls() if cls not in (BashTool, WebFetchTool, WebSearchTool) else cls(config=None)
+        instance = cls(config=None)
         s = instance.schema()
         assert "type" in s and s["type"] == "function", f"{name} schema missing type=function"
         assert "function" in s, f"{name} schema missing function key"
@@ -96,16 +83,14 @@ class TestToolDiscovery:
 class TestInitToolsRegistration:
     async def test_init_tools_registers_all_expected_tools(self, engine: AgentEngine):
         from bahram.tools import init_tools
-        with _patch_write_tool_init():
-            await init_tools(engine, _make_config())
+        await init_tools(engine, _make_config(), strict=True)
 
         for name in INIT_TOOLS_NAMES:
             assert name in engine.tools, f"Tool '{name}' not registered by init_tools()"
 
     async def test_no_missing_tools(self, engine: AgentEngine):
         from bahram.tools import init_tools
-        with _patch_write_tool_init():
-            await init_tools(engine, _make_config())
+        await init_tools(engine, _make_config(), strict=True)
 
         registered = set(engine.tools.keys())
         missing = INIT_TOOLS_NAMES - registered
@@ -116,8 +101,7 @@ class TestInitToolsRegistration:
 
     async def test_disabled_tools_not_registered(self, engine: AgentEngine):
         from bahram.tools import init_tools
-        with _patch_write_tool_init():
-            await init_tools(engine, _make_config(disabled=["bash", "git"]))
+        await init_tools(engine, _make_config(disabled=["bash", "git"]), strict=True)
 
         assert "bash" not in engine.tools
         assert "git" not in engine.tools
@@ -126,8 +110,7 @@ class TestInitToolsRegistration:
 
     async def test_disabled_tools_actually_excluded(self, engine: AgentEngine):
         from bahram.tools import init_tools
-        with _patch_write_tool_init():
-            await init_tools(engine, _make_config(disabled=["bash", "read", "edit"]))
+        await init_tools(engine, _make_config(disabled=["bash", "read", "edit"]), strict=True)
 
         assert "bash" not in engine.tools
         assert "read" not in engine.tools
@@ -138,8 +121,7 @@ class TestInitToolsRegistration:
 class TestToolExecutorIsOnlyExecutionPath:
     async def test_engine_creates_tool_executor(self, engine: AgentEngine):
         from bahram.tools import init_tools
-        with _patch_write_tool_init():
-            await init_tools(engine, _make_config())
+        await init_tools(engine, _make_config(), strict=True)
 
         assert engine._tool_executor is not None, "AgentEngine._tool_executor was not created"
         assert isinstance(engine._tool_executor, ToolExecutor), (
@@ -148,8 +130,7 @@ class TestToolExecutorIsOnlyExecutionPath:
 
     async def test_tool_executor_has_all_tools(self, engine: AgentEngine):
         from bahram.tools import init_tools
-        with _patch_write_tool_init():
-            await init_tools(engine, _make_config())
+        await init_tools(engine, _make_config(), strict=True)
 
         executor_tools = set(engine._tool_executor.tools.keys())
         engine_tools = set(engine.tools.keys())

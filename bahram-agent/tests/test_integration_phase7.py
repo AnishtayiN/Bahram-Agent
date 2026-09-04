@@ -1,15 +1,12 @@
 from __future__ import annotations
 
-import asyncio
 import json
 import tempfile
-import time
-from typing import Any
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
-from bahram.core.engine import AgentEngine, AgentResponse, Message, MessageRole, RunConfig
+from bahram.core.engine import AgentEngine, AgentResponse, Message, MessageRole
 from bahram.providers.fallback import FallbackProvider
 
 

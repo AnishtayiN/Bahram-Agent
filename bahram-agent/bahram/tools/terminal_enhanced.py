@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import fcntl
 import logging
 import os
@@ -8,8 +7,7 @@ import pty
 import select
 import struct
 import termios
-from dataclasses import dataclass, field
-from typing import Any, Optional
+from dataclasses import dataclass
 
 logger = logging.getLogger(__name__)
 

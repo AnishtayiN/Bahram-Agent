@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from bahram.autonomy.plan import Plan, PlanStatus, PlanStep, StepStatus
+from bahram.autonomy.plan import Plan, PlanStatus, StepStatus
 
 logger = logging.getLogger(__name__)
 

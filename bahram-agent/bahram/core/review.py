@@ -1,13 +1,12 @@
 from __future__ import annotations
 
-import asyncio
 import json
 import logging
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 

@@ -3,11 +3,10 @@ from __future__ import annotations
 import hashlib
 import hmac
 import json
-import os
 import time
 import uuid
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import Any
 
 import pytest
 
@@ -367,12 +366,7 @@ class TestTelegramApprovalManager:
 
 _NO_TELEGRAM = True
 try:
-    from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
-    from telegram.ext import (
-        ApplicationBuilder,
-        CallbackQueryHandler,
-        ContextTypes,
-    )
+    from telegram import InlineKeyboardButton, InlineKeyboardMarkup
     _NO_TELEGRAM = False
 except ImportError:
     pass

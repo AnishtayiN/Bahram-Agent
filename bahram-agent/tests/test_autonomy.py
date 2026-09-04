@@ -2,24 +2,22 @@ from __future__ import annotations
 
 import asyncio
 import json
-import os
 import time
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from bahram.autonomy.budget import BudgetConfig, BudgetManager, BudgetUsage
-from bahram.autonomy.events import Event, EventTracker
-from bahram.autonomy.executor import PlanExecutor
-from bahram.autonomy.jobs import PRIORITY_ORDER, Job, JobEngine, JobPriority, JobStatus
+from bahram.autonomy.budget import BudgetConfig, BudgetManager
+from bahram.autonomy.events import EventTracker
+from bahram.autonomy.jobs import PRIORITY_ORDER, JobEngine, JobPriority, JobStatus
 from bahram.autonomy.learning import LearningEngine, Lesson, SkillCandidate
 from bahram.autonomy.plan import Plan, PlanStatus, PlanStep, StepStatus
 from bahram.autonomy.planner import Planner
-from bahram.autonomy.recovery import CheckpointData, RecoveryManager
-from bahram.autonomy.replanner import Deviation, Replanner, ReplanningStrategy
+from bahram.autonomy.recovery import RecoveryManager
+from bahram.autonomy.replanner import Replanner, ReplanningStrategy
 from bahram.autonomy.skill_lifecycle import SkillLifecycle
 from bahram.autonomy.subagent import SubagentEngine, SubagentResult
-from bahram.autonomy.verification import VerificationEngine, VerificationResult, VerificationType
+from bahram.autonomy.verification import VerificationEngine, VerificationResult
 
 # ── Plan DAG Tests ──────────────────────────────────────────
 
@@ -1020,7 +1018,7 @@ class TestJobEngine:
 class TestSubagentEngine:
     @pytest.mark.asyncio
     async def test_spawn_subagent_with_mock_provider(self):
-        from bahram.core.engine import AgentEngine, Message, MessageRole
+        from bahram.core.engine import AgentEngine
 
         engine = AgentEngine()
 

@@ -4,9 +4,7 @@ Tests that SmartContext actually affects model requests.
 """
 from __future__ import annotations
 
-import pytest
-
-from bahram.core.engine import Message, MessageRole
+from bahram.core.engine import MessageRole
 from bahram.core.smart_context import SmartContextManager
 
 

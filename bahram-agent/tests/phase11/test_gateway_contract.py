@@ -8,11 +8,8 @@ from __future__ import annotations
 import tempfile
 from pathlib import Path
 
-import pytest
-
-from bahram.core.agent import Agent, Session
+from bahram.core.agent import Agent
 from bahram.core.config import Config
-from bahram.core.engine import Message, MessageRole
 
 
 class FakeGateway:

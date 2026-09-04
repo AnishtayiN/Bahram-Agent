@@ -4,7 +4,7 @@ import importlib.util
 import logging
 from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from bahram.plugins.base import BasePlugin
 
@@ -18,7 +18,6 @@ class PluginManager:
         self._hooks: dict[str, list[Callable]] = {}
 
     async def load_plugins(self) -> None:
-        import os
 
         for plugin_dir in self.plugin_dirs:
             dir_path = Path(plugin_dir).expanduser()

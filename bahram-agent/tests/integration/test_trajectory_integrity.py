@@ -1,17 +1,14 @@
 """Tests for trajectory integrity and causal ordering of events."""
 from __future__ import annotations
 
-import asyncio
 import time
-import uuid
 
 import pytest
 
 from bahram.autonomy.events import Event, EventTracker
-from bahram.autonomy.jobs import JobEngine, JobStatus
+from bahram.autonomy.jobs import JobEngine
 from bahram.autonomy.learning import LearningEngine, SkillCandidate
 from bahram.autonomy.skill_lifecycle import SkillLifecycle
-from bahram.autonomy.verification import VerificationEngine, VerificationResult
 from bahram.core.engine import (
     AgentEngine,
     Message,

@@ -90,7 +90,6 @@ class ProcessListTool(BaseTool):
         }
 
     async def execute(self, **kwargs: Any) -> str:
-        import os
         pid = kwargs.get("pid")
         proc_filter = kwargs.get("filter", "")
 

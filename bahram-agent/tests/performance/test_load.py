@@ -7,7 +7,6 @@ import tempfile
 import time
 import uuid
 from dataclasses import dataclass, field
-from typing import Any
 
 import pytest
 
@@ -18,7 +17,6 @@ from bahram.core.engine import (
     AgentResponse,
     Message,
     MessageRole,
-    ToolCall,
 )
 from bahram.memory.providers import LocalMemoryProvider, MemoryEntry
 

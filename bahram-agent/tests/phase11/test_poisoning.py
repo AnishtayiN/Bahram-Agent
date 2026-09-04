@@ -8,8 +8,6 @@ from __future__ import annotations
 import asyncio
 import tempfile
 
-import pytest
-
 from bahram.autonomy.learning import LearningEngine
 from bahram.autonomy.skill_lifecycle import SkillLifecycle
 from bahram.memory.semantic import SemanticMemory

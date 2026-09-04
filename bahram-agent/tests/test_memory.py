@@ -1,10 +1,6 @@
 from __future__ import annotations
 
-import time
-
-import pytest
-
-from bahram.memory.semantic import MemoryResult, SemanticMemory
+from bahram.memory.semantic import SemanticMemory
 
 
 class TestSemanticMemory:

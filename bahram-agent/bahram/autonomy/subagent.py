@@ -7,7 +7,7 @@ import uuid
 from dataclasses import dataclass, field
 from typing import Any, Protocol
 
-from bahram.core.engine import AgentEngine, AgentResponse, Message, MessageRole, RunConfig
+from bahram.core.engine import AgentEngine, Message, MessageRole, RunConfig
 
 logger = logging.getLogger(__name__)
 

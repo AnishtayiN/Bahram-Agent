@@ -5,8 +5,6 @@ or applied to wrong users/runs/tools/arguments.
 """
 from __future__ import annotations
 
-import pytest
-
 from bahram.security.approval import ApprovalConfig, ApprovalMode, ApprovalSystem
 
 

@@ -4,8 +4,6 @@ Tests that cost estimation works correctly for known and unknown models.
 """
 from __future__ import annotations
 
-import pytest
-
 from bahram.autonomy.cost import MODEL_PRICING, estimate_cost, get_pricing_info
 
 

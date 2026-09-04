@@ -6,16 +6,12 @@ Uses real subprocess spawning and SIGTERM signals.
 from __future__ import annotations
 
 import asyncio
-import json
-import os
 import signal
 import subprocess
 import sys
 import tempfile
 import time
 from pathlib import Path
-
-import pytest
 
 from bahram.autonomy.jobs import JobEngine, JobStatus
 
@@ -144,7 +140,7 @@ class TestCrashInjection:
 
     def test_recovery_manager_checkpoint_survives_restart(self):
         """RecoveryManager checkpoints should persist across instances."""
-        from bahram.autonomy.plan import Plan, PlanStatus, PlanStep, StepStatus
+        from bahram.autonomy.plan import Plan, PlanStep, StepStatus
         from bahram.autonomy.recovery import RecoveryManager
 
         tmpdir = self._make_tmpdir()

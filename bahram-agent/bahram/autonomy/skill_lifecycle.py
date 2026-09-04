@@ -1,12 +1,9 @@
 from __future__ import annotations
 
 import logging
-import time
-import uuid
-from dataclasses import dataclass, field
 from typing import Any, Protocol
 
-from bahram.autonomy.learning import LearningEngine, Lesson, SkillCandidate
+from bahram.autonomy.learning import LearningEngine, SkillCandidate
 
 logger = logging.getLogger(__name__)
 

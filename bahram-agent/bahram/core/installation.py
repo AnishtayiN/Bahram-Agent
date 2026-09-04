@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import logging
 import platform
-from pathlib import Path
 
 logger = logging.getLogger(__name__)
 

@@ -6,11 +6,10 @@ from __future__ import annotations
 
 import asyncio
 import tempfile
-from pathlib import Path
 
 import pytest
 
-from bahram.autonomy.jobs import Job, JobEngine, JobPriority, JobStatus
+from bahram.autonomy.jobs import JobEngine, JobPriority, JobStatus
 
 
 class TestJobRecovery:

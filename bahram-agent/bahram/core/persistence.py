@@ -9,7 +9,7 @@ import uuid
 from pathlib import Path
 from typing import Any
 
-from bahram.core.engine import Message, MessageRole, Trajectory, TrajectoryStep
+from bahram.core.engine import Message, MessageRole, Trajectory
 
 logger = logging.getLogger(__name__)
 

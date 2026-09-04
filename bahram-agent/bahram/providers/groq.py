@@ -2,11 +2,10 @@ from __future__ import annotations
 
 import json
 import logging
-import time
 from collections.abc import AsyncIterator
 from typing import Any
 
-from bahram.core.engine import AgentResponse, ToolCall
+from bahram.core.engine import AgentResponse
 from bahram.providers.base import BaseProvider
 
 logger = logging.getLogger(__name__)

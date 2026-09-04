@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import tempfile
 import time
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -15,7 +15,6 @@ from bahram.core.engine import (
     RunState,
     ToolCall,
     ToolExecutor,
-    ToolResult,
     Trajectory,
 )
 from bahram.core.persistence import SessionStore

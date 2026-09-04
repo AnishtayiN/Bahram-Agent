@@ -1,15 +1,12 @@
 from __future__ import annotations
 
-import asyncio
-import time
-from typing import Any
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 from bahram.core.agent import Agent
-from bahram.core.config import AgentConfig, Config, MemoryConfig, ProviderConfig, ToolsConfig
-from bahram.core.context import Context, ContextWindow
+from bahram.core.config import Config
+from bahram.core.context import ContextWindow
 from bahram.core.engine import (
     AgentEngine,
     AgentResponse,
@@ -17,12 +14,8 @@ from bahram.core.engine import (
     MessageRole,
     ToolCall,
     ToolExecutor,
-    ToolResult,
-    Trajectory,
-    TrajectoryStep,
 )
 from bahram.core.persistence import SessionStore
-from bahram.security.approval import ApprovalConfig, ApprovalSystem
 
 
 class MockProvider:

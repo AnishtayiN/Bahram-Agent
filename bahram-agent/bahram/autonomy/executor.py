@@ -3,11 +3,11 @@ from __future__ import annotations
 import logging
 from typing import Any, Protocol
 
-from bahram.autonomy.budget import BudgetConfig, BudgetManager
+from bahram.autonomy.budget import BudgetManager
 from bahram.autonomy.events import EventTracker
 from bahram.autonomy.plan import Plan, PlanStatus, PlanStep, StepStatus
 from bahram.autonomy.replanner import Replanner
-from bahram.autonomy.verification import VerificationEngine, VerificationResult
+from bahram.autonomy.verification import VerificationEngine
 
 logger = logging.getLogger(__name__)
 

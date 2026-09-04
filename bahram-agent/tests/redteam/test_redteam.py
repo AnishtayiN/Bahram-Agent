@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import os
 import tempfile
 import uuid
@@ -15,12 +14,10 @@ from bahram.core.engine import (
     MessageRole,
     ToolCall,
     ToolExecutor,
-    ToolResult,
 )
-from bahram.core.smart_context import SmartContextManager
 from bahram.memory.semantic import SemanticMemory
 from bahram.security.approval import ApprovalConfig, ApprovalMode, ApprovalSystem
-from bahram.security.protection import PromptInjectionDetector, SSRFProtector
+from bahram.security.protection import PromptInjectionDetector
 from bahram.tools.bash import BashTool
 
 # ---------------------------------------------------------------------------

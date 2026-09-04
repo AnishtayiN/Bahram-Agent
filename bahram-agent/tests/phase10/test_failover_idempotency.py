@@ -5,9 +5,7 @@ already-completed tool calls are not duplicated.
 """
 from __future__ import annotations
 
-import asyncio
 import json
-from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -19,7 +17,6 @@ from bahram.core.engine import (
     MessageRole,
     RunState,
     ToolCall,
-    ToolResult,
 )
 from bahram.providers.fallback import FallbackProvider
 

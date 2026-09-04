@@ -1,9 +1,7 @@
 from __future__ import annotations
 
 import asyncio
-import sys
-from pathlib import Path
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from bahram.core.agent import Agent
@@ -89,8 +87,6 @@ if HAS_CLI:
         list_skills: bool = typer.Option(False, "--list", "-l", help="List available skills"),
         skill_name: str | None = typer.Argument(None, help="Skill name"),
     ) -> None:
-        from bahram.core.config import Config
-        from bahram.skills.manager import SkillManager
 
 
         if list_skills:
@@ -176,7 +172,6 @@ async def _chat_async(
     model: str,
     session: str | None,
 ) -> None:
-    from bahram.core.engine import AgentResponse
 
     await agent.start()
 

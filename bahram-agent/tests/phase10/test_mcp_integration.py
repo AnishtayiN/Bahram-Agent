@@ -7,11 +7,10 @@ from __future__ import annotations
 
 import asyncio
 import json
-from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from bahram.core.engine import AgentEngine, ToolCall, ToolExecutor, ToolResult
+from bahram.core.engine import AgentEngine, ToolCall, ToolExecutor
 
 
 class FakeMCPTool:

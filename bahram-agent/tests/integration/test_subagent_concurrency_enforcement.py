@@ -8,11 +8,11 @@ from __future__ import annotations
 
 import asyncio
 import time
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import MagicMock
 
 import pytest
 
-from bahram.autonomy.subagent import SubagentEngine, SubagentResult
+from bahram.autonomy.subagent import SubagentEngine
 from bahram.core.engine import AgentResponse, RunState
 
 # ── Helpers ────────────────────────────────────────────────

@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import time
 from dataclasses import dataclass, field
-from typing import Any, Protocol
+from typing import Any
 
 from bahram.autonomy.plan import Plan, PlanStatus, PlanStep, StepStatus
 from bahram.autonomy.planner import Planner

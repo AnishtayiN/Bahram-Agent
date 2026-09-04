@@ -41,9 +41,10 @@ class ExecuteCodeTool(BaseTool):
             "required": ["code"],
         }
 
-    def __init__(self) -> None:
-        self._timeout: float = 30.0
-        self._max_output: int = 10000
+    def __init__(self, config: Any = None) -> None:
+        super().__init__(config)
+        self._timeout: float = float(getattr(config, "code_timeout", 30) or 30)
+        self._max_output: int = int(getattr(config, "code_max_output", 10000) or 10000)
 
     async def execute(self, **kwargs: Any) -> str:
         code = kwargs.get("code", "")

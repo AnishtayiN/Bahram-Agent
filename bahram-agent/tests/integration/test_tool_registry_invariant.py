@@ -4,14 +4,11 @@ import ast
 import asyncio
 import inspect
 from pathlib import Path
-from unittest.mock import patch
-
 import pytest
 
 from bahram.core.engine import AgentEngine, ToolCall, ToolExecutor, ToolResult
 from bahram.tools import init_tools
 from bahram.tools.bash import BashTool
-from bahram.tools.file import WriteTool
 
 
 def _make_tools_config(disabled: list[str] | None = None):
@@ -30,28 +27,17 @@ def _make_config(disabled: list[str] | None = None):
     return cfg
 
 
-def _patch_write_tool_init():
-    original_init = WriteTool.__init__ if hasattr(WriteTool, '__init__') else None
-
-    def patched_init(self, config=None):
-        pass
-
-    return patch.object(WriteTool, '__init__', patched_init)
-
-
 @pytest.fixture
 async def engine_with_tools():
     engine = AgentEngine()
-    with _patch_write_tool_init():
-        await init_tools(engine, _make_config())
+    await init_tools(engine, _make_config(), strict=True)
     return engine
 
 
 @pytest.fixture
 async def executor_with_tools():
     engine = AgentEngine()
-    with _patch_write_tool_init():
-        await init_tools(engine, _make_config())
+    await init_tools(engine, _make_config(), strict=True)
     return engine._tool_executor
 
 

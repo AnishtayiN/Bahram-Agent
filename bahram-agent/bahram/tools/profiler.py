@@ -6,8 +6,7 @@ import logging
 import pstats
 import time
 from collections.abc import Callable
-from dataclasses import dataclass, field
-from typing import Any, Optional
+from dataclasses import dataclass
 
 logger = logging.getLogger(__name__)
 

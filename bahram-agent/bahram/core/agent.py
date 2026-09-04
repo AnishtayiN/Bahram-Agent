@@ -1,16 +1,15 @@
 from __future__ import annotations
 
-import asyncio
 import logging
 import time
 import uuid
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import Any
 
 from bahram.core.compressor import ContextCompressor
 from bahram.core.config import Config
-from bahram.core.context import Context, ContextWindow
+from bahram.core.context import Context
 from bahram.core.engine import AgentEngine, AgentResponse, Message, MessageRole, ToolCall
 from bahram.core.persistence import SessionStore
 from bahram.core.smart_context import SmartContextManager
