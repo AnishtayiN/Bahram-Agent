@@ -49,10 +49,7 @@ def fake_docker(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     bin_dir.mkdir()
     script = bin_dir / "docker"
     script.write_text(
-        "#!/bin/sh\n"
-        'echo "stdout:$*"\n'
-        'echo "stderr:$*" >&2\n'
-        'exit "${FAKE_DOCKER_RC:-0}"\n'
+        '#!/bin/sh\necho "stdout:$*"\necho "stderr:$*" >&2\nexit "${FAKE_DOCKER_RC:-0}"\n'
     )
     script.chmod(script.stat().st_mode | stat.S_IEXEC | stat.S_IXGRP | stat.S_IXOTH)
     monkeypatch.setenv("PATH", f"{bin_dir}{os.pathsep}{os.environ['PATH']}")
@@ -128,16 +125,16 @@ class TestComplexityAnalyzer:
 
         src = tmp_path / "m.py"
         src.write_text("def a():\n    if True:\n        return 1\n")
-        report = a.get_report({"file": str(src), "metrics": {"cyclomatic": 3},
-                               "overall_score": 100, "rating": "A"})
+        report = a.get_report(
+            {"file": str(src), "metrics": {"cyclomatic": 3}, "overall_score": 100, "rating": "A"}
+        )
         assert "Code Complexity Report" in report
         assert "✅ Good" in report
 
     def test_get_report_marks_critical_metric(self):
         a = ComplexityAnalyzer()
         report = a.get_report(
-            {"file": "f", "metrics": {"cyclomatic": 999}, "overall_score": 30,
-             "rating": "D"}
+            {"file": "f", "metrics": {"cyclomatic": 999}, "overall_score": 30, "rating": "D"}
         )
         assert "🔴 Critical" in report
 
@@ -286,9 +283,7 @@ class TestDatabaseTool:
         tool = DatabaseTool(DBConfig(db_type="oracle", database="x"))
         assert await tool.connect() is False
 
-    async def test_missing_driver_degrades_to_false(
-        self, monkeypatch: pytest.MonkeyPatch
-    ):
+    async def test_missing_driver_degrades_to_false(self, monkeypatch: pytest.MonkeyPatch):
         import builtins
 
         real_import = builtins.__import__
@@ -367,9 +362,7 @@ class TestDelegationTool:
 # ---------------------------------------------------------------------------
 class TestDependencyAnalyzer:
     async def test_reads_requirements_txt(self, tmp_path: Path):
-        (tmp_path / "requirements.txt").write_text(
-            "# comment\nfastapi>=0.104.0\nrich\n\n"
-        )
+        (tmp_path / "requirements.txt").write_text("# comment\nfastapi>=0.104.0\nrich\n\n")
         deps = await DependencyAnalyzer(str(tmp_path)).analyze()
         names = {d.name for d in deps["python"]}
         assert names == {"fastapi", "rich"}
@@ -388,9 +381,7 @@ class TestDependencyAnalyzer:
 
     async def test_reads_package_json(self, tmp_path: Path):
         (tmp_path / "package.json").write_text(
-            json.dumps(
-                {"dependencies": {"react": "^18"}, "devDependencies": {"vitest": "^1"}}
-            )
+            json.dumps({"dependencies": {"react": "^18"}, "devDependencies": {"vitest": "^1"}})
         )
         deps = await DependencyAnalyzer(str(tmp_path)).analyze()
         sources = {d.source for d in deps["javascript"]}
@@ -427,9 +418,7 @@ class TestDeploymentTool:
         out = await tool.deploy("svc")
         assert "Unsupported target" in out["error"]
 
-    async def test_cloud_targets_are_configured_without_executing(
-        self, fake_docker: Path
-    ):
+    async def test_cloud_targets_are_configured_without_executing(self, fake_docker: Path):
         tool = DeploymentTool()
         for provider in ("aws", "gcp", "azure"):
             tool.add_config(
@@ -508,9 +497,7 @@ class TestDocumentationGenerator:
         pkg.mkdir()
         out = tmp_path / "CHANGELOG.md"
         assert (
-            await DocumentationGenerator().generate(
-                str(pkg), str(out), doc_type="changelog"
-            )
+            await DocumentationGenerator().generate(str(pkg), str(out), doc_type="changelog")
             is True
         )
         assert out.exists()
@@ -668,7 +655,5 @@ class TestSmartFormatter:
         fmt = SmartFormatter()
         assert fmt.get_rules("python")[0]["name"] == "trailing_whitespace"
 
-        fmt.add_rule(
-            FormatRule(name="tabs", language="go", pattern="\t", replacement="    ")
-        )
+        fmt.add_rule(FormatRule(name="tabs", language="go", pattern="\t", replacement="    "))
         assert "tabs" in [r["name"] for r in fmt.get_rules("go")]
