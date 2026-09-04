@@ -149,16 +149,18 @@ class JobEngine:
         Initialise a JobEngine instance.
 
         Args:
-            data_dir (str): directory that holds the on-disk state. Defaults to ``'data/jobs'``.
+            data_dir (str | None): directory that holds the on-disk state, or
+            ``None`` to keep jobs in memory only. Defaults to ``'data/jobs'``.
             max_concurrent (int): numeric value for max concurrent. Defaults to ``3``.
             event_tracker (Any): event tracker. Defaults to ``None``.
         """
-        self._data_dir = Path(data_dir)
-        try:
-            self._data_dir.mkdir(parents=True, exist_ok=True)
-        except OSError as e:
-            logger.warning(f"Cannot create job data dir {data_dir}: {e}")
-        self._db_path = self._data_dir / "jobs.db"
+        self._data_dir = Path(data_dir) if data_dir else None
+        if self._data_dir is not None:
+            try:
+                self._data_dir.mkdir(parents=True, exist_ok=True)
+            except OSError as e:
+                logger.warning(f"Cannot create job data dir {data_dir}: {e}")
+        self._db_path = self._data_dir / "jobs.db" if self._data_dir else None
         self._local = threading.local()
         self._memory_mode = False
         self._memory_conn: sqlite3.Connection | None = None
@@ -201,6 +203,8 @@ class JobEngine:
         return self._local.conn
 
     def _init_db(self) -> None:
+        if self._db_path is None:
+            self._memory_mode = True
         conn = self._get_conn()
         conn.executescript("""
             CREATE TABLE IF NOT EXISTS jobs (

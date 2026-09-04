@@ -511,6 +511,10 @@ class AgentEngine:
 
     def _persist_trajectory(self, trajectory: Trajectory) -> None:
         trajectory_dir = getattr(self, "_trajectory_dir", "data/trajectories")
+        # ``None`` means the agent was configured for a fully in-memory run and
+        # must not touch the filesystem.
+        if trajectory_dir is None:
+            return
         try:
             os.makedirs(trajectory_dir, exist_ok=True)
             path = os.path.join(trajectory_dir, f"{trajectory.run_id}.json")

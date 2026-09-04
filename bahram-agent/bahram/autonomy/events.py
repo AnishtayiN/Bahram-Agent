@@ -75,21 +75,25 @@ class EventTracker:
     Event tracker.
     """
 
-    def __init__(self, data_dir: str = "data/events") -> None:
-        """
-        Initialise a EventTracker instance.
+    def __init__(self, data_dir: str | None = "data/events") -> None:
+        """Initialise a EventTracker instance.
 
         Args:
-            data_dir (str): directory that holds the on-disk state. Defaults to ``'data/events'``.
+            data_dir (str | None): directory that holds the on-disk state, or
+                ``None`` to keep events in memory only. Defaults to
+                ``'data/events'``.
         """
-        self._data_dir = Path(data_dir)
-        self._data_dir.mkdir(parents=True, exist_ok=True)
-        self._events_file = self._data_dir / "events.jsonl"
+        self._data_dir = Path(data_dir) if data_dir else None
+        self._events_file = self._data_dir / "events.jsonl" if self._data_dir else None
+        if self._data_dir is not None:
+            self._data_dir.mkdir(parents=True, exist_ok=True)
         self._events: list[Event] = []
         self._load_events()
 
     def _append_event(self, event: Event) -> None:
         self._events.append(event)
+        if self._events_file is None:
+            return
         try:
             with open(self._events_file, "a") as f:
                 f.write(json.dumps(event.to_dict(), default=str) + "\n")
@@ -98,7 +102,7 @@ class EventTracker:
 
     def _load_events(self) -> None:
         """Load events from JSONL file on startup."""
-        if not self._events_file.exists():
+        if self._events_file is None or not self._events_file.exists():
             return
         try:
             with open(self._events_file) as f:

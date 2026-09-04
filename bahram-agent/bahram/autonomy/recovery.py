@@ -58,13 +58,18 @@ class RecoveryManager:
         Args:
             data_dir (str): directory that holds the on-disk state. Defaults to ``'data/recovery'``.
         """
-        self._data_dir = Path(data_dir)
-        self._data_dir.mkdir(parents=True, exist_ok=True)
-        self._checkpoints_file = self._data_dir / "recovery_checkpoints.json"
+        self._data_dir = Path(data_dir) if data_dir else None
+        if self._data_dir is not None:
+            self._data_dir.mkdir(parents=True, exist_ok=True)
+        self._checkpoints_file = (
+            self._data_dir / "recovery_checkpoints.json" if self._data_dir else None
+        )
         self._checkpoints: dict[str, CheckpointData] = {}
         self._load()
 
     def _load(self) -> None:
+        if self._checkpoints_file is None:
+            return
         if self._checkpoints_file.exists():
             try:
                 with open(self._checkpoints_file) as f:
@@ -85,6 +90,8 @@ class RecoveryManager:
                 logger.warning(f"Failed to load recovery checkpoints: {e}")
 
     def _save(self) -> None:
+        if self._checkpoints_file is None:
+            return
         try:
             data = {}
             for run_id, cp in self._checkpoints.items():

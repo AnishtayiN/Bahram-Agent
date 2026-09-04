@@ -62,7 +62,10 @@ class SkillManager:
             return
 
         module = importlib.util.module_from_spec(spec)
-        await spec.loader.exec_module(module)
+        # exec_module is synchronous - awaiting its None return raised
+        # "object NoneType can't be used in 'await' expression", so not a
+        # single skill was ever loaded.
+        spec.loader.exec_module(module)
 
         for attr_name in dir(module):
             attr = getattr(module, attr_name)

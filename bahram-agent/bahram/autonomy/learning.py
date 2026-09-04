@@ -175,13 +175,16 @@ class LearningEngine:
         Args:
             data_dir (str): directory that holds the on-disk state. Defaults to ``'data/learning'``.
         """
-        self._data_dir = Path(data_dir)
-        self._data_dir.mkdir(parents=True, exist_ok=True)
+        self._data_dir = Path(data_dir) if data_dir else None
+        if self._data_dir is not None:
+            self._data_dir.mkdir(parents=True, exist_ok=True)
         self._lessons: dict[str, Lesson] = {}
         self._skills: dict[str, SkillCandidate] = {}
         self._load()
 
     def _load(self) -> None:
+        if self._data_dir is None:
+            return
         lessons_file = self._data_dir / "lessons.json"
         skills_file = self._data_dir / "skill_candidates.json"
 
@@ -206,6 +209,8 @@ class LearningEngine:
                 logger.warning(f"Failed to load skill candidates: {e}")
 
     def _save(self) -> None:
+        if self._data_dir is None:
+            return
         try:
             lessons_file = self._data_dir / "lessons.json"
             with open(lessons_file, "w") as f:

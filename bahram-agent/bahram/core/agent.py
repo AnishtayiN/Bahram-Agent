@@ -62,6 +62,10 @@ class Agent:
             self.config = Config.from_file("config/config.yaml")
 
         self.engine = AgentEngine(self.config)
+        # Propagate "run entirely in memory" to the trajectory recorder, which
+        # otherwise always writes JSON files under data/trajectories.
+        if self.config.memory.database == ":memory:":
+            self.engine._trajectory_dir = None
         self.context = Context(max_turns=self.config.memory.max_context_turns)
         max_ctx_tokens = getattr(self.config.memory, "max_context_tokens", 8192)
         self.smart_context = SmartContextManager(max_tokens=max_ctx_tokens)
@@ -130,11 +134,19 @@ class Agent:
         from bahram.autonomy.subagent import SubagentEngine
         from bahram.autonomy.verification import VerificationEngine
 
-        self._event_tracker = EventTracker()
+        # When the memory database is ":memory:" the whole agent must run
+        # without touching the filesystem, so every autonomy subsystem is put
+        # in ephemeral mode as well.
+        ephemeral = self.config.memory.database == ":memory:"
+
+        def data_dir(name: str) -> str | None:
+            return None if ephemeral else f"data/{name}"
+
+        self._event_tracker = EventTracker(data_dir=data_dir("events"))
         self._budget_manager = BudgetManager()
         self._verification_engine = VerificationEngine()
-        self._recovery_manager = RecoveryManager()
-        self._learning_engine = LearningEngine()
+        self._recovery_manager = RecoveryManager(data_dir=data_dir("recovery"))
+        self._learning_engine = LearningEngine(data_dir=data_dir("learning"))
         self._skill_lifecycle = SkillLifecycle(self._learning_engine)
 
         self._planner = Planner()
@@ -149,7 +161,7 @@ class Agent:
             recovery_manager=self._recovery_manager,
         )
         self._subagent_engine = SubagentEngine(self.engine, event_tracker=self._event_tracker)
-        self._job_engine = JobEngine(event_tracker=self._event_tracker)
+        self._job_engine = JobEngine(data_dir=data_dir("jobs"), event_tracker=self._event_tracker)
 
         self._planner.set_provider(self._get_first_provider())
         logger.info("Autonomy layer initialized")
