@@ -340,7 +340,7 @@ class Agent:
         self.smart_context.set_system_prompt(self._build_system_prompt())
 
         memories = self._retrieve_memories(message)
-        skills_context = self._retrieve_skills(message)
+        skills_context = await self._retrieve_skills(message)
 
         enhanced_message = message
         if memories:
@@ -756,12 +756,26 @@ class Agent:
         except Exception as e:
             logger.warning(f"Memory storage failed: {e}")
 
-    def _retrieve_skills(self, task: str) -> str:
+    async def _retrieve_skills(self, task: str) -> str:
+        """Return a readable description of the skills relevant to ``task``.
+
+        Args:
+            task (str): the user's request.
+
+        Returns:
+            str: one line per matching skill, or ``''`` when none apply.
+
+        Note:
+            Coroutine - must be awaited.  ``SkillManager.find_skill`` is a
+            coroutine; the previous synchronous version called it without
+            awaiting, so the coroutine was never executed, no skill ever
+            matched, and CPython emitted "coroutine ... was never awaited".
+        """
         skill_descriptions = []
 
         if self._skills is not None:
             try:
-                skill = self._skills.find_skill(task)
+                skill = await self._skills.find_skill(task)
                 if skill and hasattr(skill, "metadata"):
                     skill_descriptions.append(
                         f"Skill '{skill.metadata.name}': {skill.metadata.description}"
@@ -806,21 +820,23 @@ class Agent:
         """
         self.context.clear(session_id)
 
-    async def execute_command(self, command: str, **kwargs: Any) -> Any:
-        """
-        Execute command.
+    async def execute_command(self, tool_name: str, **kwargs: Any) -> Any:
+        """Invoke one registered tool directly, bypassing the model.
 
         Args:
-            command (str): shell command to execute.
-            **kwargs (Any): keyword arguments forwarded to the implementation.
+            tool_name (str): name of the tool to run, e.g. ``"bash"``.  The
+                parameter used to be called ``command``, which read as if it
+                took a shell string; it is passed straight through as the
+                ``ToolCall.name``.
+            **kwargs (Any): arguments forwarded to the tool.
 
         Returns:
-            Any: the resulting Any.
+            Any: ``{"content": ..., "success": ..., "error": ...}``.
 
         Note:
             Coroutine - must be awaited.
         """
-        logger.info(f"Executing command: {command}")
+        logger.info("Executing tool: %s", tool_name)
         if self.engine._tool_executor is None:
             from bahram.core.engine import ToolExecutor
 
@@ -829,7 +845,7 @@ class Agent:
             )
         tc = ToolCall(
             id=f"cmd_{int(time.time() * 1000)}",
-            name=command,
+            name=tool_name,
             arguments=kwargs,
         )
         result = await self.engine._tool_executor.execute(tc)

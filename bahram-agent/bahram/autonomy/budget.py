@@ -279,13 +279,19 @@ class BudgetManager:
 
         return warnings
 
-    def record_tool_call(self, run_id: str, session_id: str = "") -> list[str]:
-        """
-        Record tool call.
+    def record_tool_call(self, run_id: str, session_id: str = "", tool_name: str = "") -> list[str]:
+        """Record one tool call against the run budget.
 
         Args:
             run_id (str): run identifier.
             session_id (str): session identifier. Defaults to ``''``.
+            tool_name (str): name of the tool that ran. Recorded in the
+                warning message so an operator can see which tool is hot; it
+                does not change the accounting. ``AgentEngine.run`` passes it
+                as a keyword argument, which this signature used to reject -
+                every run that called a tool with a budget manager wired
+                crashed with ``TypeError: ... unexpected keyword argument
+                'tool_name'``.
 
         Returns:
             list[str]: a sequence of str entries (empty when there is nothing to report).
@@ -294,6 +300,8 @@ class BudgetManager:
 
         run_budget = self.get_run_budget(run_id)
         run_budget.tool_calls += 1
+        if tool_name:
+            run_budget.warnings.append(f"tool:{tool_name}")
 
         if run_budget.tool_calls >= self._config.max_tool_calls * self._config.warning_threshold:
             w = f"Run tool calls at {run_budget.tool_calls}/{self._config.max_tool_calls}"

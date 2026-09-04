@@ -827,7 +827,9 @@ class AgentEngine:
                 total_tool_calls += 1
 
                 if self._budget_manager is not None:
-                    self._budget_manager.record_tool_call(run_id, tool_name=tool_call.name)
+                    self._budget_manager.record_tool_call(
+                        run_id, session_id=session_id, tool_name=tool_call.name
+                    )
 
                 tool_results_data.append(
                     {
@@ -900,48 +902,35 @@ class AgentEngine:
         Note:
             Coroutine - must be awaited.
         """
-        run_cfg = self._get_run_config()
         model = model or (
             self.config.agent.model if self.config else "anthropic/claude-sonnet-4-20250514"
         )
         provider_name = model.split("/")[0] if "/" in model else "anthropic"
         provider = self.get_provider(model)
         tools_schema = self.get_tools_schema()
-        start_time = time.time()
 
-        for iteration in range(run_cfg.max_iterations):
-            if self._cancel_event.is_set():
-                yield "Operation cancelled."
-                return
-            if time.time() - start_time > run_cfg.max_runtime_seconds:
-                yield "Operation timed out."
-                return
+        if self._cancel_event.is_set():
+            yield "Operation cancelled."
+            return
 
-            full_content = ""
+        # A single streaming turn.  The previous version wrapped the same body
+        # in a ``for iteration in range(run_cfg.max_iterations)`` loop, but the
+        # streaming protocol carries no tool calls, so nothing could ever end
+        # the loop early: whenever any tool was registered the provider was
+        # called max_iterations times (15 by default) and the caller received
+        # every reply concatenated.  Callers that need the tool loop use run().
+        try:
+            async for chunk in provider.stream(messages, tools_schema if tools_schema else None):
+                yield chunk
+            self.record_provider_success(provider_name)
+        except Exception:
+            self.record_provider_failure(provider_name)
             try:
+                provider = self.get_provider(model)
                 async for chunk in provider.stream(
                     messages, tools_schema if tools_schema else None
                 ):
-                    full_content += chunk
                     yield chunk
-                self.record_provider_success(provider_name)
-            except Exception:
-                self.record_provider_failure(provider_name)
-                try:
-                    provider = self.get_provider(model)
-                    async for chunk in provider.stream(
-                        messages, tools_schema if tools_schema else None
-                    ):
-                        full_content += chunk
-                        yield chunk
-                except Exception as e2:
-                    yield f"\nError: {e2}"
-                    return
-
-            if not full_content:
+            except Exception as e2:
+                yield f"\nError: {e2}"
                 return
-
-            if not tools_schema:
-                return
-
-            messages.append(Message(role=MessageRole.ASSISTANT, content=full_content))

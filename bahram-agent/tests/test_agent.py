@@ -133,21 +133,22 @@ class TestAgentMemory:
 
 
 class TestAgentSkills:
-    def test_skills_retrieval(self):
+    async def test_skills_retrieval(self):
         config = _make_config()
         agent = Agent(config=config)
         agent._skills = MagicMock()
         mock_skill = MagicMock()
         mock_skill.metadata.name = "test_skill"
         mock_skill.metadata.description = "A test skill"
-        agent._skills.find_skill.return_value = mock_skill
-        result = agent._retrieve_skills("do something")
+        # SkillManager.find_skill is a coroutine, so the double must be too.
+        agent._skills.find_skill = AsyncMock(return_value=mock_skill)
+        result = await agent._retrieve_skills("do something")
         assert "test_skill" in result
 
-    def test_no_skills(self):
+    async def test_no_skills(self):
         config = _make_config()
         agent = Agent(config=config)
-        result = agent._retrieve_skills("do something")
+        result = await agent._retrieve_skills("do something")
         assert result == ""
 
 
