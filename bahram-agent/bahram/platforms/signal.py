@@ -7,7 +7,6 @@ from typing import Any, Callable, Optional
 logger = logging.getLogger(__name__)
 
 class SignalAdapter:
-    ""
 
     def __init__(self, number: str = "", api_url: str = "http://localhost:8080") -> None:
         self.number = number
@@ -15,11 +14,9 @@ class SignalAdapter:
         self._message_fn: Optional[Callable] = None
 
     def set_message_function(self, fn: Callable) -> None:
-        ""
         self._message_fn = fn
 
     async def handle_webhook(self, data: dict) -> dict[str, Any]:
-        ""
         try:
             envelope = data.get("envelope", {})
 
@@ -42,7 +39,6 @@ class SignalAdapter:
             return {"status": "error", "error": str(e)}
 
     async def send_message(self, chat_id: str, text: str, **kwargs) -> bool:
-        ""
         try:
             import httpx
 
@@ -62,7 +58,6 @@ class SignalAdapter:
             return False
 
     async def send_image(self, chat_id: str, image_path: str) -> bool:
-        ""
         try:
             import httpx
 
@@ -83,7 +78,6 @@ class SignalAdapter:
             return False
 
     def get_platform_info(self) -> dict[str, Any]:
-        ""
         return {
             "name": "signal",
             "version": "1.0.0",

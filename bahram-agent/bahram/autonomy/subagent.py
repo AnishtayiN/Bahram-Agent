@@ -215,7 +215,6 @@ class SubagentEngine:
             tool_timeout_seconds=min(60.0, task.timeout_seconds / 2),
         )
 
-        provider_name = model.split("/")[0] if model and "/" in model else "anthropic"
         try:
             provider = self._engine.get_provider(model or self._engine.config.agent.model if self._engine.config else "anthropic/claude-sonnet-4-20250514")
         except (ValueError, AttributeError):

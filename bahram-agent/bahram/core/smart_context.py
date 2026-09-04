@@ -9,7 +9,6 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class ContextWindow:
-    ""
 
     content: str
     tokens: int
@@ -17,7 +16,6 @@ class ContextWindow:
     metadata: dict = field(default_factory=dict)
 
 class SmartContextManager:
-    ""
 
     def __init__(self, max_tokens: int = 8192) -> None:
         self.max_tokens = max_tokens
@@ -26,7 +24,6 @@ class SmartContextManager:
         self._history: list[dict] = []
 
     def set_system_prompt(self, prompt: str) -> None:
-        ""
         self._system_prompt = prompt
 
     def add_context(
@@ -35,7 +32,6 @@ class SmartContextManager:
         priority: int = 0,
         metadata: dict = None,
     ) -> None:
-        ""
         tokens = self._estimate_tokens(content)
         self._windows.append(ContextWindow(
             content=content,
@@ -45,11 +41,9 @@ class SmartContextManager:
         ))
 
     def add_history(self, role: str, content: str) -> None:
-        ""
         self._history.append({"role": role, "content": content})
 
     def build_context(self) -> list[dict]:
-        ""
         messages = []
 
         if self._system_prompt:
@@ -73,12 +67,10 @@ class SmartContextManager:
         return messages
 
     def _estimate_tokens(self, text: str) -> int:
-        ""
 
         return len(text) // 4
 
     def get_usage(self) -> dict[str, int]:
-        ""
         total_tokens = sum(w.tokens for w in self._windows)
         history_tokens = sum(self._estimate_tokens(m["content"]) for m in self._history)
         return {
@@ -90,7 +82,6 @@ class SmartContextManager:
         }
 
     def optimize(self) -> int:
-        ""
         usage = self.get_usage()
         if usage["remaining"] > 0:
             return 0
@@ -105,12 +96,10 @@ class SmartContextManager:
         return removed
 
     def clear(self) -> None:
-        ""
         self._windows.clear()
         self._history.clear()
 
     def format_context(self) -> str:
-        ""
         usage = self.get_usage()
         lines = [
             "## Context Window",
@@ -123,7 +112,6 @@ class SmartContextManager:
         return "\n".join(lines)
 
     def build_messages(self) -> list[Any]:
-        ""
         from bahram.core.engine import Message, MessageRole
 
         messages = []

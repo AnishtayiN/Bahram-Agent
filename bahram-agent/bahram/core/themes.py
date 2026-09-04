@@ -10,7 +10,6 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class Theme:
-    ""
 
     name: str
     display_name: str
@@ -97,7 +96,6 @@ PERSIAN_THEME = Theme(
 )
 
 class ThemeManager:
-    ""
 
     def __init__(self, config_dir: str = "config") -> None:
         self.config_dir = Path(config_dir)
@@ -112,7 +110,6 @@ class ThemeManager:
         self._load()
 
     def _load(self) -> None:
-        ""
         theme_file = self.config_dir / "theme.json"
         if theme_file.exists():
             try:
@@ -123,17 +120,14 @@ class ThemeManager:
                 logger.warning(f"Failed to load theme config: {e}")
 
     def _save(self) -> None:
-        ""
         theme_file = self.config_dir / "theme.json"
         with open(theme_file, "w") as f:
             json.dump({"current_theme": self._current_theme}, f, indent=2)
 
     def get_theme(self, name: str = None) -> Theme:
-        ""
         return self._themes.get(name or self._current_theme, DEFAULT_THEME)
 
     def set_theme(self, name: str) -> bool:
-        ""
         if name in self._themes:
             self._current_theme = name
             self._save()
@@ -141,7 +135,6 @@ class ThemeManager:
         return False
 
     def list_themes(self) -> list[dict]:
-        ""
         return [
             {
                 "name": t.name,
@@ -154,15 +147,12 @@ class ThemeManager:
         ]
 
     def add_theme(self, theme: Theme) -> None:
-        ""
         self._themes[theme.name] = theme
 
     def get_color(self, key: str) -> str:
-        ""
         theme = self.get_theme()
         return theme.colors.get(key, "#000000")
 
     def get_emoji(self, key: str) -> str:
-        ""
         theme = self.get_theme()
         return theme.emoji.get(key, "")

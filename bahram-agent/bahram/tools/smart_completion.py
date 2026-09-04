@@ -9,7 +9,6 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class CompletionContext:
-    ""
 
     file_path: str
     line: int
@@ -19,7 +18,6 @@ class CompletionContext:
     code_after: str = ""
 
 class SmartCodeCompletion:
-    ""
 
     def __init__(self) -> None:
         self._snippets: dict[str, list[dict]] = {
@@ -52,7 +50,6 @@ class SmartCodeCompletion:
         context: CompletionContext,
         trigger: str = "",
     ) -> list[dict]:
-        ""
         completions = []
         language = context.language
 
@@ -75,7 +72,6 @@ class SmartCodeCompletion:
         return sorted(completions, key=lambda x: x["priority"], reverse=True)
 
     def _get_context_completions(self, context: CompletionContext) -> list[dict]:
-        ""
         completions = []
         lines = context.code_before.split("\n")
 
@@ -94,7 +90,6 @@ class SmartCodeCompletion:
         return completions
 
     def _get_import_completions(self, context: CompletionContext) -> list[dict]:
-        ""
         common_imports = [
             "os", "sys", "json", "logging", "asyncio", "pathlib",
             "typing", "dataclasses", "datetime", "time", "re",
@@ -107,7 +102,6 @@ class SmartCodeCompletion:
         ]
 
     def _get_definition_completions(self, context: CompletionContext) -> list[dict]:
-        ""
         return [
             {"text": "def __init__(self):", "description": "Constructor", "priority": 1},
             {"text": "def __str__(self):", "description": "String representation", "priority": 1},
@@ -115,7 +109,6 @@ class SmartCodeCompletion:
         ]
 
     def _get_function_body_completions(self, context: CompletionContext) -> list[dict]:
-        ""
         return [
             {"text": "return", "description": "Return statement", "priority": 1},
             {"text": "if condition:", "description": "If statement", "priority": 1},
@@ -123,7 +116,6 @@ class SmartCodeCompletion:
         ]
 
     def get_snippet(self, language: str, trigger: str) -> Optional[str]:
-        ""
         snippets = self._snippets.get(language, [])
         for snippet in snippets:
             if snippet["trigger"] == trigger:

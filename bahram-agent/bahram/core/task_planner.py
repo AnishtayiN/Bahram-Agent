@@ -8,7 +8,6 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class TaskStep:
-    ""
 
     id: str
     description: str
@@ -18,7 +17,6 @@ class TaskStep:
 
 @dataclass
 class TaskPlan:
-    ""
 
     id: str
     goal: str
@@ -27,14 +25,12 @@ class TaskPlan:
     created_at: float = 0.0
 
 class TaskPlanner:
-    ""
 
     def __init__(self) -> None:
         self._plans: dict[str, TaskPlan] = {}
         self._step_counter = 0
 
     async def create_plan(self, goal: str, context: dict = None) -> TaskPlan:
-        ""
         import uuid
         import time
 
@@ -54,7 +50,6 @@ class TaskPlanner:
         return plan
 
     async def _analyze_goal(self, goal: str, context: dict = None) -> list[TaskStep]:
-        ""
         steps = []
 
         goal_lower = goal.lower()
@@ -73,7 +68,6 @@ class TaskPlanner:
         return steps
 
     async def _plan_creation(self, goal: str) -> list[TaskStep]:
-        ""
         return [
             TaskStep(id="1", description="Understand requirements"),
             TaskStep(id="2", description="Design solution architecture"),
@@ -83,7 +77,6 @@ class TaskPlanner:
         ]
 
     async def _plan_fix(self, goal: str) -> list[TaskStep]:
-        ""
         return [
             TaskStep(id="1", description="Reproduce the issue"),
             TaskStep(id="2", description="Identify root cause"),
@@ -92,7 +85,6 @@ class TaskPlanner:
         ]
 
     async def _plan_testing(self, goal: str) -> list[TaskStep]:
-        ""
         return [
             TaskStep(id="1", description="Identify test cases"),
             TaskStep(id="2", description="Write test code"),
@@ -101,7 +93,6 @@ class TaskPlanner:
         ]
 
     async def _plan_deployment(self, goal: str) -> list[TaskStep]:
-        ""
         return [
             TaskStep(id="1", description="Prepare deployment environment"),
             TaskStep(id="2", description="Configure deployment settings"),
@@ -110,7 +101,6 @@ class TaskPlanner:
         ]
 
     async def _plan_generic(self, goal: str) -> list[TaskStep]:
-        ""
         return [
             TaskStep(id="1", description="Analyze requirements"),
             TaskStep(id="2", description="Create implementation plan"),
@@ -119,7 +109,6 @@ class TaskPlanner:
         ]
 
     def update_step(self, plan_id: str, step_id: str, status: str, result: Any = None) -> bool:
-        ""
         plan = self._plans.get(plan_id)
         if plan:
             for step in plan.steps:
@@ -130,7 +119,6 @@ class TaskPlanner:
         return False
 
     def get_plan(self, plan_id: str) -> Optional[dict]:
-        ""
         plan = self._plans.get(plan_id)
         if plan:
             return {
@@ -150,7 +138,6 @@ class TaskPlanner:
         return None
 
     def get_next_step(self, plan_id: str) -> Optional[TaskStep]:
-        ""
         plan = self._plans.get(plan_id)
         if plan:
             for step in plan.steps:
@@ -165,7 +152,6 @@ class TaskPlanner:
         return None
 
     def get_progress(self, plan_id: str) -> dict[str, Any]:
-        ""
         plan = self._plans.get(plan_id)
         if plan:
             total = len(plan.steps)

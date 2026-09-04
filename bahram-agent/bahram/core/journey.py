@@ -11,7 +11,6 @@ from typing import Any, Optional
 logger = logging.getLogger(__name__)
 
 class CurveType(str, Enum):
-    ""
 
     PLATEAU = "plateau"
     CLIMBING = "climbing"
@@ -20,7 +19,6 @@ class CurveType(str, Enum):
 
 @dataclass
 class LearningPoint:
-    ""
 
     timestamp: float
     metric: float
@@ -29,7 +27,6 @@ class LearningPoint:
 
 @dataclass
 class LearningCurve:
-    ""
 
     curve_type: CurveType
     confidence: float
@@ -37,7 +34,6 @@ class LearningCurve:
     suggested_action: str
 
 class LearningJourney:
-    ""
 
     def __init__(self, data_dir: str = "data/memory") -> None:
         self.data_dir = Path(data_dir)
@@ -47,7 +43,6 @@ class LearningJourney:
         self._load()
 
     def _load(self) -> None:
-        ""
         journey_file = self.data_dir / "journey.json"
         if journey_file.exists():
             try:
@@ -63,7 +58,6 @@ class LearningJourney:
                 logger.warning(f"Failed to load journey: {e}")
 
     def _save(self) -> None:
-        ""
         journey_file = self.data_dir / "journey.json"
         data = {
             "points": [
@@ -89,7 +83,6 @@ class LearningJourney:
             json.dump(data, f, indent=2)
 
     def record(self, metric: float, description: str = "", context: dict = None) -> None:
-        ""
         point = LearningPoint(
             timestamp=time.time(),
             metric=metric,
@@ -107,7 +100,6 @@ class LearningJourney:
                 logger.info(f"Learning curve detected: {curve.curve_type.value} ({curve.confidence:.0%})")
 
     def _detect_curve(self) -> Optional[LearningCurve]:
-        ""
         if len(self._points) < 3:
             return None
 
@@ -161,7 +153,6 @@ class LearningJourney:
         )
 
     def get_summary(self) -> dict[str, Any]:
-        ""
         if not self._points:
             return {"status": "no_data"}
 
@@ -177,7 +168,6 @@ class LearningJourney:
         }
 
     def get_curve_history(self) -> list[dict]:
-        ""
         return [
             {
                 "curve_type": c.curve_type.value,
@@ -189,7 +179,6 @@ class LearningJourney:
         ]
 
     def reset(self) -> None:
-        ""
         self._points.clear()
         self._curves.clear()
         self._save()

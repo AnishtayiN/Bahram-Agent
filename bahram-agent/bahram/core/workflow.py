@@ -9,7 +9,6 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class WorkflowStep:
-    ""
 
     id: str
     name: str
@@ -21,7 +20,6 @@ class WorkflowStep:
 
 @dataclass
 class Workflow:
-    ""
 
     id: str
     name: str
@@ -30,7 +28,6 @@ class Workflow:
     current_step: int = 0
 
 class WorkflowAutomation:
-    ""
 
     def __init__(self) -> None:
         self._workflows: dict[str, Workflow] = {}
@@ -38,11 +35,9 @@ class WorkflowAutomation:
         self._history: list[dict] = []
 
     def register_action(self, name: str, action: Callable) -> None:
-        ""
         self._actions[name] = action
 
     def create_workflow(self, name: str, steps: list[dict]) -> Workflow:
-        ""
         import uuid
 
         workflow_id = str(uuid.uuid4())[:8]
@@ -66,7 +61,6 @@ class WorkflowAutomation:
         return workflow
 
     async def execute(self, workflow_id: str) -> dict[str, Any]:
-        ""
         workflow = self._workflows.get(workflow_id)
         if not workflow:
             return {"error": f"Workflow '{workflow_id}' not found"}
@@ -112,7 +106,6 @@ class WorkflowAutomation:
         return {"status": "completed", "results": results}
 
     def get_workflow(self, workflow_id: str) -> Optional[dict]:
-        ""
         workflow = self._workflows.get(workflow_id)
         if workflow:
             return {
@@ -132,7 +125,6 @@ class WorkflowAutomation:
         return None
 
     def get_progress(self, workflow_id: str) -> dict[str, Any]:
-        ""
         workflow = self._workflows.get(workflow_id)
         if workflow:
             total = len(workflow.steps)
@@ -145,7 +137,6 @@ class WorkflowAutomation:
         return {"total": 0, "completed": 0, "progress": 0}
 
     def list_workflows(self) -> list[dict]:
-        ""
         return [
             {
                 "id": w.id,
@@ -157,5 +148,4 @@ class WorkflowAutomation:
         ]
 
     def get_history(self) -> list[dict]:
-        ""
         return self._history.copy()

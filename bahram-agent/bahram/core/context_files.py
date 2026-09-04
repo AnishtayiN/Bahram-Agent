@@ -7,7 +7,6 @@ from typing import Any, Optional
 logger = logging.getLogger(__name__)
 
 class ContextFiles:
-    ""
 
     def __init__(self, workspace_root: str = ".") -> None:
         self.workspace_root = Path(workspace_root)
@@ -21,7 +20,6 @@ class ContextFiles:
         ]
 
     def load_context(self) -> str:
-        ""
         context_parts = []
 
         for filename in self._context_files:
@@ -36,7 +34,6 @@ class ContextFiles:
         return "\n\n".join(context_parts)
 
     def get_loaded_files(self) -> list[str]:
-        ""
         loaded = []
         for filename in self._context_files:
             file_path = self.workspace_root / filename
@@ -45,19 +42,16 @@ class ContextFiles:
         return loaded
 
     def add_context_file(self, filename: str) -> None:
-        ""
         if filename not in self._context_files:
             self._context_files.append(filename)
 
     def remove_context_file(self, filename: str) -> bool:
-        ""
         if filename in self._context_files:
             self._context_files.remove(filename)
             return True
         return False
 
     def save_context(self, filename: str, content: str) -> bool:
-        ""
         try:
             file_path = self.workspace_root / filename
             file_path.write_text(content)

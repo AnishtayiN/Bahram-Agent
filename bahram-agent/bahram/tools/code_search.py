@@ -10,7 +10,6 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class SearchResult:
-    ""
 
     file: str
     line: int
@@ -19,13 +18,11 @@ class SearchResult:
     context: str = ""
 
 class CodeSearchEngine:
-    ""
 
     def __init__(self) -> None:
         self._indexes: dict[str, list[dict]] = {}
 
     async def index_directory(self, dir_path: str) -> int:
-        ""
         path = Path(dir_path)
         count = 0
 
@@ -48,7 +45,6 @@ class CodeSearchEngine:
         file_pattern: str = None,
         max_results: int = 20,
     ) -> list[SearchResult]:
-        ""
         results = []
         query_lower = query.lower()
 
@@ -93,7 +89,6 @@ class CodeSearchEngine:
         return results[:max_results]
 
     async def find_definitions(self, name: str) -> list[SearchResult]:
-        ""
         results = []
 
         for file_path, lines in self._indexes.items():
@@ -110,7 +105,6 @@ class CodeSearchEngine:
         return results
 
     async def find_references(self, name: str) -> list[SearchResult]:
-        ""
         results = []
 
         for file_path, lines in self._indexes.items():
@@ -127,7 +121,6 @@ class CodeSearchEngine:
         return results
 
     def format_results(self, results: list[SearchResult]) -> str:
-        ""
         if not results:
             return "No results found!"
 

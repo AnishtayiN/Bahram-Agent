@@ -8,7 +8,6 @@ from typing import Any, Callable, Optional
 logger = logging.getLogger(__name__)
 
 class SlackAdapter:
-    ""
 
     def __init__(self, token: str = "", signing_secret: str = "") -> None:
         self.token = token
@@ -17,11 +16,9 @@ class SlackAdapter:
         self._message_fn: Optional[Callable] = None
 
     def set_message_function(self, fn: Callable) -> None:
-        ""
         self._message_fn = fn
 
     async def start(self) -> None:
-        ""
         if not self.token:
             logger.warning("Slack token not configured")
             return
@@ -53,7 +50,6 @@ class SlackAdapter:
             logger.error(f"Failed to start Slack adapter: {e}")
 
     async def send_message(self, chat_id: str, text: str, **kwargs) -> bool:
-        ""
         if not self._app:
             return False
 
@@ -69,7 +65,6 @@ class SlackAdapter:
             return False
 
     async def send_dm(self, user_id: str, text: str) -> bool:
-        ""
         if not self._app:
             return False
 
@@ -84,7 +79,6 @@ class SlackAdapter:
             return False
 
     def get_platform_info(self) -> dict[str, Any]:
-        ""
         return {
             "name": "slack",
             "version": "1.0.0",

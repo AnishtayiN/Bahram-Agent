@@ -9,7 +9,6 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class ScanResult:
-    ""
 
     safe: bool
     issues: list[str] = field(default_factory=list)
@@ -17,7 +16,6 @@ class ScanResult:
     blocked: list[str] = field(default_factory=list)
 
 class TirithScanner:
-    ""
 
     def __init__(self) -> None:
         self._dangerous_patterns: list[tuple[str, str, str]] = [
@@ -42,7 +40,6 @@ class TirithScanner:
         ]
 
     def scan(self, content: str) -> ScanResult:
-        ""
         issues = []
         warnings = []
         blocked = []
@@ -69,23 +66,18 @@ class TirithScanner:
         )
 
     def scan_command(self, command: str) -> ScanResult:
-        ""
         return self.scan(command)
 
     def scan_code(self, code: str) -> ScanResult:
-        ""
         return self.scan(code)
 
     def add_dangerous_pattern(self, pattern: str, severity: str, description: str) -> None:
-        ""
         self._dangerous_patterns.append((pattern, severity, description))
 
     def add_blocked_pattern(self, pattern: str) -> None:
-        ""
         self._blocked_patterns.append(pattern)
 
     def get_scan_report(self, content: str) -> str:
-        ""
         result = self.scan(content)
 
         lines = ["=== Security Scan Report ===", ""]

@@ -94,20 +94,48 @@ JobHandler = Callable[..., Coroutine[Any, Any, str]]
 class JobEngine:
     def __init__(self, data_dir: str = "data/jobs", max_concurrent: int = 3, event_tracker: Any = None) -> None:
         self._data_dir = Path(data_dir)
-        self._data_dir.mkdir(parents=True, exist_ok=True)
+        try:
+            self._data_dir.mkdir(parents=True, exist_ok=True)
+        except OSError as e:
+            logger.warning(f"Cannot create job data dir {data_dir}: {e}")
         self._db_path = self._data_dir / "jobs.db"
         self._local = threading.local()
+        self._memory_mode = False
+        self._memory_conn: sqlite3.Connection | None = None
         self._handlers: dict[str, JobHandler] = {}
         self._running_tasks: dict[str, asyncio.Task] = {}
         self._max_concurrent = max_concurrent
         self._active_count = 0
         self._event_tracker = event_tracker
-        self._init_db()
-        self._load_pending_jobs()
+        try:
+            self._init_db()
+            self._load_pending_jobs()
+        except sqlite3.Error as e:
+            # Read-only dir / unwritable db path: degrade to in-memory storage
+            # so the job subsystem stays usable instead of crashing.
+            logger.warning(
+                f"Unable to open job database at {self._db_path} "
+                f"({e}); degrading to in-memory storage"
+            )
+            self._memory_mode = True
+            self._init_db()
 
     def _get_conn(self) -> sqlite3.Connection:
+        if self._memory_mode:
+            if self._memory_conn is None:
+                self._memory_conn = sqlite3.connect(":memory:")
+                self._memory_conn.row_factory = sqlite3.Row
+            return self._memory_conn
         if not hasattr(self._local, "conn") or self._local.conn is None:
-            self._local.conn = sqlite3.connect(str(self._db_path))
+            try:
+                self._local.conn = sqlite3.connect(str(self._db_path))
+            except sqlite3.OperationalError as e:
+                logger.warning(
+                    f"Unable to open job database at {self._db_path} ({e}); "
+                    "degrading to in-memory storage"
+                )
+                self._memory_mode = True
+                return self._get_conn()
             self._local.conn.row_factory = sqlite3.Row
             self._local.conn.execute("PRAGMA journal_mode=WAL")
         return self._local.conn

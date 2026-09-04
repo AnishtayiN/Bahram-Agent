@@ -10,7 +10,6 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class LSPServer:
-    ""
 
     name: str
     command: str
@@ -18,7 +17,6 @@ class LSPServer:
     process: Any = None
 
 class LSPTool:
-    ""
 
     def __init__(self) -> None:
         self._servers: dict[str, LSPServer] = {}
@@ -30,7 +28,6 @@ class LSPTool:
         command: str,
         language: str,
     ) -> None:
-        ""
         self._servers[name] = LSPServer(
             name=name,
             command=command,
@@ -38,7 +35,6 @@ class LSPTool:
         )
 
     async def start_server(self, name: str) -> bool:
-        ""
         server = self._servers.get(name)
         if not server:
             return False
@@ -59,7 +55,6 @@ class LSPTool:
             return False
 
     async def stop_server(self, name: str) -> bool:
-        ""
         server = self._servers.get(name)
         if not server or not server.process:
             return False
@@ -81,7 +76,6 @@ class LSPTool:
         line: int,
         character: int,
     ) -> list[dict]:
-        ""
         server = self._servers.get(server_name)
         if not server or not server.process:
             return []
@@ -113,5 +107,4 @@ class LSPTool:
             return []
 
     def is_running(self, name: str) -> bool:
-        ""
         return self._initialized.get(name, False)

@@ -15,7 +15,6 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class PTYSession:
-    ""
 
     session_id: str
     pid: int
@@ -25,7 +24,6 @@ class PTYSession:
     interactive: bool = True
 
 class PTYManager:
-    ""
 
     def __init__(self) -> None:
         self._sessions: dict[str, PTYSession] = {}
@@ -37,7 +35,6 @@ class PTYManager:
         cols: int = 80,
         rows: int = 24,
     ) -> PTYSession:
-        ""
         import uuid
         from datetime import datetime
 
@@ -65,7 +62,6 @@ class PTYManager:
             return session
 
     async def read_output(self, session_id: str, timeout: float = 0.1) -> str:
-        ""
         session = self._sessions.get(session_id)
         if not session:
             return ""
@@ -80,7 +76,6 @@ class PTYManager:
         return ""
 
     async def write_input(self, session_id: str, data: str) -> bool:
-        ""
         session = self._sessions.get(session_id)
         if not session:
             return False
@@ -93,7 +88,6 @@ class PTYManager:
             return False
 
     async def resize(self, session_id: str, cols: int, rows: int) -> bool:
-        ""
         session = self._sessions.get(session_id)
         if not session:
             return False
@@ -107,7 +101,6 @@ class PTYManager:
             return False
 
     def close_session(self, session_id: str) -> bool:
-        ""
         session = self._sessions.pop(session_id, None)
         if session:
             try:
@@ -119,7 +112,6 @@ class PTYManager:
         return False
 
     def list_sessions(self) -> list[dict]:
-        ""
         return [
             {
                 "session_id": s.session_id,
@@ -131,7 +123,6 @@ class PTYManager:
         ]
 
 class SudoManager:
-    ""
 
     def __init__(self) -> None:
         self._cached_password: Optional[str] = None
@@ -139,43 +130,35 @@ class SudoManager:
         self._last_auth: float = 0
 
     def set_password(self, password: str) -> None:
-        ""
         import time
         self._cached_password = password
         self._last_auth = time.time()
 
     def get_password(self) -> Optional[str]:
-        ""
         import time
         if self._cached_password and (time.time() - self._last_auth < self._cache_ttl):
             return self._cached_password
         return None
 
     def clear(self) -> None:
-        ""
         self._cached_password = None
 
     def is_cached(self) -> bool:
-        ""
         import time
         return self._cached_password is not None and (time.time() - self._last_auth < self._cache_ttl)
 
 class ShellInitHandler:
-    ""
 
     @staticmethod
     def get_non_interactive_guard() -> str:
-        ""
         return ""
 
     @staticmethod
     def get_safe_bashrc_content() -> str:
-        ""
         return f""
 
     @staticmethod
     def get_env_passthrough_vars() -> list[str]:
-        ""
         return [
             "PATH", "HOME", "USER", "LANG", "LC_ALL", "TERM", "SHELL", "TMPDIR",
             "XDG_CONFIG_HOME", "XDG_DATA_HOME", "XDG_CACHE_HOME",

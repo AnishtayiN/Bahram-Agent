@@ -6,7 +6,6 @@ from typing import Any, Optional
 logger = logging.getLogger(__name__)
 
 class WebFetchTool:
-    ""
 
     def __init__(self) -> None:
         self._timeout: float = 30.0
@@ -18,7 +17,6 @@ class WebFetchTool:
         format: str = "text",
         timeout: float = None,
     ) -> dict[str, Any]:
-        ""
         try:
             import httpx
 
@@ -55,19 +53,15 @@ class WebFetchTool:
             return {"error": str(e)}
 
     async def fetch_text(self, url: str) -> str:
-        ""
         result = await self.fetch(url, format="text")
         return result.get("content", result.get("error", ""))
 
     async def fetch_json(self, url: str) -> Any:
-        ""
         result = await self.fetch(url, format="json")
         return result.get("content", result.get("error", ""))
 
     def set_timeout(self, timeout: float) -> None:
-        ""
         self._timeout = timeout
 
     def set_max_size(self, max_size: int) -> None:
-        ""
         self._max_size = max_size

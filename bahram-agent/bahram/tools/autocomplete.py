@@ -9,7 +9,6 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class Completion:
-    ""
 
     text: str
     description: str = ""
@@ -17,7 +16,6 @@ class Completion:
     category: str = ""
 
 class AutoComplete:
-    ""
 
     def __init__(self) -> None:
         self._history: list[str] = []
@@ -41,7 +39,6 @@ class AutoComplete:
         }
 
     def add_to_history(self, text: str) -> None:
-        ""
         if text not in self._history:
             self._history.append(text)
             if len(self._history) > 1000:
@@ -53,7 +50,6 @@ class AutoComplete:
         language: str = "python",
         context: str = "",
     ) -> list[Completion]:
-        ""
         completions = []
 
         patterns = self._patterns.get(language, [])
@@ -85,11 +81,9 @@ class AutoComplete:
         return unique[:10]
 
     def complete_command(self, text: str) -> list[Completion]:
-        ""
         return self.complete(text, language="bash")
 
     def complete_import(self, text: str) -> list[Completion]:
-        ""
         completions = []
         common_modules = [
             "os", "sys", "json", "logging", "asyncio", "pathlib",
@@ -107,7 +101,6 @@ class AutoComplete:
         return completions
 
     def complete_function(self, text: str, context: str = "") -> list[Completion]:
-        ""
         completions = []
         common_functions = [
             "print()", "len()", "range()", "str()", "int()", "float()",
@@ -125,6 +118,5 @@ class AutoComplete:
         return completions
 
     def get_suggestions(self, text: str) -> list[str]:
-        ""
         completions = self.complete(text)
         return [c.text for c in completions]

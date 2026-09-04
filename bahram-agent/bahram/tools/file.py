@@ -52,7 +52,6 @@ class ReadTool(BaseTool):
         }
 
     async def execute(self, **kwargs: Any) -> str:
-        ""
         file_path = kwargs.get("file_path", "")
         offset = kwargs.get("offset", 0)
         limit = kwargs.get("limit", 2000)

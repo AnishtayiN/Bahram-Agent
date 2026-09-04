@@ -8,7 +8,6 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class APIEndpoint:
-    ""
 
     path: str
     method: str
@@ -18,7 +17,6 @@ class APIEndpoint:
     response_schema: dict = field(default_factory=dict)
 
 class APIGenerator:
-    ""
 
     def __init__(self) -> None:
         self._endpoints: list[APIEndpoint] = []
@@ -29,11 +27,9 @@ class APIGenerator:
         }
 
     def add_endpoint(self, endpoint: APIEndpoint) -> None:
-        ""
         self._endpoints.append(endpoint)
 
     def generate(self, framework: str = "fastapi") -> str:
-        ""
         template = self._templates.get(framework, "")
         if not template:
             return f"# Unsupported framework: {framework}"
@@ -45,7 +41,6 @@ class APIGenerator:
         return code
 
     def _generate_endpoint(self, endpoint: APIEndpoint, framework: str) -> str:
-        ""
         if framework == "fastapi":
             return f""
         elif framework == "flask":
@@ -55,7 +50,6 @@ class APIGenerator:
         return ""
 
     def _get_params(self, endpoint: APIEndpoint) -> str:
-        ""
         params = []
         for param in endpoint.parameters:
             if param.get("required"):
@@ -74,7 +68,6 @@ class APIGenerator:
         return ""
 
     def generate_openapi(self) -> dict:
-        ""
         paths = {}
         for endpoint in self._endpoints:
             if endpoint.path not in paths:

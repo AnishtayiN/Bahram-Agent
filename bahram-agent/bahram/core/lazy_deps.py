@@ -7,14 +7,12 @@ from typing import Any, Optional
 logger = logging.getLogger(__name__)
 
 class LazyLoader:
-    ""
 
     def __init__(self) -> None:
         self._cache: dict[str, Any] = {}
         self._failed: set[str] = set()
 
     def __getattr__(self, name: str) -> Any:
-        ""
         if name in self._cache:
             return self._cache[name]
 
@@ -30,14 +28,12 @@ class LazyLoader:
             raise ImportError(f"Optional dependency '{name}' not installed: {e}")
 
     def load(self, module_name: str) -> Optional[Any]:
-        ""
         try:
             return getattr(self, module_name)
         except ImportError:
             return None
 
     def is_available(self, module_name: str) -> bool:
-        ""
         try:
             self.load(module_name)
             return True
@@ -45,7 +41,6 @@ class LazyLoader:
             return False
 
     def preload(self, module_names: list[str]) -> dict[str, bool]:
-        ""
         results = {}
         for name in module_names:
             results[name] = self.is_available(name)
@@ -54,11 +49,9 @@ class LazyLoader:
 _lazy = LazyLoader()
 
 def lazy_import(module_name: str) -> Optional[Any]:
-    ""
     return _lazy.load(module_name)
 
 def require_optional(module_name: str) -> Any:
-    ""
     try:
         return getattr(_lazy, module_name)
     except ImportError as e:
@@ -68,21 +61,16 @@ def require_optional(module_name: str) -> Any:
         ) from e
 
 def get_httpx():
-    ""
     return require_optional("httpx")
 
 def get_pydantic():
-    ""
     return require_optional("pydantic")
 
 def get_yaml():
-    ""
     return require_optional("yaml")
 
 def get_rich():
-    ""
     return require_optional("rich")
 
 def get_typer():
-    ""
     return require_optional("typer")

@@ -9,7 +9,6 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class CodeIssue:
-    ""
 
     file: str
     line: int
@@ -19,7 +18,6 @@ class CodeIssue:
     suggestion: str = ""
 
 class CodeReviewTool:
-    ""
 
     def __init__(self) -> None:
         self._rules: list[tuple[str, str, str, str]] = [
@@ -43,7 +41,6 @@ class CodeReviewTool:
         ]
 
     async def review_file(self, file_path: str) -> list[CodeIssue]:
-        ""
         try:
             with open(file_path, "r", encoding="utf-8", errors="replace") as f:
                 content = f.read()
@@ -69,7 +66,6 @@ class CodeReviewTool:
             return []
 
     async def review_code(self, code: str, language: str = "python") -> list[CodeIssue]:
-        ""
         issues = []
         lines = code.split("\n")
 
@@ -88,7 +84,6 @@ class CodeReviewTool:
         return issues
 
     def _get_suggestion(self, category: str, line: str) -> str:
-        ""
         suggestions = {
             "style": "Consider refactoring for better readability",
             "error": "Handle exceptions explicitly",
@@ -99,14 +94,12 @@ class CodeReviewTool:
         return suggestions.get(category, "")
 
     def get_summary(self, issues: list[CodeIssue]) -> dict[str, int]:
-        ""
         summary = {"error": 0, "warning": 0, "info": 0}
         for issue in issues:
             summary[issue.severity] = summary.get(issue.severity, 0) + 1
         return summary
 
     def format_report(self, issues: list[CodeIssue]) -> str:
-        ""
         if not issues:
             return "No issues found!"
 

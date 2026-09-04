@@ -9,7 +9,6 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class BatchItem:
-    ""
 
     id: str
     data: Any
@@ -18,7 +17,6 @@ class BatchItem:
     error: str = ""
 
 class BatchProcessor:
-    ""
 
     def __init__(self, batch_size: int = 10, max_concurrent: int = 3) -> None:
         self.batch_size = batch_size
@@ -27,11 +25,9 @@ class BatchProcessor:
         self._results: list[BatchItem] = []
 
     def add_item(self, id: str, data: Any) -> None:
-        ""
         self._queue.append(BatchItem(id=id, data=data))
 
     def add_items(self, items: list[tuple[str, Any]]) -> None:
-        ""
         for id, data in items:
             self.add_item(id, data)
 
@@ -40,7 +36,6 @@ class BatchProcessor:
         processor: Callable,
         **kwargs,
     ) -> list[dict]:
-        ""
         self._results = []
         semaphore = asyncio.Semaphore(self.max_concurrent)
 
@@ -75,7 +70,6 @@ class BatchProcessor:
         ]
 
     def get_statistics(self) -> dict[str, Any]:
-        ""
         total = len(self._results)
         completed = sum(1 for r in self._results if r.status == "completed")
         failed = sum(1 for r in self._results if r.status == "failed")
@@ -87,6 +81,5 @@ class BatchProcessor:
         }
 
     def clear(self) -> None:
-        ""
         self._queue.clear()
         self._results.clear()

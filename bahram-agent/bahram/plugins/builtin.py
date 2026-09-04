@@ -6,7 +6,6 @@ from typing import Any, Callable
 logger = logging.getLogger(__name__)
 
 class BuiltInPlugin:
-    ""
 
     def __init__(self) -> None:
         self.name = ""
@@ -14,23 +13,18 @@ class BuiltInPlugin:
         self.enabled = True
 
     async def on_message(self, message: dict) -> dict:
-        ""
         return message
 
     async def on_response(self, response: str) -> str:
-        ""
         return response
 
     async def on_tool_call(self, tool: str, args: dict) -> dict:
-        ""
         return args
 
     async def on_error(self, error: Exception) -> None:
-        ""
         pass
 
 class LoggingPlugin(BuiltInPlugin):
-    ""
 
     def __init__(self) -> None:
         super().__init__()
@@ -46,7 +40,6 @@ class LoggingPlugin(BuiltInPlugin):
         return response
 
 class MetricsPlugin(BuiltInPlugin):
-    ""
 
     def __init__(self) -> None:
         super().__init__()
@@ -78,7 +71,6 @@ class MetricsPlugin(BuiltInPlugin):
         return self._metrics.copy()
 
 class CachePlugin(BuiltInPlugin):
-    ""
 
     def __init__(self) -> None:
         super().__init__()

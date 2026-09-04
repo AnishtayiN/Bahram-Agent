@@ -9,7 +9,6 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class Task:
-    ""
 
     task_id: str
     name: str
@@ -20,7 +19,6 @@ class Task:
     end_time: float = 0.0
 
 class TaskTool:
-    ""
 
     def __init__(self) -> None:
         self._tasks: dict[str, Task] = {}
@@ -34,7 +32,6 @@ class TaskTool:
         *args,
         **kwargs,
     ) -> Task:
-        ""
         import time
 
         task = Task(
@@ -69,27 +66,22 @@ class TaskTool:
         return task
 
     def get_task(self, task_id: str) -> Optional[Task]:
-        ""
         return self._tasks.get(task_id)
 
     def get_status(self, task_id: str) -> str:
-        ""
         task = self._tasks.get(task_id)
         return task.status if task else "not_found"
 
     def get_result(self, task_id: str) -> Any:
-        ""
         task = self._tasks.get(task_id)
         if task and task.status == "completed":
             return task.result
         return None
 
     def set_callback(self, task_id: str, callback: Callable) -> None:
-        ""
         self._callbacks[task_id] = callback
 
     def list_tasks(self) -> list[dict]:
-        ""
         return [
             {
                 "id": t.task_id,
@@ -101,7 +93,6 @@ class TaskTool:
         ]
 
     def cancel(self, task_id: str) -> bool:
-        ""
         task = self._tasks.get(task_id)
         if task and task.status == "running":
             task.status = "cancelled"

@@ -7,7 +7,6 @@ from typing import Any, Optional
 logger = logging.getLogger(__name__)
 
 class ImageGenTool:
-    ""
 
     def __init__(self) -> None:
         self._provider: str = "openai"
@@ -21,7 +20,6 @@ class ImageGenTool:
         style: str = "vivid",
         output_path: str = None,
     ) -> dict[str, Any]:
-        ""
         if self._provider == "openai":
             return await self._generate_openai(prompt, size, style, output_path)
         else:
@@ -34,7 +32,6 @@ class ImageGenTool:
         style: str,
         output_path: str = None,
     ) -> dict[str, Any]:
-        ""
         try:
             import httpx
 
@@ -80,9 +77,7 @@ class ImageGenTool:
             return {"error": str(e)}
 
     def set_provider(self, provider: str) -> None:
-        ""
         self._provider = provider
 
     def set_api_key(self, api_key: str) -> None:
-        ""
         self._api_key = api_key

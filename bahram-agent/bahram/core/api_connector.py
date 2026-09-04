@@ -9,7 +9,6 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class APIConfig:
-    ""
 
     name: str
     base_url: str
@@ -19,14 +18,12 @@ class APIConfig:
     timeout: float = 30.0
 
 class APIConnector:
-    ""
 
     def __init__(self) -> None:
         self._apis: dict[str, APIConfig] = {}
         self._cache: dict[str, Any] = {}
 
     def register_api(self, config: APIConfig) -> None:
-        ""
         self._apis[config.name] = config
 
     async def request(
@@ -38,7 +35,6 @@ class APIConnector:
         params: dict = None,
         use_cache: bool = False,
     ) -> dict[str, Any]:
-        ""
         config = self._apis.get(api_name)
         if not config:
             return {"error": f"API '{api_name}' not found"}
@@ -89,27 +85,21 @@ class APIConnector:
             return {"error": str(e)}
 
     async def get(self, api_name: str, path: str, **kwargs) -> dict:
-        ""
         return await self.request(api_name, "GET", path, **kwargs)
 
     async def post(self, api_name: str, path: str, data: dict = None, **kwargs) -> dict:
-        ""
         return await self.request(api_name, "POST", path, data=data, **kwargs)
 
     async def put(self, api_name: str, path: str, data: dict = None, **kwargs) -> dict:
-        ""
         return await self.request(api_name, "PUT", path, data=data, **kwargs)
 
     async def delete(self, api_name: str, path: str, **kwargs) -> dict:
-        ""
         return await self.request(api_name, "DELETE", path, **kwargs)
 
     def clear_cache(self) -> None:
-        ""
         self._cache.clear()
 
     def list_apis(self) -> list[dict]:
-        ""
         return [
             {
                 "name": api.name,

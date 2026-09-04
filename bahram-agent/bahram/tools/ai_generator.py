@@ -9,7 +9,6 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class GeneratedFile:
-    ""
 
     path: str
     content: str
@@ -17,7 +16,6 @@ class GeneratedFile:
     description: str = ""
 
 class AICodeGenerator:
-    ""
 
     def __init__(self) -> None:
         self._templates: dict[str, dict] = {
@@ -52,7 +50,6 @@ class AICodeGenerator:
         framework: str = "fastapi",
         output_dir: str = "generated",
     ) -> list[GeneratedFile]:
-        ""
         template = self._templates.get(framework, {})
         if not template:
             return []
@@ -88,7 +85,6 @@ class AICodeGenerator:
         language: str,
         framework: str,
     ) -> str:
-        ""
         if language == "python" and framework == "fastapi":
             return self._generate_fastapi_main(description)
         elif language == "python" and framework == "cli":

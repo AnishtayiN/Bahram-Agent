@@ -10,7 +10,6 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class Dependency:
-    ""
 
     name: str
     version: str = ""
@@ -18,13 +17,11 @@ class Dependency:
     is_direct: bool = True
 
 class DependencyAnalyzer:
-    ""
 
     def __init__(self, project_root: str = ".") -> None:
         self.project_root = Path(project_root)
 
     async def analyze(self) -> dict[str, Any]:
-        ""
         deps = {
             "python": await self._analyze_python(),
             "javascript": await self._analyze_javascript(),
@@ -34,7 +31,6 @@ class DependencyAnalyzer:
         return deps
 
     async def _analyze_python(self) -> list[Dependency]:
-        ""
         deps = []
 
         req_file = self.project_root / "requirements.txt"
@@ -60,7 +56,6 @@ class DependencyAnalyzer:
         return deps
 
     async def _analyze_javascript(self) -> list[Dependency]:
-        ""
         deps = []
 
         pkg_file = self.project_root / "package.json"
@@ -75,7 +70,6 @@ class DependencyAnalyzer:
         return deps
 
     def get_report(self, deps: dict[str, Any]) -> str:
-        ""
         lines = ["## Dependency Report", ""]
 
         if deps["python"]:
@@ -94,7 +88,6 @@ class DependencyAnalyzer:
         return "\n".join(lines)
 
     def check_outdated(self, deps: dict[str, Any]) -> list[dict]:
-        ""
         outdated = []
 
         return outdated

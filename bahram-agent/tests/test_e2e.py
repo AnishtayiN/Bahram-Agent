@@ -63,6 +63,10 @@ class TestScenarioB_ToolExecution:
         agent = Agent(config=config)
 
         echo_tool = AsyncMock()
+        echo_tool.schema = MagicMock(return_value={
+            "type": "function",
+            "function": {"name": "echo", "description": "Echo tool", "parameters": {}},
+        })
         echo_tool.execute = AsyncMock(return_value="Hello from echo")
         agent.engine.register_tool("echo", echo_tool)
 
@@ -84,6 +88,10 @@ class TestScenarioB_ToolExecution:
         agent = Agent(config=config)
 
         fail_tool = AsyncMock()
+        fail_tool.schema = MagicMock(return_value={
+            "type": "function",
+            "function": {"name": "fail", "description": "Failing tool", "parameters": {}},
+        })
         fail_tool.execute = AsyncMock(side_effect=ValueError("Tool crashed"))
         agent.engine.register_tool("fail", fail_tool)
 
@@ -287,6 +295,10 @@ class TestScenarioJ_MaxIterations:
 
         tc = ToolCall(id="call_1", name="bash", arguments={"command": "ls"})
         infinite_tool = AsyncMock()
+        infinite_tool.schema = MagicMock(return_value={
+            "type": "function",
+            "function": {"name": "bash", "description": "Bash tool", "parameters": {}},
+        })
         infinite_tool.execute = AsyncMock(return_value="output")
         agent.engine.register_tool("bash", infinite_tool)
 

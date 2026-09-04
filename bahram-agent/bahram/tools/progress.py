@@ -10,7 +10,6 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class ToolProgress:
-    ""
 
     tool_name: str
     status: str = "pending"
@@ -22,7 +21,6 @@ class ToolProgress:
     error: str = ""
 
 class ProgressTracker:
-    ""
 
     def __init__(self) -> None:
         self._active: dict[str, ToolProgress] = {}
@@ -30,7 +28,6 @@ class ProgressTracker:
         self._callbacks: list[Callable] = []
 
     def start(self, tool_name: str) -> str:
-        ""
         import uuid
         tracker_id = f"{tool_name}_{uuid.uuid4().hex[:8]}"
 
@@ -44,7 +41,6 @@ class ProgressTracker:
         return tracker_id
 
     def update(self, tracker_id: str, progress: float = None, message: str = None) -> None:
-        ""
         if tracker_id in self._active:
             p = self._active[tracker_id]
             if progress is not None:
@@ -54,7 +50,6 @@ class ProgressTracker:
             self._notify_callbacks(p)
 
     def complete(self, tracker_id: str, result: Any = None) -> None:
-        ""
         if tracker_id in self._active:
             p = self._active[tracker_id]
             p.status = "completed"
@@ -66,7 +61,6 @@ class ProgressTracker:
             self._notify_callbacks(p)
 
     def fail(self, tracker_id: str, error: str) -> None:
-        ""
         if tracker_id in self._active:
             p = self._active[tracker_id]
             p.status = "failed"
@@ -77,7 +71,6 @@ class ProgressTracker:
             self._notify_callbacks(p)
 
     def get_active(self) -> list[dict]:
-        ""
         return [
             {
                 "id": k,
@@ -90,7 +83,6 @@ class ProgressTracker:
         ]
 
     def get_history(self, limit: int = 10) -> list[dict]:
-        ""
         return [
             {
                 "tool": p.tool_name,
@@ -102,11 +94,9 @@ class ProgressTracker:
         ]
 
     def add_callback(self, callback: Callable) -> None:
-        ""
         self._callbacks.append(callback)
 
     def _notify_callbacks(self, progress: ToolProgress) -> None:
-        ""
         for callback in self._callbacks:
             try:
                 callback(progress)

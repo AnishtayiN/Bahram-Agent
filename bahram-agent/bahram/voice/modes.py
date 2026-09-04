@@ -7,7 +7,6 @@ from typing import Any, Optional
 logger = logging.getLogger(__name__)
 
 class VoiceTranscriber:
-    ""
 
     def __init__(self, provider: str = "openai", api_key: str = "") -> None:
         self.provider = provider
@@ -18,7 +17,6 @@ class VoiceTranscriber:
         audio_path: str,
         language: str = "en",
     ) -> dict[str, Any]:
-        ""
         if not self.api_key:
             return {"error": f"No API key configured for {self.provider}"}
 
@@ -35,7 +33,6 @@ class VoiceTranscriber:
         audio_path: str,
         language: str,
     ) -> dict:
-        ""
         import httpx
 
         async with httpx.AsyncClient() as client:
@@ -55,7 +52,6 @@ class VoiceTranscriber:
                 return {"error": f"API error: {response.status_code}"}
 
 class TextToSpeech:
-    ""
 
     def __init__(self, provider: str = "openai", api_key: str = "") -> None:
         self.provider = provider
@@ -67,7 +63,6 @@ class TextToSpeech:
         voice: str = "alloy",
         output_path: str = "output.mp3",
     ) -> dict[str, Any]:
-        ""
         if not self.api_key:
             return {"error": f"No API key configured for {self.provider}"}
 
@@ -85,7 +80,6 @@ class TextToSpeech:
         voice: str,
         output_path: str,
     ) -> dict:
-        ""
         import httpx
 
         async with httpx.AsyncClient() as client:

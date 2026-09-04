@@ -7,7 +7,6 @@ from typing import Any, Optional
 
 @dataclass
 class ProviderConfig:
-    ""
 
     api_key: str = ""
     base_url: Optional[str] = None
@@ -17,7 +16,6 @@ class ProviderConfig:
 
 @dataclass
 class MemoryConfig:
-    ""
 
     enabled: bool = True
     database: str = "data/memory.db"
@@ -28,7 +26,6 @@ class MemoryConfig:
 
 @dataclass
 class SkillsConfig:
-    ""
 
     enabled: bool = True
     directory: str = "skills"
@@ -37,7 +34,6 @@ class SkillsConfig:
 
 @dataclass
 class ToolsConfig:
-    ""
 
     enabled: list[str] = field(
         default_factory=lambda: ["bash", "read", "write", "edit", "glob", "grep"]
@@ -50,7 +46,6 @@ class ToolsConfig:
 
 @dataclass
 class PlatformConfig:
-    ""
 
     enabled: bool = False
     token: str = ""
@@ -60,7 +55,6 @@ class PlatformConfig:
 
 @dataclass
 class SchedulerConfig:
-    ""
 
     enabled: bool = True
     max_concurrent: int = 5
@@ -68,7 +62,6 @@ class SchedulerConfig:
 
 @dataclass
 class SecurityConfig:
-    ""
 
     sandbox_mode: bool = False
     allowed_commands: list[str] = field(default_factory=list)
@@ -77,7 +70,6 @@ class SecurityConfig:
 
 @dataclass
 class LoggingConfig:
-    ""
 
     level: str = "INFO"
     file: str = "logs/bahram.log"
@@ -86,7 +78,6 @@ class LoggingConfig:
 
 @dataclass
 class ServerConfig:
-    ""
 
     enabled: bool = False
     host: str = "0.0.0.0"
@@ -108,7 +99,6 @@ class AgentConfig:
 
 @dataclass
 class Config:
-    ""
 
     agent: AgentConfig = field(default_factory=AgentConfig)
     providers: dict[str, ProviderConfig] = field(default_factory=dict)
@@ -123,7 +113,6 @@ class Config:
 
     @classmethod
     def from_file(cls, path: str | Path) -> Config:
-        ""
         path = Path(path)
         if not path.exists():
             return cls()
@@ -147,7 +136,6 @@ class Config:
 
     @classmethod
     def _from_dict(cls, data: dict[str, Any]) -> Config:
-        ""
         config = cls()
 
         if "agent" in data:
@@ -186,7 +174,6 @@ class Config:
 
     @classmethod
     def _expand_env_vars(cls, obj: Any) -> Any:
-        ""
         if isinstance(obj, str):
             if obj.startswith("${") and obj.endswith("}"):
                 var_name = obj[2:-1]
@@ -199,12 +186,10 @@ class Config:
         return obj
 
     def get_provider(self, name: str) -> ProviderConfig:
-        ""
         if name not in self.providers:
             raise ValueError(f"Provider '{name}' not configured")
         return self.providers[name]
 
     def get_model_provider(self, model: str) -> tuple[str, ProviderConfig]:
-        ""
         provider_name = model.split("/")[0] if "/" in model else "anthropic"
         return provider_name, self.get_provider(provider_name)

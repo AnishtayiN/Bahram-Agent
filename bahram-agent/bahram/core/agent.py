@@ -40,7 +40,11 @@ class Agent:
         self.smart_context = SmartContextManager(max_tokens=max_ctx_tokens)
         self.compressor = ContextCompressor()
         self.sessions: dict[str, Session] = {}
-        self._store = SessionStore(db_path=self.config.memory.database.replace("memory.db", "sessions.db"))
+        _memory_db = self.config.memory.database
+        _session_db = (
+            ":memory:" if _memory_db == ":memory:" else _memory_db.replace("memory.db", "sessions.db")
+        )
+        self._store = SessionStore(db_path=_session_db)
         self._memory = None
         self._skills = None
         self._setup_logging()

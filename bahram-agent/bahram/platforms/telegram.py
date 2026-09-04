@@ -2,14 +2,17 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import Any, Callable, Optional
+from typing import TYPE_CHECKING, Any, Callable, Optional
+
+if TYPE_CHECKING:
+    from telegram import Update
+    from telegram.ext import ContextTypes
 
 from bahram.platforms.base import BasePlatform, PlatformMessage
 
 logger = logging.getLogger(__name__)
 
 class TelegramPlatform(BasePlatform):
-    ""
 
     def __init__(self, config: Any) -> None:
         super().__init__(config)
@@ -27,7 +30,6 @@ class TelegramPlatform(BasePlatform):
         return "telegram"
 
     async def start(self) -> None:
-        ""
         try:
             from telegram import Update, BotCommand
             from telegram.ext import (
@@ -82,7 +84,6 @@ class TelegramPlatform(BasePlatform):
             raise
 
     async def stop(self) -> None:
-        ""
         if self.app:
             await self.app.updater.stop()
             await self.app.stop()
@@ -90,7 +91,6 @@ class TelegramPlatform(BasePlatform):
             logger.info("Telegram bot stopped")
 
     async def _set_bot_commands(self) -> None:
-        ""
         from telegram import BotCommand
 
         commands = [
@@ -104,7 +104,6 @@ class TelegramPlatform(BasePlatform):
         await self.app.bot.set_my_commands(commands)
 
     async def send_message(self, chat_id: str, content: str, parse_mode: str = "Markdown") -> None:
-        ""
         if self.bot:
             try:
 
@@ -129,11 +128,9 @@ class TelegramPlatform(BasePlatform):
                 await self.bot.send_message(chat_id=chat_id, text=content)
 
     async def reply(self, message: PlatformMessage, content: str) -> None:
-        ""
         await self.send_message(message.chat_id, content)
 
     async def edit_message(self, chat_id: str, message_id: str, content: str) -> None:
-        ""
         if self.bot:
             try:
                 await self.bot.edit_message_text(
@@ -145,18 +142,15 @@ class TelegramPlatform(BasePlatform):
                 logger.error(f"Failed to edit message: {e}")
 
     async def send_typing(self, chat_id: str) -> None:
-        ""
         if self.bot:
             await self.bot.send_chat_action(chat_id=chat_id, action="typing")
 
     async def send_voice(self, chat_id: str, voice_path: str) -> None:
-        ""
         if self.bot:
             with open(voice_path, "rb") as voice:
                 await self.bot.send_voice(chat_id=chat_id, voice=voice)
 
     async def send_document(self, chat_id: str, document_path: str, caption: str = "") -> None:
-        ""
         if self.bot:
             with open(document_path, "rb") as doc:
                 await self.bot.send_document(
@@ -166,7 +160,6 @@ class TelegramPlatform(BasePlatform):
                 )
 
     async def send_photo(self, chat_id: str, photo_path: str, caption: str = "") -> None:
-        ""
         if self.bot:
             with open(photo_path, "rb") as photo:
                 await self.bot.send_photo(
@@ -176,13 +169,11 @@ class TelegramPlatform(BasePlatform):
                 )
 
     def _is_allowed(self, user_id: str) -> bool:
-        ""
         if not self._allowed_users:
             return True
         return user_id in self._allowed_users
 
     async def _handle_start(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        ""
         user_id = str(update.effective_user.id)
 
         if not self._is_allowed(user_id):
@@ -202,7 +193,6 @@ class TelegramPlatform(BasePlatform):
         await update.message.reply_text(welcome)
 
     async def _handle_help(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        ""
         help_text = (
             "Bahram Agent Help\n\n"
             "Features:\n"
@@ -226,7 +216,6 @@ class TelegramPlatform(BasePlatform):
         await update.message.reply_text(help_text)
 
     async def _handle_clear(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        ""
 
         msg = PlatformMessage(
             platform="telegram",
@@ -241,7 +230,6 @@ class TelegramPlatform(BasePlatform):
         await update.message.reply_text("Conversation cleared.")
 
     async def _handle_model(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        ""
         if context.args:
             model = context.args[0]
             msg = PlatformMessage(
@@ -262,7 +250,6 @@ class TelegramPlatform(BasePlatform):
             )
 
     async def _handle_status(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        ""
         status = (
             "Bahram Agent Status\n\n"
             "Version: 1.0.0\n"
@@ -272,7 +259,6 @@ class TelegramPlatform(BasePlatform):
         await update.message.reply_text(status)
 
     async def _handle_message(self, update_or_message: Any, context: Any = None) -> None:
-        ""
         if isinstance(update_or_message, PlatformMessage):
             msg = update_or_message
         else:
@@ -346,7 +332,6 @@ class TelegramPlatform(BasePlatform):
             await self.send_message(chat_id, f"Error: {str(e)[:200]}")
 
     async def _handle_voice(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        ""
         if not update.message:
             return
 
@@ -375,7 +360,6 @@ class TelegramPlatform(BasePlatform):
             await self._handle_message(msg)
 
     async def _handle_image(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        ""
         if not update.message:
             return
 
@@ -406,7 +390,6 @@ class TelegramPlatform(BasePlatform):
             await self._handle_message(msg)
 
     async def _handle_document(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        ""
         if not update.message or not update.message.document:
             return
 

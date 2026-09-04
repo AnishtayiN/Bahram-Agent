@@ -13,7 +13,6 @@ from typing import Any, Optional, Callable
 logger = logging.getLogger(__name__)
 
 class JobState(str, Enum):
-    ""
 
     SCHEDULED = "scheduled"
     PAUSED = "paused"
@@ -22,7 +21,6 @@ class JobState(str, Enum):
 
 @dataclass
 class CronJob:
-    ""
 
     id: str = field(default_factory=lambda: str(uuid.uuid4())[:8])
     name: str = ""
@@ -42,7 +40,6 @@ class CronJob:
     metadata: dict[str, Any] = field(default_factory=dict)
 
 class CronScheduler:
-    ""
 
     def __init__(self, data_dir: str = "data/cron") -> None:
         self.data_dir = Path(data_dir)
@@ -55,7 +52,6 @@ class CronScheduler:
         self._load_jobs()
 
     def _load_jobs(self) -> None:
-        ""
         jobs_file = self.data_dir / "jobs.json"
         if jobs_file.exists():
             try:
@@ -68,7 +64,6 @@ class CronScheduler:
                 logger.error(f"Failed to load jobs: {e}")
 
     def _save_jobs(self) -> None:
-        ""
         jobs_file = self.data_dir / "jobs.json"
         try:
             data = [
@@ -106,7 +101,6 @@ class CronScheduler:
         deliver_to: str = "origin",
         repeat: int = 0,
     ) -> CronJob:
-        ""
         job = CronJob(
             name=name or f"job-{uuid.uuid4().hex[:6]}",
             prompt=prompt,
@@ -122,15 +116,12 @@ class CronScheduler:
         return job
 
     def get_job(self, job_id: str) -> Optional[CronJob]:
-        ""
         return self.jobs.get(job_id)
 
     def list_jobs(self) -> list[CronJob]:
-        ""
         return list(self.jobs.values())
 
     def pause_job(self, job_id: str) -> bool:
-        ""
         job = self.jobs.get(job_id)
         if job:
             job.state = JobState.PAUSED
@@ -139,7 +130,6 @@ class CronScheduler:
         return False
 
     def resume_job(self, job_id: str) -> bool:
-        ""
         job = self.jobs.get(job_id)
         if job:
             job.state = JobState.SCHEDULED
@@ -149,7 +139,6 @@ class CronScheduler:
         return False
 
     def remove_job(self, job_id: str) -> bool:
-        ""
         if job_id in self.jobs:
             del self.jobs[job_id]
             self._save_jobs()
@@ -157,7 +146,6 @@ class CronScheduler:
         return False
 
     def update_job(self, job_id: str, updates: dict) -> bool:
-        ""
         job = self.jobs.get(job_id)
         if job:
             for key, value in updates.items():
@@ -168,7 +156,6 @@ class CronScheduler:
         return False
 
     def _calculate_next_run(self, schedule: str) -> str:
-        ""
         now = datetime.now()
 
         if schedule.startswith("every "):
@@ -186,7 +173,6 @@ class CronScheduler:
         return (now + timedelta(hours=1)).isoformat()
 
     def get_due_jobs(self) -> list[CronJob]:
-        ""
         now = datetime.now()
         due = []
 
@@ -202,18 +188,15 @@ class CronScheduler:
         return due
 
     async def start(self) -> None:
-        ""
         self._running = True
         asyncio.create_task(self._tick_loop())
         logger.info("Cron scheduler started")
 
     async def stop(self) -> None:
-        ""
         self._running = False
         logger.info("Cron scheduler stopped")
 
     async def _tick_loop(self) -> None:
-        ""
         while self._running:
             async with self._lock:
                 due_jobs = self.get_due_jobs()
@@ -223,7 +206,6 @@ class CronScheduler:
             await asyncio.sleep(self._tick_interval)
 
     async def _run_job(self, job: CronJob) -> None:
-        ""
         logger.info(f"Running cron job: {job.name}")
         job.state = JobState.RUNNING
         job.last_run = datetime.now().isoformat()
@@ -249,12 +231,10 @@ class CronScheduler:
         self._save_jobs()
 
     async def _execute_job(self, job: CronJob) -> str:
-        ""
 
         return f"Job {job.name} executed at {datetime.now().isoformat()}"
 
     async def _deliver_result(self, job: CronJob, result: str) -> None:
-        ""
 
         output_dir = self.data_dir / "output" / job.id
         output_dir.mkdir(parents=True, exist_ok=True)
@@ -266,13 +246,11 @@ class CronScheduler:
         logger.info(f"Delivered result for job: {job.name}")
 
     def register_handler(self, event: str, handler: Callable) -> None:
-        ""
         if event not in self._handlers:
             self._handlers[event] = []
         self._handlers[event].append(handler)
 
     async def trigger_job(self, job_id: str) -> Optional[str]:
-        ""
         job = self.jobs.get(job_id)
         if job:
             result = await self._execute_job(job)

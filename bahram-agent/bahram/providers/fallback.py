@@ -9,7 +9,6 @@ from bahram.core.engine import AgentResponse, Message
 logger = logging.getLogger(__name__)
 
 class FallbackProvider(BaseProvider):
-    ""
 
     def __init__(self, primary: BaseProvider, fallbacks: list[BaseProvider] = None) -> None:
         self.primary = primary
@@ -25,7 +24,6 @@ class FallbackProvider(BaseProvider):
         tools: list[dict[str, Any]],
         **kwargs: Any,
     ) -> AgentResponse:
-        ""
 
         try:
             return await self.primary.complete(messages, tools, **kwargs)
@@ -49,7 +47,6 @@ class FallbackProvider(BaseProvider):
         tools: list[dict[str, Any]],
         **kwargs: Any,
     ):
-        ""
 
         try:
             async for chunk in self.primary.stream(messages, tools, **kwargs):
@@ -71,13 +68,10 @@ class FallbackProvider(BaseProvider):
         raise Exception("All providers failed")
 
     def get_current_provider(self) -> str:
-        ""
         return self._current.__class__.__name__
 
     def add_fallback(self, provider: BaseProvider) -> None:
-        ""
         self.fallbacks.append(provider)
 
     def remove_fallback(self, provider: BaseProvider) -> None:
-        ""
         self.fallbacks = [p for p in self.fallbacks if p is not provider]

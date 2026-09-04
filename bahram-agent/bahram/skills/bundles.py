@@ -10,7 +10,6 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class SkillBundle:
-    ""
 
     name: str
     description: str
@@ -18,7 +17,6 @@ class SkillBundle:
     enabled: bool = True
 
 class SkillBundles:
-    ""
 
     def __init__(self, data_dir: str = "data/skills") -> None:
         self.data_dir = Path(data_dir)
@@ -27,7 +25,6 @@ class SkillBundles:
         self._load()
 
     def _load(self) -> None:
-        ""
         bundles_file = self.data_dir / "bundles.json"
         if bundles_file.exists():
             try:
@@ -40,7 +37,6 @@ class SkillBundles:
                 logger.warning(f"Failed to load bundles: {e}")
 
     def _save(self) -> None:
-        ""
         bundles_file = self.data_dir / "bundles.json"
         data = [
             {
@@ -55,7 +51,6 @@ class SkillBundles:
             json.dump(data, f, indent=2)
 
     def create_bundle(self, name: str, description: str, skills: list[str] = None) -> SkillBundle:
-        ""
         bundle = SkillBundle(
             name=name,
             description=description,
@@ -66,7 +61,6 @@ class SkillBundles:
         return bundle
 
     def add_skill_to_bundle(self, bundle_name: str, skill_name: str) -> bool:
-        ""
         bundle = self._bundles.get(bundle_name)
         if bundle and skill_name not in bundle.skills:
             bundle.skills.append(skill_name)
@@ -75,7 +69,6 @@ class SkillBundles:
         return False
 
     def remove_skill_from_bundle(self, bundle_name: str, skill_name: str) -> bool:
-        ""
         bundle = self._bundles.get(bundle_name)
         if bundle and skill_name in bundle.skills:
             bundle.skills.remove(skill_name)
@@ -84,7 +77,6 @@ class SkillBundles:
         return False
 
     def enable_bundle(self, name: str) -> bool:
-        ""
         bundle = self._bundles.get(name)
         if bundle:
             bundle.enabled = True
@@ -93,7 +85,6 @@ class SkillBundles:
         return False
 
     def disable_bundle(self, name: str) -> bool:
-        ""
         bundle = self._bundles.get(name)
         if bundle:
             bundle.enabled = False
@@ -102,11 +93,9 @@ class SkillBundles:
         return False
 
     def get_bundle(self, name: str) -> Optional[SkillBundle]:
-        ""
         return self._bundles.get(name)
 
     def get_enabled_skills(self) -> list[str]:
-        ""
         skills = []
         for bundle in self._bundles.values():
             if bundle.enabled:
@@ -114,7 +103,6 @@ class SkillBundles:
         return list(set(skills))
 
     def list_bundles(self) -> list[dict]:
-        ""
         return [
             {
                 "name": b.name,
@@ -126,7 +114,6 @@ class SkillBundles:
         ]
 
     def delete_bundle(self, name: str) -> bool:
-        ""
         if name in self._bundles:
             del self._bundles[name]
             self._save()

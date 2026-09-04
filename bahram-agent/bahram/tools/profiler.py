@@ -12,7 +12,6 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class ProfileResult:
-    ""
 
     function: str
     calls: int
@@ -20,22 +19,18 @@ class ProfileResult:
     per_call: float
 
 class Profiler:
-    ""
 
     def __init__(self) -> None:
         self._profiler = cProfile.Profile()
         self._results: list[ProfileResult] = []
 
     def start(self) -> None:
-        ""
         self._profiler.enable()
 
     def stop(self) -> None:
-        ""
         self._profiler.disable()
 
     def get_stats(self, top_n: int = 20) -> list[ProfileResult]:
-        ""
         stream = io.StringIO()
         stats = pstats.Stats(self._profiler, stream=stream)
         stats.sort_stats("cumulative")
@@ -55,7 +50,6 @@ class Profiler:
         return sorted(results, key=lambda x: x.total_time, reverse=True)
 
     def format_report(self, results: list[ProfileResult]) -> str:
-        ""
         lines = ["## Profile Report", ""]
         lines.append(f"{'Function':<60} {'Calls':>8} {'Total':>10} {'Per Call':>10}")
         lines.append("-" * 90)
@@ -66,18 +60,15 @@ class Profiler:
         return "\n".join(lines)
 
     def reset(self) -> None:
-        ""
         self._profiler = cProfile.Profile()
         self._results.clear()
 
 class FunctionTimer:
-    ""
 
     def __init__(self) -> None:
         self._timings: dict[str, list[float]] = {}
 
     def time(self, func: Callable) -> Callable:
-        ""
         import functools
 
         @functools.wraps(func)
@@ -112,7 +103,6 @@ class FunctionTimer:
         return sync_wrapper
 
     def get_report(self) -> str:
-        ""
         lines = ["## Timing Report", ""]
         lines.append(f"{'Function':<50} {'Calls':>8} {'Total':>10} {'Avg':>10}")
         lines.append("-" * 80)
@@ -125,5 +115,4 @@ class FunctionTimer:
         return "\n".join(lines)
 
     def reset(self) -> None:
-        ""
         self._timings.clear()

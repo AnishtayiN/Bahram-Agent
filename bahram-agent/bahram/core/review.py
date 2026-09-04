@@ -12,7 +12,6 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class ReviewItem:
-    ""
 
     conversation_id: str
     timestamp: float
@@ -22,7 +21,6 @@ class ReviewItem:
     reviewed: bool = False
 
 class BackgroundReviewer:
-    ""
 
     def __init__(self, data_dir: str = "data/memory") -> None:
         self.data_dir = Path(data_dir)
@@ -33,7 +31,6 @@ class BackgroundReviewer:
         self._load()
 
     def _load(self) -> None:
-        ""
         reviews_file = self.data_dir / "reviews.json"
         if reviews_file.exists():
             try:
@@ -44,7 +41,6 @@ class BackgroundReviewer:
                 logger.warning(f"Failed to load reviews: {e}")
 
     def _save(self) -> None:
-        ""
         reviews_file = self.data_dir / "reviews.json"
         data = [
             {
@@ -61,7 +57,6 @@ class BackgroundReviewer:
             json.dump(data, f, indent=2)
 
     def set_review_function(self, fn: Callable) -> None:
-        ""
         self._review_fn = fn
 
     async def review_conversation(
@@ -70,7 +65,6 @@ class BackgroundReviewer:
         messages: list[dict],
         model_fn: Callable = None,
     ) -> ReviewItem:
-        ""
 
         review_fn = model_fn or self._review_fn
 
@@ -104,7 +98,6 @@ class BackgroundReviewer:
         return review
 
     def _heuristic_review(self, messages: list[dict]) -> dict:
-        ""
         issues = []
         suggestions = []
 
@@ -135,7 +128,6 @@ class BackgroundReviewer:
         }
 
     def get_pending_reviews(self) -> list[dict]:
-        ""
         return [
             {
                 "conversation_id": r.conversation_id,
@@ -147,7 +139,6 @@ class BackgroundReviewer:
         ]
 
     def mark_reviewed(self, conversation_id: str) -> bool:
-        ""
         for r in self._reviews:
             if r.conversation_id == conversation_id:
                 r.reviewed = True
@@ -156,7 +147,6 @@ class BackgroundReviewer:
         return False
 
     def get_statistics(self) -> dict[str, Any]:
-        ""
         total = len(self._reviews)
         reviewed = sum(1 for r in self._reviews if r.reviewed)
         issues = sum(len(r.issues) for r in self._reviews)

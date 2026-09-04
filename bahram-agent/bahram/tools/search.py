@@ -6,7 +6,6 @@ from typing import Any, Optional
 logger = logging.getLogger(__name__)
 
 class ToolSearch:
-    ""
 
     def __init__(self) -> None:
         self._tools: dict[str, dict[str, Any]] = {}
@@ -18,7 +17,6 @@ class ToolSearch:
         category: str = "",
         parameters: dict = None,
     ) -> None:
-        ""
         self._tools[name] = {
             "name": name,
             "description": description,
@@ -32,7 +30,6 @@ class ToolSearch:
         category: str = "",
         limit: int = 10,
     ) -> list[dict]:
-        ""
         query_lower = query.lower()
         results = []
 
@@ -56,7 +53,6 @@ class ToolSearch:
         return results[:limit]
 
     def list_categories(self) -> list[str]:
-        ""
         categories = set()
         for tool in self._tools.values():
             if tool["category"]:
@@ -64,9 +60,7 @@ class ToolSearch:
         return sorted(categories)
 
     def get_tool(self, name: str) -> Optional[dict]:
-        ""
         return self._tools.get(name)
 
     def list_all(self) -> list[dict]:
-        ""
         return list(self._tools.values())

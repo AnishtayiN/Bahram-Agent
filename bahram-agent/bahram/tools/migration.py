@@ -10,7 +10,6 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class MigrationRule:
-    ""
 
     name: str
     source_pattern: str
@@ -19,7 +18,6 @@ class MigrationRule:
     description: str = ""
 
 class CodeMigration:
-    ""
 
     def __init__(self) -> None:
         self._rules: dict[str, list[MigrationRule]] = {
@@ -46,7 +44,6 @@ class CodeMigration:
         migration_type: str,
         dry_run: bool = False,
     ) -> dict[str, Any]:
-        ""
         rules = self._rules.get(migration_type, [])
         if not rules:
             return {"error": f"Unknown migration type: {migration_type}"}
@@ -67,7 +64,6 @@ class CodeMigration:
         rules: list[MigrationRule],
         dry_run: bool,
     ) -> dict[str, Any]:
-        ""
         try:
             content = source.read_text(errors="replace")
             changes = []
@@ -106,7 +102,6 @@ class CodeMigration:
         rules: list[MigrationRule],
         dry_run: bool,
     ) -> dict[str, Any]:
-        ""
         results = []
         for py_file in source.rglob("*.py"):
             rel_path = py_file.relative_to(source)
@@ -121,11 +116,9 @@ class CodeMigration:
         }
 
     def get_migration_types(self) -> list[str]:
-        ""
         return list(self._rules.keys())
 
     def get_rules(self, migration_type: str) -> list[dict]:
-        ""
         rules = self._rules.get(migration_type, [])
         return [
             {

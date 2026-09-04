@@ -11,7 +11,6 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class SessionState:
-    ""
 
     session_id: str
     platform: str
@@ -22,7 +21,6 @@ class SessionState:
     conversation_history: list[dict] = field(default_factory=list)
 
 class SessionResumeManager:
-    ""
 
     def __init__(self, data_dir: str = "data/gateway") -> None:
         self.data_dir = Path(data_dir)
@@ -31,7 +29,6 @@ class SessionResumeManager:
         self._load()
 
     def _load(self) -> None:
-        ""
         sessions_file = self.data_dir / "sessions.json"
         if sessions_file.exists():
             try:
@@ -44,7 +41,6 @@ class SessionResumeManager:
                 logger.warning(f"Failed to load sessions: {e}")
 
     def _save(self) -> None:
-        ""
         sessions_file = self.data_dir / "sessions.json"
         data = [
             {
@@ -70,7 +66,6 @@ class SessionResumeManager:
         context: dict = None,
         history: list[dict] = None,
     ) -> None:
-        ""
         self._sessions[session_id] = SessionState(
             session_id=session_id,
             platform=platform,
@@ -83,11 +78,9 @@ class SessionResumeManager:
         self._save()
 
     def get_session(self, session_id: str) -> Optional[SessionState]:
-        ""
         return self._sessions.get(session_id)
 
     def get_recent_sessions(self, platform: str = None, limit: int = 10) -> list[dict]:
-        ""
         sessions = list(self._sessions.values())
         if platform:
             sessions = [s for s in sessions if s.platform == platform]
@@ -105,7 +98,6 @@ class SessionResumeManager:
         ]
 
     def cleanup_old(self, max_age_seconds: int = 86400) -> int:
-        ""
         now = time.time()
         to_remove = [
             sid for sid, session in self._sessions.items()

@@ -10,7 +10,6 @@ from bahram.skills.base import BaseSkill
 logger = logging.getLogger(__name__)
 
 class SkillManager:
-    ""
 
     def __init__(self, config: Any) -> None:
         self.config = config
@@ -18,7 +17,6 @@ class SkillManager:
         self.skill_dir = Path(config.directory) if config.directory else Path("skills")
 
     async def load_skills(self) -> None:
-        ""
         if not self.skill_dir.exists():
             logger.warning(f"Skills directory not found: {self.skill_dir}")
             return
@@ -35,7 +33,6 @@ class SkillManager:
         logger.info(f"Loaded {len(self.skills)} skills")
 
     async def _load_skill(self, skill_file: Path) -> None:
-        ""
         module_name = skill_file.stem
         spec = importlib.util.spec_from_file_location(module_name, skill_file)
 
@@ -58,22 +55,18 @@ class SkillManager:
                 break
 
     def get_skill(self, name: str) -> Optional[BaseSkill]:
-        ""
         return self.skills.get(name)
 
     def list_skills(self) -> list[str]:
-        ""
         return list(self.skills.keys())
 
     async def find_skill(self, task: str) -> Optional[BaseSkill]:
-        ""
         for skill in self.skills.values():
             if await skill.can_handle(task):
                 return skill
         return None
 
     async def execute_skill(self, name: str, context: dict[str, Any]) -> str:
-        ""
         skill = self.get_skill(name)
         if skill is None:
             return f"Skill not found: {name}"
@@ -85,7 +78,6 @@ class SkillManager:
             return f"Skill execution failed: {e}"
 
     async def auto_execute(self, task: str, context: dict[str, Any]) -> Optional[str]:
-        ""
         skill = await self.find_skill(task)
         if skill:
             logger.info(f"Auto-executing skill: {skill.metadata.name}")

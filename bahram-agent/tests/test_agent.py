@@ -84,6 +84,10 @@ class TestAgentChat:
         config = _make_config()
         agent = Agent(config=config)
         tool = AsyncMock()
+        tool.schema = MagicMock(return_value={
+            "type": "function",
+            "function": {"name": "echo", "description": "Echo tool", "parameters": {}},
+        })
         tool.execute = AsyncMock(return_value="Tool output")
         agent.engine.register_tool("echo", tool)
 

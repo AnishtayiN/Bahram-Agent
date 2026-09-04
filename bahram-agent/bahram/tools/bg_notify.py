@@ -10,7 +10,6 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class BackgroundTask:
-    ""
 
     task_id: str
     name: str
@@ -23,14 +22,12 @@ class BackgroundTask:
     notify_platform: str = ""
 
 class BackgroundNotifier:
-    ""
 
     def __init__(self) -> None:
         self._tasks: dict[str, BackgroundTask] = {}
         self._notify_fn: Optional[Callable] = None
 
     def set_notify_function(self, fn: Callable) -> None:
-        ""
         self._notify_fn = fn
 
     def start_task(
@@ -40,7 +37,6 @@ class BackgroundNotifier:
         notify_chat_id: str = "",
         notify_platform: str = "",
     ) -> None:
-        ""
         self._tasks[task_id] = BackgroundTask(
             task_id=task_id,
             name=name,
@@ -51,7 +47,6 @@ class BackgroundNotifier:
         )
 
     def complete_task(self, task_id: str, result: Any = None) -> None:
-        ""
         if task_id in self._tasks:
             task = self._tasks[task_id]
             task.status = "completed"
@@ -60,7 +55,6 @@ class BackgroundNotifier:
             self._send_notification(task, f"Task '{task.name}' completed")
 
     def fail_task(self, task_id: str, error: str) -> None:
-        ""
         if task_id in self._tasks:
             task = self._tasks[task_id]
             task.status = "failed"
@@ -69,7 +63,6 @@ class BackgroundNotifier:
             self._send_notification(task, f"Task '{task.name}' failed: {error}")
 
     def _send_notification(self, task: BackgroundTask, message: str) -> None:
-        ""
         if not self._notify_fn or not task.notify_chat_id:
             return
 
@@ -84,7 +77,6 @@ class BackgroundNotifier:
             logger.warning(f"Failed to send notification: {e}")
 
     def get_active_tasks(self) -> list[dict]:
-        ""
         return [
             {
                 "id": t.task_id,
@@ -97,7 +89,6 @@ class BackgroundNotifier:
         ]
 
     def get_task(self, task_id: str) -> Optional[dict]:
-        ""
         task = self._tasks.get(task_id)
         if task:
             return {
@@ -110,7 +101,6 @@ class BackgroundNotifier:
         return None
 
     def cleanup_old(self, max_age_seconds: int = 3600) -> int:
-        ""
         now = time.time()
         to_remove = [
             tid for tid, task in self._tasks.items()

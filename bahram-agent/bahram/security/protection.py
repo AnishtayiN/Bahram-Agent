@@ -8,7 +8,6 @@ from typing import Optional
 logger = logging.getLogger(__name__)
 
 class SSRFProtector:
-    ""
 
     BLOCKED_RANGES = [
         ("10.0.0.0", "10.255.255.255"),
@@ -36,7 +35,6 @@ class SSRFProtector:
         self.allow_private = allow_private
 
     def check_url(self, url: str) -> tuple[bool, str]:
-        ""
         if self.allow_private:
             return True, ""
 
@@ -57,7 +55,6 @@ class SSRFProtector:
         return True, ""
 
     def _extract_hostname(self, url: str) -> str:
-        ""
 
         hostname = re.sub(r"https?://", "", url)
 
@@ -67,7 +64,6 @@ class SSRFProtector:
         return hostname.lower()
 
     def _extract_ip(self, hostname: str) -> Optional[str]:
-        ""
 
         parts = hostname.split(".")
         if len(parts) == 4 and all(p.isdigit() for p in parts):
@@ -78,7 +74,6 @@ class SSRFProtector:
         return None
 
     def _ip_in_range(self, ip: str, start: str, end: str) -> bool:
-        ""
         try:
             ip_num = self._ip_to_int(ip)
             start_num = self._ip_to_int(start)
@@ -88,14 +83,12 @@ class SSRFProtector:
             return False
 
     def _ip_to_int(self, ip: str) -> int:
-        ""
         parts = ip.split(".")
         if len(parts) != 4:
             raise ValueError("Not IPv4")
         return (int(parts[0]) << 24) + (int(parts[1]) << 16) + (int(parts[2]) << 8) + int(parts[3])
 
 class PromptInjectionDetector:
-    ""
 
     SUSPICIOUS_PATTERNS = [
         (r"ignore\s+(all\s+)?previous\s+instructions", "instruction override"),
@@ -116,7 +109,6 @@ class PromptInjectionDetector:
     ]
 
     def scan_file(self, content: str) -> tuple[bool, list[str]]:
-        ""
         findings = []
 
         for pattern, description in self.SUSPICIOUS_PATTERNS:
@@ -126,7 +118,6 @@ class PromptInjectionDetector:
         return len(findings) > 0, findings
 
     def scan_file_safe(self, filepath: str) -> tuple[bool, list[str]]:
-        ""
         try:
             content = Path(filepath).read_text(encoding="utf-8", errors="ignore")
             return self.scan_file(content)
@@ -135,7 +126,6 @@ class PromptInjectionDetector:
             return False, []
 
 class SecurityManager:
-    ""
 
     def __init__(self, config: dict = None) -> None:
         config = config or {}
@@ -145,9 +135,7 @@ class SecurityManager:
         self.injection = PromptInjectionDetector()
 
     def check_url(self, url: str) -> tuple[bool, str]:
-        ""
         return self.ssrf.check_url(url)
 
     def scan_context_file(self, filepath: str) -> tuple[bool, list[str]]:
-        ""
         return self.injection.scan_file_safe(filepath)

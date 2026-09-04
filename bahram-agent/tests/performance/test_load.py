@@ -284,7 +284,7 @@ class TestConcurrentBudgetTracking:
         total_model_calls = 0
         total_tool_calls = 0
         for i in range(num_tasks):
-            run_id = f"run_{t}_{i}" if False else f"run_t_{i}"
+            run_id = f"run_t_{i}"
             budget = bm.get_run_budget(run_id)
             total_model_calls += budget.model_calls
             total_tool_calls += budget.tool_calls

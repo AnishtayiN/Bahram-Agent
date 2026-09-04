@@ -12,7 +12,6 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class Checkpoint:
-    ""
 
     id: str
     name: str
@@ -22,7 +21,6 @@ class Checkpoint:
     metadata: dict = field(default_factory=dict)
 
 class CheckpointManager:
-    ""
 
     def __init__(self, data_dir: str = "data/checkpoints", max_checkpoints: int = 10) -> None:
         self.data_dir = Path(data_dir)
@@ -34,7 +32,6 @@ class CheckpointManager:
         self._load()
 
     def _load(self) -> None:
-        ""
         checkpoints_file = self.data_dir / "checkpoints.json"
         if checkpoints_file.exists():
             try:
@@ -45,7 +42,6 @@ class CheckpointManager:
                 logger.warning(f"Failed to load checkpoints: {e}")
 
     def _save(self) -> None:
-        ""
         checkpoints_file = self.data_dir / "checkpoints.json"
         data = [
             {
@@ -68,7 +64,6 @@ class CheckpointManager:
         description: str = "",
         metadata: dict = None,
     ) -> Checkpoint:
-        ""
         checkpoint_id = f"cp_{int(time.time() * 1000)}"
         snapshot_dir = self._snapshots_dir / checkpoint_id
         snapshot_dir.mkdir(exist_ok=True)
@@ -108,7 +103,6 @@ class CheckpointManager:
         return checkpoint
 
     def rollback(self, checkpoint_id: str) -> bool:
-        ""
         checkpoint = next(
             (c for c in self._checkpoints if c.id == checkpoint_id), None
         )
@@ -131,7 +125,6 @@ class CheckpointManager:
         return True
 
     def list_checkpoints(self) -> list[dict]:
-        ""
         return [
             {
                 "id": c.id,
@@ -144,7 +137,6 @@ class CheckpointManager:
         ]
 
     def delete_checkpoint(self, checkpoint_id: str) -> bool:
-        ""
         checkpoint = next(
             (c for c in self._checkpoints if c.id == checkpoint_id), None
         )

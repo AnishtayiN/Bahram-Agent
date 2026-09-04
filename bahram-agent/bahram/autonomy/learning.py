@@ -237,7 +237,6 @@ class LearningEngine:
             return None
 
         combined_content = " ".join(l.content for l in lessons)
-        scopes = list({l.scope for l in lessons})
 
         skill = SkillCandidate(
             id=f"skill_{uuid.uuid4().hex[:8]}",

@@ -10,7 +10,6 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class SecurityIssue:
-    ""
 
     file: str
     line: int
@@ -20,7 +19,6 @@ class SecurityIssue:
     recommendation: str
 
 class SecurityScanner:
-    ""
 
     def __init__(self) -> None:
         self._patterns: list[tuple[str, str, str, str, str]] = [
@@ -41,7 +39,6 @@ class SecurityScanner:
         ]
 
     async def scan_file(self, file_path: str) -> list[SecurityIssue]:
-        ""
         try:
             with open(file_path, "r", encoding="utf-8", errors="replace") as f:
                 content = f.read()
@@ -67,7 +64,6 @@ class SecurityScanner:
             return []
 
     async def scan_directory(self, dir_path: str) -> list[SecurityIssue]:
-        ""
         issues = []
         path = Path(dir_path)
 
@@ -78,7 +74,6 @@ class SecurityScanner:
         return issues
 
     def get_report(self, issues: list[SecurityIssue]) -> str:
-        ""
         if not issues:
             return "No security issues found!"
 
@@ -108,7 +103,6 @@ class SecurityScanner:
         return "\n".join(lines)
 
     def get_summary(self, issues: list[SecurityIssue]) -> dict[str, int]:
-        ""
         summary = {"critical": 0, "high": 0, "medium": 0, "low": 0}
         for issue in issues:
             summary[issue.severity] = summary.get(issue.severity, 0) + 1

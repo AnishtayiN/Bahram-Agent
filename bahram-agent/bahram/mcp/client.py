@@ -12,7 +12,6 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class MCPServerConfig:
-    ""
 
     name: str
     type: str = "stdio"
@@ -25,7 +24,6 @@ class MCPServerConfig:
 
 @dataclass
 class MCPTool:
-    ""
 
     name: str
     description: str
@@ -33,7 +31,6 @@ class MCPTool:
     server_name: str
 
 class MCPClient:
-    ""
 
     def __init__(self) -> None:
         self.servers: dict[str, MCPServerConfig] = {}
@@ -41,7 +38,6 @@ class MCPClient:
         self._connections: dict[str, Any] = {}
 
     def load_config(self, config_path: str) -> None:
-        ""
         path = Path(config_path)
         if not path.exists():
             return
@@ -68,7 +64,6 @@ class MCPClient:
                 )
 
     async def connect(self, server_name: str) -> bool:
-        ""
         config = self.servers.get(server_name)
         if not config:
             logger.error(f"Server not found: {server_name}")
@@ -91,7 +86,6 @@ class MCPClient:
             return False
 
     async def _connect_stdio(self, config: MCPServerConfig) -> bool:
-        ""
         if not config.command:
             logger.error(f"No command specified for {config.name}")
             return False
@@ -158,7 +152,6 @@ class MCPClient:
             return False
 
     async def _connect_http(self, config: MCPServerConfig) -> bool:
-        ""
         try:
             import httpx
 
@@ -222,7 +215,6 @@ class MCPClient:
             return False
 
     async def _send_message(self, server_name: str, message: dict) -> None:
-        ""
         conn = self._connections.get(server_name)
         if not conn:
             return
@@ -234,7 +226,6 @@ class MCPClient:
             await process.stdin.drain()
 
     async def _receive_message(self, server_name: str) -> Optional[dict]:
-        ""
         conn = self._connections.get(server_name)
         if not conn:
             return None
@@ -253,7 +244,6 @@ class MCPClient:
         return None
 
     async def call_tool(self, tool_name: str, arguments: dict[str, Any]) -> str:
-        ""
         tool = self.tools.get(tool_name)
         if not tool:
             return f"Tool not found: {tool_name}"
@@ -289,7 +279,6 @@ class MCPClient:
             return f"Error calling tool: {e}"
 
     async def disconnect(self, server_name: str) -> None:
-        ""
         conn = self._connections.pop(server_name, None)
         if conn and conn["type"] == "stdio":
             process = conn.get("process")
@@ -300,12 +289,10 @@ class MCPClient:
         self.tools = {k: v for k, v in self.tools.items() if v.server_name != server_name}
 
     async def disconnect_all(self) -> None:
-        ""
         for server_name in list(self._connections.keys()):
             await self.disconnect(server_name)
 
     def get_tools_schema(self) -> list[dict[str, Any]]:
-        ""
         schemas = []
         for name, tool in self.tools.items():
             schemas.append({
@@ -319,9 +306,7 @@ class MCPClient:
         return schemas
 
     def list_servers(self) -> list[str]:
-        ""
         return list(self.servers.keys())
 
     def list_tools(self) -> list[str]:
-        ""
         return list(self.tools.keys())

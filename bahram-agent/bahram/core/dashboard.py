@@ -11,7 +11,6 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class DashboardStats:
-    ""
 
     total_messages: int = 0
     total_tokens: int = 0
@@ -23,7 +22,6 @@ class DashboardStats:
     success_rate: float = 100.0
 
 class Dashboard:
-    ""
 
     def __init__(self, data_dir: str = "data/gateway") -> None:
         self.data_dir = Path(data_dir)
@@ -33,7 +31,6 @@ class Dashboard:
         self._load()
 
     def _load(self) -> None:
-        ""
         stats_file = self.data_dir / "dashboard_stats.json"
         if stats_file.exists():
             try:
@@ -44,7 +41,6 @@ class Dashboard:
                 logger.warning(f"Failed to load dashboard stats: {e}")
 
     def _save(self) -> None:
-        ""
         stats_file = self.data_dir / "dashboard_stats.json"
         self._stats.uptime = time.time() - self._start_time
         data = {
@@ -61,7 +57,6 @@ class Dashboard:
             json.dump(data, f, indent=2)
 
     def record_message(self, platform: str, tokens: int = 0, cost: float = 0.0) -> None:
-        ""
         self._stats.total_messages += 1
         self._stats.total_tokens += tokens
         self._stats.total_cost += cost
@@ -73,7 +68,6 @@ class Dashboard:
         self._save()
 
     def record_error(self) -> None:
-        ""
         self._stats.errors += 1
         if self._stats.total_messages > 0:
             self._stats.success_rate = (
@@ -84,7 +78,6 @@ class Dashboard:
         self._save()
 
     def get_stats(self) -> dict[str, Any]:
-        ""
         self._stats.uptime = time.time() - self._start_time
         return {
             "total_messages": self._stats.total_messages,
@@ -98,7 +91,6 @@ class Dashboard:
         }
 
     def get_health(self) -> str:
-        ""
         if self._stats.success_rate > 99:
             return "healthy"
         elif self._stats.success_rate > 95:
@@ -107,7 +99,6 @@ class Dashboard:
             return "unhealthy"
 
     def format_dashboard(self) -> str:
-        ""
         stats = self.get_stats()
         health = self.get_health()
         health_emoji = {"healthy": "🟢", "degraded": "🟡", "unhealthy": "🔴"}
@@ -126,7 +117,6 @@ class Dashboard:
         return "\n".join(lines)
 
     def reset(self) -> None:
-        ""
         self._stats = DashboardStats()
         self._start_time = time.time()
         self._save()
