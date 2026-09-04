@@ -1,3 +1,9 @@
+"""
+Themes.
+
+Public objects: ``Theme``, ``ThemeManager``.
+"""
+
 from __future__ import annotations
 
 import json
@@ -10,6 +16,18 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class Theme:
+    """
+    Theme.
+
+    Attributes:
+        name (str): name of the object.
+        display_name (str): display name string.
+        description (str): human readable description.
+        colors (dict[str, str]): mapping of colors.
+        emoji (dict[str, str]): mapping of emoji.
+        is_default (bool): when ``True``, enable is default.
+    """
+
     name: str
     display_name: str
     description: str = ""
@@ -97,7 +115,17 @@ PERSIAN_THEME = Theme(
 
 
 class ThemeManager:
+    """
+    Theme manager.
+    """
+
     def __init__(self, config_dir: str = "config") -> None:
+        """
+        Initialise a ThemeManager instance.
+
+        Args:
+            config_dir (str): config dir string. Defaults to ``'config'``.
+        """
         self.config_dir = Path(config_dir)
         self.config_dir.mkdir(parents=True, exist_ok=True)
         self._themes: dict[str, Theme] = {
@@ -125,9 +153,27 @@ class ThemeManager:
             json.dump({"current_theme": self._current_theme}, f, indent=2)
 
     def get_theme(self, name: str = None) -> Theme:
+        """
+        Return the theme.
+
+        Args:
+            name (str): name of the object. Defaults to ``None``.
+
+        Returns:
+            Theme: the resulting Theme.
+        """
         return self._themes.get(name or self._current_theme, DEFAULT_THEME)
 
     def set_theme(self, name: str) -> bool:
+        """
+        Set the theme.
+
+        Args:
+            name (str): name of the object.
+
+        Returns:
+            bool: ``True`` when the operation succeeds, otherwise ``False``.
+        """
         if name in self._themes:
             self._current_theme = name
             self._save()
@@ -135,6 +181,12 @@ class ThemeManager:
         return False
 
     def list_themes(self) -> list[dict]:
+        """
+        List themes.
+
+        Returns:
+            list[dict]: a sequence of dict entries (empty when there is nothing to report).
+        """
         return [
             {
                 "name": t.name,
@@ -147,12 +199,36 @@ class ThemeManager:
         ]
 
     def add_theme(self, theme: Theme) -> None:
+        """
+        Add theme.
+
+        Args:
+            theme (Theme): theme.
+        """
         self._themes[theme.name] = theme
 
     def get_color(self, key: str) -> str:
+        """
+        Return the color.
+
+        Args:
+            key (str): key string.
+
+        Returns:
+            str: the rendered string.
+        """
         theme = self.get_theme()
         return theme.colors.get(key, "#000000")
 
     def get_emoji(self, key: str) -> str:
+        """
+        Return the emoji.
+
+        Args:
+            key (str): key string.
+
+        Returns:
+            str: the rendered string.
+        """
         theme = self.get_theme()
         return theme.emoji.get(key, "")

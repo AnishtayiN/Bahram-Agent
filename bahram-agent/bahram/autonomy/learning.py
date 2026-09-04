@@ -1,3 +1,9 @@
+"""
+Learning.
+
+Public objects: ``Lesson``, ``SkillCandidate``, ``LearningEngine``.
+"""
+
 from __future__ import annotations
 
 import json
@@ -13,6 +19,23 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class Lesson:
+    """
+    Lesson.
+
+    Attributes:
+        id (str): id string.
+        content (str): text content to process.
+        scope (str): scope string.
+        source_run (str): source run string.
+        confidence (float): numeric value for confidence.
+        usage_count (int): numeric value for usage count.
+        success_count (int): numeric value for success count.
+        failure_count (int): numeric value for failure count.
+        created_at (float): numeric value for created at.
+        updated_at (float): numeric value for updated at.
+        metadata (dict[str, Any]): mapping of metadata.
+    """
+
     id: str
     content: str
     scope: str
@@ -27,10 +50,22 @@ class Lesson:
 
     @property
     def success_rate(self) -> float:
+        """
+        Success rate.
+
+        Returns:
+            float: the computed numeric value.
+        """
         total = self.success_count + self.failure_count
         return self.success_count / total if total > 0 else 0.0
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Serialise the object to a JSON-serialisable dictionary.
+
+        Returns:
+            dict[str, Any]: a mapping of str, Any.
+        """
         return {
             "id": self.id,
             "content": self.content,
@@ -48,6 +83,29 @@ class Lesson:
 
 @dataclass
 class SkillCandidate:
+    """
+    Skill candidate.
+
+    Attributes:
+        id (str): id string.
+        name (str): name of the object.
+        description (str): human readable description.
+        instructions (str): instructions string.
+        triggers (list[str]): collection of triggers.
+        prerequisites (list[str]): collection of prerequisites.
+        required_capabilities (list[str]): collection of required capabilities.
+        version (str): version string.
+        confidence (float): numeric value for confidence.
+        usage_count (int): numeric value for usage count.
+        success_count (int): numeric value for success count.
+        failure_count (int): numeric value for failure count.
+        status (str): status string.
+        created_at (float): numeric value for created at.
+        updated_at (float): numeric value for updated at.
+        source_lessons (list[str]): collection of source lessons.
+        provenance (dict[str, Any]): mapping of provenance.
+    """
+
     id: str
     name: str
     description: str
@@ -68,10 +126,22 @@ class SkillCandidate:
 
     @property
     def success_rate(self) -> float:
+        """
+        Success rate.
+
+        Returns:
+            float: the computed numeric value.
+        """
         total = self.success_count + self.failure_count
         return self.success_count / total if total > 0 else 0.0
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Serialise the object to a JSON-serialisable dictionary.
+
+        Returns:
+            dict[str, Any]: a mapping of str, Any.
+        """
         return {
             "id": self.id,
             "name": self.name,
@@ -94,7 +164,17 @@ class SkillCandidate:
 
 
 class LearningEngine:
+    """
+    Learning engine.
+    """
+
     def __init__(self, data_dir: str = "data/learning") -> None:
+        """
+        Initialise a LearningEngine instance.
+
+        Args:
+            data_dir (str): directory that holds the on-disk state. Defaults to ``'data/learning'``.
+        """
         self._data_dir = Path(data_dir)
         self._data_dir.mkdir(parents=True, exist_ok=True)
         self._lessons: dict[str, Lesson] = {}
@@ -145,6 +225,22 @@ class LearningEngine:
         tool_results: list[dict[str, Any]],
         success: bool,
     ) -> dict[str, Any]:
+        """
+        Analyze outcome.
+
+        Args:
+            run_id (str): run identifier.
+            goal (str): goal string.
+            trajectory_steps (list[dict[str, Any]]): collection of trajectory steps.
+            tool_results (list[dict[str, Any]]): collection of tool results.
+            success (bool): when ``True``, enable success.
+
+        Returns:
+            dict[str, Any]: a mapping of str, Any.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         analysis = {
             "run_id": run_id,
             "goal": goal,
@@ -232,6 +328,18 @@ class LearningEngine:
         return "general"
 
     async def generate_skill(self, lesson_ids: list[str]) -> SkillCandidate | None:
+        """
+        Generate skill.
+
+        Args:
+            lesson_ids (list[str]): collection of lesson ids.
+
+        Returns:
+            SkillCandidate | None: the resulting object, or ``None`` when it is not available.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         lessons = [self._lessons[lid] for lid in lesson_ids if lid in self._lessons]
         if not lessons:
             return None
@@ -355,6 +463,18 @@ class LearningEngine:
         return meaningful if meaningful else ["auto"]
 
     async def validate_skill(self, skill_id: str) -> str:
+        """
+        Validate skill.
+
+        Args:
+            skill_id (str): skill id string.
+
+        Returns:
+            str: the rendered string.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         skill = self._skills.get(skill_id)
         if not skill:
             return "not_found"
@@ -377,6 +497,13 @@ class LearningEngine:
         return skill.status
 
     def record_skill_usage(self, skill_id: str, success: bool) -> None:
+        """
+        Record skill usage.
+
+        Args:
+            skill_id (str): skill id string.
+            success (bool): when ``True``, enable success.
+        """
         skill = self._skills.get(skill_id)
         if skill:
             skill.usage_count += 1
@@ -388,6 +515,17 @@ class LearningEngine:
             self._save()
 
     def get_relevant_skills(self, task: str, limit: int = 3) -> list[SkillCandidate]:
+        """
+        Return the relevant skills.
+
+        Args:
+            task (str): task string.
+            limit (int): maximum number of items to return. Defaults to ``3``.
+
+        Returns:
+            list[SkillCandidate]: a sequence of SkillCandidate entries (empty when there is nothing
+                to report).
+        """
         task_lower = task.lower()
         scored = []
         for skill in self._skills.values():
@@ -401,6 +539,16 @@ class LearningEngine:
         return [s for _, s in scored[:limit]]
 
     def get_relevant_lessons(self, task: str, limit: int = 5) -> list[Lesson]:
+        """
+        Return the relevant lessons.
+
+        Args:
+            task (str): task string.
+            limit (int): maximum number of items to return. Defaults to ``5``.
+
+        Returns:
+            list[Lesson]: a sequence of Lesson entries (empty when there is nothing to report).
+        """
         task_lower = task.lower()
         scored = []
         for lesson in self._lessons.values():
@@ -412,15 +560,43 @@ class LearningEngine:
         return [lesson for _, lesson in scored[:limit]]
 
     def get_lessons(self) -> list[Lesson]:
+        """
+        Return the lessons.
+
+        Returns:
+            list[Lesson]: a sequence of Lesson entries (empty when there is nothing to report).
+        """
         return list(self._lessons.values())
 
     def get_skills(self) -> list[SkillCandidate]:
+        """
+        Return the skills.
+
+        Returns:
+            list[SkillCandidate]: a sequence of SkillCandidate entries (empty when there is nothing
+                to report).
+        """
         return list(self._skills.values())
 
     def get_skill(self, skill_id: str) -> SkillCandidate | None:
+        """
+        Return the skill.
+
+        Args:
+            skill_id (str): skill id string.
+
+        Returns:
+            SkillCandidate | None: the resulting object, or ``None`` when it is not available.
+        """
         return self._skills.get(skill_id)
 
     def get_stats(self) -> dict[str, Any]:
+        """
+        Return the stats.
+
+        Returns:
+            dict[str, Any]: a mapping of str, Any.
+        """
         lessons = list(self._lessons.values())
         skills = list(self._skills.values())
         return {

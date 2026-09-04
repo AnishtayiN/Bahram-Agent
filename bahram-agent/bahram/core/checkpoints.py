@@ -1,3 +1,9 @@
+"""
+Checkpoints.
+
+Public objects: ``Checkpoint``, ``CheckpointManager``.
+"""
+
 from __future__ import annotations
 
 import json
@@ -12,6 +18,18 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class Checkpoint:
+    """
+    Checkpoint.
+
+    Attributes:
+        id (str): id string.
+        name (str): name of the object.
+        timestamp (float): numeric value for timestamp.
+        description (str): human readable description.
+        files (list[str]): collection of files.
+        metadata (dict): mapping of metadata.
+    """
+
     id: str
     name: str
     timestamp: float
@@ -21,7 +39,19 @@ class Checkpoint:
 
 
 class CheckpointManager:
+    """
+    Checkpoint manager.
+    """
+
     def __init__(self, data_dir: str = "data/checkpoints", max_checkpoints: int = 10) -> None:
+        """
+        Initialise a CheckpointManager instance.
+
+        Args:
+            data_dir (str): directory that holds the on-disk state. Defaults to
+                ``'data/checkpoints'``.
+            max_checkpoints (int): numeric value for max checkpoints. Defaults to ``10``.
+        """
         self.data_dir = Path(data_dir)
         self.data_dir.mkdir(parents=True, exist_ok=True)
         self._max_checkpoints = max_checkpoints
@@ -63,6 +93,18 @@ class CheckpointManager:
         description: str = "",
         metadata: dict = None,
     ) -> Checkpoint:
+        """
+        Create checkpoint.
+
+        Args:
+            name (str): name of the object.
+            files (list[str]): collection of files.
+            description (str): human readable description. Defaults to ``''``.
+            metadata (dict): mapping of metadata. Defaults to ``None``.
+
+        Returns:
+            Checkpoint: the resulting Checkpoint.
+        """
         checkpoint_id = f"cp_{int(time.time() * 1000)}"
         snapshot_dir = self._snapshots_dir / checkpoint_id
         snapshot_dir.mkdir(exist_ok=True)
@@ -102,6 +144,15 @@ class CheckpointManager:
         return checkpoint
 
     def rollback(self, checkpoint_id: str) -> bool:
+        """
+        Rollback.
+
+        Args:
+            checkpoint_id (str): checkpoint id string.
+
+        Returns:
+            bool: ``True`` when the operation succeeds, otherwise ``False``.
+        """
         checkpoint = next((c for c in self._checkpoints if c.id == checkpoint_id), None)
         if not checkpoint:
             return False
@@ -122,6 +173,12 @@ class CheckpointManager:
         return True
 
     def list_checkpoints(self) -> list[dict]:
+        """
+        List checkpoints.
+
+        Returns:
+            list[dict]: a sequence of dict entries (empty when there is nothing to report).
+        """
         return [
             {
                 "id": c.id,
@@ -134,6 +191,15 @@ class CheckpointManager:
         ]
 
     def delete_checkpoint(self, checkpoint_id: str) -> bool:
+        """
+        Delete checkpoint.
+
+        Args:
+            checkpoint_id (str): checkpoint id string.
+
+        Returns:
+            bool: ``True`` when the operation succeeds, otherwise ``False``.
+        """
         checkpoint = next((c for c in self._checkpoints if c.id == checkpoint_id), None)
         if not checkpoint:
             return False

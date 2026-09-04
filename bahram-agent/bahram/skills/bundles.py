@@ -1,3 +1,9 @@
+"""
+Bundles.
+
+Public objects: ``SkillBundle``, ``SkillBundles``.
+"""
+
 from __future__ import annotations
 
 import json
@@ -10,6 +16,16 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class SkillBundle:
+    """
+    Skill bundle.
+
+    Attributes:
+        name (str): name of the object.
+        description (str): human readable description.
+        skills (list[str]): collection of skills.
+        enabled (bool): when ``True`` the object is active.
+    """
+
     name: str
     description: str
     skills: list[str] = field(default_factory=list)
@@ -17,7 +33,17 @@ class SkillBundle:
 
 
 class SkillBundles:
+    """
+    Skill bundles.
+    """
+
     def __init__(self, data_dir: str = "data/skills") -> None:
+        """
+        Initialise a SkillBundles instance.
+
+        Args:
+            data_dir (str): directory that holds the on-disk state. Defaults to ``'data/skills'``.
+        """
         self.data_dir = Path(data_dir)
         self.data_dir.mkdir(parents=True, exist_ok=True)
         self._bundles: dict[str, SkillBundle] = {}
@@ -50,6 +76,17 @@ class SkillBundles:
             json.dump(data, f, indent=2)
 
     def create_bundle(self, name: str, description: str, skills: list[str] = None) -> SkillBundle:
+        """
+        Create bundle.
+
+        Args:
+            name (str): name of the object.
+            description (str): human readable description.
+            skills (list[str]): collection of skills. Defaults to ``None``.
+
+        Returns:
+            SkillBundle: the resulting SkillBundle.
+        """
         bundle = SkillBundle(
             name=name,
             description=description,
@@ -60,6 +97,16 @@ class SkillBundles:
         return bundle
 
     def add_skill_to_bundle(self, bundle_name: str, skill_name: str) -> bool:
+        """
+        Add skill to bundle.
+
+        Args:
+            bundle_name (str): bundle name string.
+            skill_name (str): skill name string.
+
+        Returns:
+            bool: ``True`` when the operation succeeds, otherwise ``False``.
+        """
         bundle = self._bundles.get(bundle_name)
         if bundle and skill_name not in bundle.skills:
             bundle.skills.append(skill_name)
@@ -68,6 +115,16 @@ class SkillBundles:
         return False
 
     def remove_skill_from_bundle(self, bundle_name: str, skill_name: str) -> bool:
+        """
+        Remove skill from bundle.
+
+        Args:
+            bundle_name (str): bundle name string.
+            skill_name (str): skill name string.
+
+        Returns:
+            bool: ``True`` when the operation succeeds, otherwise ``False``.
+        """
         bundle = self._bundles.get(bundle_name)
         if bundle and skill_name in bundle.skills:
             bundle.skills.remove(skill_name)
@@ -76,6 +133,15 @@ class SkillBundles:
         return False
 
     def enable_bundle(self, name: str) -> bool:
+        """
+        Enable bundle.
+
+        Args:
+            name (str): name of the object.
+
+        Returns:
+            bool: ``True`` when the operation succeeds, otherwise ``False``.
+        """
         bundle = self._bundles.get(name)
         if bundle:
             bundle.enabled = True
@@ -84,6 +150,15 @@ class SkillBundles:
         return False
 
     def disable_bundle(self, name: str) -> bool:
+        """
+        Disable bundle.
+
+        Args:
+            name (str): name of the object.
+
+        Returns:
+            bool: ``True`` when the operation succeeds, otherwise ``False``.
+        """
         bundle = self._bundles.get(name)
         if bundle:
             bundle.enabled = False
@@ -92,9 +167,24 @@ class SkillBundles:
         return False
 
     def get_bundle(self, name: str) -> SkillBundle | None:
+        """
+        Return the bundle.
+
+        Args:
+            name (str): name of the object.
+
+        Returns:
+            SkillBundle | None: the resulting object, or ``None`` when it is not available.
+        """
         return self._bundles.get(name)
 
     def get_enabled_skills(self) -> list[str]:
+        """
+        Return the enabled skills.
+
+        Returns:
+            list[str]: a sequence of str entries (empty when there is nothing to report).
+        """
         skills = []
         for bundle in self._bundles.values():
             if bundle.enabled:
@@ -102,6 +192,12 @@ class SkillBundles:
         return list(set(skills))
 
     def list_bundles(self) -> list[dict]:
+        """
+        List bundles.
+
+        Returns:
+            list[dict]: a sequence of dict entries (empty when there is nothing to report).
+        """
         return [
             {
                 "name": b.name,
@@ -113,6 +209,15 @@ class SkillBundles:
         ]
 
     def delete_bundle(self, name: str) -> bool:
+        """
+        Delete bundle.
+
+        Args:
+            name (str): name of the object.
+
+        Returns:
+            bool: ``True`` when the operation succeeds, otherwise ``False``.
+        """
         if name in self._bundles:
             del self._bundles[name]
             self._save()

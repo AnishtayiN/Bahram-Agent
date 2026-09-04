@@ -1,3 +1,8 @@
+"""Skill loading and lifecycle.
+
+Public objects: ``init_skills``, ``BaseSkill``, ``SkillManager``.
+"""
+
 from bahram.skills.base import BaseSkill
 from bahram.skills.manager import SkillManager
 
@@ -11,5 +16,15 @@ if TYPE_CHECKING:
 
 
 async def init_skills(engine: "AgentEngine", config: "Config") -> None:
+    """
+    Initialise skills.
+
+    Args:
+        engine ('AgentEngine'): engine.
+        config ('Config'): configuration object.
+
+    Note:
+        Coroutine - must be awaited.
+    """
     manager = SkillManager(config.skills)
     await manager.load_skills()

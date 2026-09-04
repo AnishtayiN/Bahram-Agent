@@ -1,3 +1,9 @@
+"""
+Manager.
+
+Public objects: ``SkillManager``.
+"""
+
 from __future__ import annotations
 
 import importlib.util
@@ -11,12 +17,28 @@ logger = logging.getLogger(__name__)
 
 
 class SkillManager:
+    """
+    Skill manager.
+    """
+
     def __init__(self, config: Any) -> None:
+        """
+        Initialise a SkillManager instance.
+
+        Args:
+            config (Any): configuration object.
+        """
         self.config = config
         self.skills: dict[str, BaseSkill] = {}
         self.skill_dir = Path(config.directory) if config.directory else Path("skills")
 
     async def load_skills(self) -> None:
+        """
+        Load skills.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         if not self.skill_dir.exists():
             logger.warning(f"Skills directory not found: {self.skill_dir}")
             return
@@ -51,18 +73,58 @@ class SkillManager:
                 break
 
     def get_skill(self, name: str) -> BaseSkill | None:
+        """
+        Return the skill.
+
+        Args:
+            name (str): name of the object.
+
+        Returns:
+            BaseSkill | None: the resulting object, or ``None`` when it is not available.
+        """
         return self.skills.get(name)
 
     def list_skills(self) -> list[str]:
+        """
+        List skills.
+
+        Returns:
+            list[str]: a sequence of str entries (empty when there is nothing to report).
+        """
         return list(self.skills.keys())
 
     async def find_skill(self, task: str) -> BaseSkill | None:
+        """
+        Find skill.
+
+        Args:
+            task (str): task string.
+
+        Returns:
+            BaseSkill | None: the resulting object, or ``None`` when it is not available.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         for skill in self.skills.values():
             if await skill.can_handle(task):
                 return skill
         return None
 
     async def execute_skill(self, name: str, context: dict[str, Any]) -> str:
+        """
+        Execute skill.
+
+        Args:
+            name (str): name of the object.
+            context (dict[str, Any]): mapping of context.
+
+        Returns:
+            str: the rendered string.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         skill = self.get_skill(name)
         if skill is None:
             return f"Skill not found: {name}"
@@ -74,6 +136,19 @@ class SkillManager:
             return f"Skill execution failed: {e}"
 
     async def auto_execute(self, task: str, context: dict[str, Any]) -> str | None:
+        """
+        Auto execute.
+
+        Args:
+            task (str): task string.
+            context (dict[str, Any]): mapping of context.
+
+        Returns:
+            str | None: the resulting object, or ``None`` when it is not available.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         skill = await self.find_skill(task)
         if skill:
             logger.info(f"Auto-executing skill: {skill.metadata.name}")

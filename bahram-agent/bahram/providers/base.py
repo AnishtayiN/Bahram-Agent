@@ -1,3 +1,9 @@
+"""
+Base.
+
+Public objects: ``BaseProvider``.
+"""
+
 from __future__ import annotations
 
 import json
@@ -13,7 +19,19 @@ logger = logging.getLogger(__name__)
 
 
 class BaseProvider(ABC):
+    """
+    Base provider.
+    """
+
     def __init__(self, api_key: str = "", model: str = "", **kwargs: Any) -> None:
+        """
+        Initialise a BaseProvider instance.
+
+        Args:
+            api_key (str): api key string. Defaults to ``''``.
+            model (str): model identifier in ``provider/model`` form. Defaults to ``''``.
+            **kwargs (Any): keyword arguments forwarded to the implementation.
+        """
         self.api_key = api_key
         self.model = model
         self._extra = kwargs
@@ -27,6 +45,23 @@ class BaseProvider(ABC):
         max_tokens: int = 4096,
         **kwargs: Any,
     ) -> AgentResponse:
+        """
+        Complete.
+
+        Args:
+            messages (list[Message]): chat messages to send to the model.
+            tools (list[dict[str, Any]] | None): collection of tools. Defaults to ``None``.
+            model (str | None): model identifier in ``provider/model`` form. Defaults to ``None``.
+            temperature (float): numeric value for temperature. Defaults to ``0.7``.
+            max_tokens (int): numeric value for max tokens. Defaults to ``4096``.
+            **kwargs (Any): keyword arguments forwarded to the implementation.
+
+        Returns:
+            AgentResponse: the resulting AgentResponse.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         raw_messages, system_msg = self._prepare_messages(messages)
         tool_schemas = self._prepare_tools(tools)
         return await self._call_api(
@@ -42,6 +77,23 @@ class BaseProvider(ABC):
         max_tokens: int = 4096,
         **kwargs: Any,
     ) -> AsyncIterator[str]:
+        """
+        Stream.
+
+        Args:
+            messages (list[Message]): chat messages to send to the model.
+            tools (list[dict[str, Any]] | None): collection of tools. Defaults to ``None``.
+            model (str | None): model identifier in ``provider/model`` form. Defaults to ``None``.
+            temperature (float): numeric value for temperature. Defaults to ``0.7``.
+            max_tokens (int): numeric value for max tokens. Defaults to ``4096``.
+            **kwargs (Any): keyword arguments forwarded to the implementation.
+
+        Returns:
+            AsyncIterator[str]: the resulting AsyncIterator[str].
+
+        Note:
+            Coroutine - must be awaited.
+        """
         raw_messages, system_msg = self._prepare_messages(messages)
         tool_schemas = self._prepare_tools(tools)
         async for chunk in self._stream_api(
@@ -121,7 +173,32 @@ class BaseProvider(ABC):
         model: str | None,
         temperature: float,
         max_tokens: int,
-    ) -> AgentResponse: ...
+    ) -> AgentResponse:
+        """Perform the provider specific HTTP request.
+
+        Subclasses implement the wire protocol here;
+        :meth:`BaseProvider.complete` takes care of message formatting,
+        retries and error translation.
+
+        Args:
+            messages (list[dict]): OpenAI-style message payload.
+            system_msg (str): system prompt extracted from the history.
+            tools (list[dict[str, Any]]): tool schemas to advertise.
+            model (str | None): model id, or ``None`` to use the default.
+            temperature (float): sampling temperature.
+            max_tokens (int): maximum number of tokens to generate.
+
+        Returns:
+            AgentResponse: normalised response.
+
+        Raises:
+            Exception: HTTP and transport errors; the base class converts them
+                into a retry/failover decision.
+
+        Note:
+            Coroutine - must be awaited.
+        """
+        ...
 
     async def _stream_api(
         self,
@@ -159,7 +236,19 @@ class BaseProvider(ABC):
         return model or self.model
 
     def get_models(self) -> list[str]:
+        """
+        Return the models.
+
+        Returns:
+            list[str]: a sequence of str entries (empty when there is nothing to report).
+        """
         return []
 
     def get_provider_info(self) -> dict[str, Any]:
+        """
+        Return the provider info.
+
+        Returns:
+            dict[str, Any]: a mapping of str, Any.
+        """
         return {"name": self.__class__.__name__, "configured": bool(self.api_key)}

@@ -1,3 +1,9 @@
+"""
+Trajectory.
+
+Public objects: ``TrajectoryStep``, ``Trajectory``, ``TrajectoryGenerator``.
+"""
+
 from __future__ import annotations
 
 import json
@@ -11,6 +17,18 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class TrajectoryStep:
+    """
+    Trajectory step.
+
+    Attributes:
+        step_id (int): plan-step identifier.
+        action (str): action string.
+        input (str): input string.
+        output (str): output string.
+        timestamp (float): numeric value for timestamp.
+        duration (float): numeric value for duration.
+    """
+
     step_id: int
     action: str
     input: str
@@ -21,6 +39,18 @@ class TrajectoryStep:
 
 @dataclass
 class Trajectory:
+    """
+    Trajectory.
+
+    Attributes:
+        id (str): id string.
+        name (str): name of the object.
+        steps (list[TrajectoryStep]): collection of steps.
+        start_time (float): numeric value for start time.
+        end_time (float): numeric value for end time.
+        status (str): status string.
+    """
+
     id: str
     name: str
     steps: list[TrajectoryStep] = field(default_factory=list)
@@ -30,13 +60,33 @@ class Trajectory:
 
 
 class TrajectoryGenerator:
+    """
+    Trajectory generator.
+    """
+
     def __init__(self, data_dir: str = "data/trajectories") -> None:
+        """
+        Initialise a TrajectoryGenerator instance.
+
+        Args:
+            data_dir (str): directory that holds the on-disk state. Defaults to
+                ``'data/trajectories'``.
+        """
         self.data_dir = Path(data_dir)
         self.data_dir.mkdir(parents=True, exist_ok=True)
         self._trajectories: dict[str, Trajectory] = {}
         self._current: Trajectory | None = None
 
     def start(self, name: str) -> Trajectory:
+        """
+        Start the component and acquire any resources it needs.
+
+        Args:
+            name (str): name of the object.
+
+        Returns:
+            Trajectory: the resulting Trajectory.
+        """
         import hashlib
 
         traj_id = hashlib.md5(f"{name}{time.time()}".encode()).hexdigest()[:12]
@@ -51,6 +101,14 @@ class TrajectoryGenerator:
         return trajectory
 
     def add_step(self, action: str, input_text: str, output: str) -> None:
+        """
+        Add step.
+
+        Args:
+            action (str): action string.
+            input_text (str): input text string.
+            output (str): output string.
+        """
         if not self._current:
             return
 
@@ -64,6 +122,15 @@ class TrajectoryGenerator:
         self._current.steps.append(step)
 
     def finish(self, status: str = "completed") -> Trajectory | None:
+        """
+        Finish.
+
+        Args:
+            status (str): status string. Defaults to ``'completed'``.
+
+        Returns:
+            Trajectory | None: the resulting object, or ``None`` when it is not available.
+        """
         if not self._current:
             return None
 
@@ -98,9 +165,24 @@ class TrajectoryGenerator:
             json.dump(data, f, indent=2)
 
     def get_trajectory(self, traj_id: str) -> Trajectory | None:
+        """
+        Return the trajectory.
+
+        Args:
+            traj_id (str): traj id string.
+
+        Returns:
+            Trajectory | None: the resulting object, or ``None`` when it is not available.
+        """
         return self._trajectories.get(traj_id)
 
     def list_trajectories(self) -> list[dict]:
+        """
+        List trajectories.
+
+        Returns:
+            list[dict]: a sequence of dict entries (empty when there is nothing to report).
+        """
         return [
             {
                 "id": t.id,
@@ -113,6 +195,15 @@ class TrajectoryGenerator:
         ]
 
     def format_trajectory(self, traj_id: str) -> str:
+        """
+        Format trajectory.
+
+        Args:
+            traj_id (str): traj id string.
+
+        Returns:
+            str: the rendered string.
+        """
         traj = self.get_trajectory(traj_id)
         if not traj:
             return "Trajectory not found"

@@ -1,3 +1,9 @@
+"""
+Journey.
+
+Public objects: ``CurveType``, ``LearningPoint``, ``LearningCurve``, ``LearningJourney``.
+"""
+
 from __future__ import annotations
 
 import json
@@ -12,6 +18,10 @@ logger = logging.getLogger(__name__)
 
 
 class CurveType(str, Enum):
+    """
+    Curve type.
+    """
+
     PLATEAU = "plateau"
     CLIMBING = "climbing"
     DECLINING = "declining"
@@ -20,6 +30,16 @@ class CurveType(str, Enum):
 
 @dataclass
 class LearningPoint:
+    """
+    Learning point.
+
+    Attributes:
+        timestamp (float): numeric value for timestamp.
+        metric (float): numeric value for metric.
+        description (str): human readable description.
+        context (dict): mapping of context.
+    """
+
     timestamp: float
     metric: float
     description: str
@@ -28,6 +48,16 @@ class LearningPoint:
 
 @dataclass
 class LearningCurve:
+    """
+    Learning curve.
+
+    Attributes:
+        curve_type (CurveType): curve type.
+        confidence (float): numeric value for confidence.
+        description (str): human readable description.
+        suggested_action (str): suggested action string.
+    """
+
     curve_type: CurveType
     confidence: float
     description: str
@@ -35,7 +65,17 @@ class LearningCurve:
 
 
 class LearningJourney:
+    """
+    Learning journey.
+    """
+
     def __init__(self, data_dir: str = "data/memory") -> None:
+        """
+        Initialise a LearningJourney instance.
+
+        Args:
+            data_dir (str): directory that holds the on-disk state. Defaults to ``'data/memory'``.
+        """
         self.data_dir = Path(data_dir)
         self.data_dir.mkdir(parents=True, exist_ok=True)
         self._points: list[LearningPoint] = []
@@ -79,6 +119,14 @@ class LearningJourney:
             json.dump(data, f, indent=2)
 
     def record(self, metric: float, description: str = "", context: dict = None) -> None:
+        """
+        Record.
+
+        Args:
+            metric (float): numeric value for metric.
+            description (str): human readable description. Defaults to ``''``.
+            context (dict): mapping of context. Defaults to ``None``.
+        """
         point = LearningPoint(
             timestamp=time.time(),
             metric=metric,
@@ -151,6 +199,12 @@ class LearningJourney:
         )
 
     def get_summary(self) -> dict[str, Any]:
+        """
+        Return the summary.
+
+        Returns:
+            dict[str, Any]: a mapping of str, Any.
+        """
         if not self._points:
             return {"status": "no_data"}
 
@@ -170,6 +224,12 @@ class LearningJourney:
         }
 
     def get_curve_history(self) -> list[dict]:
+        """
+        Return the curve history.
+
+        Returns:
+            list[dict]: a sequence of dict entries (empty when there is nothing to report).
+        """
         return [
             {
                 "curve_type": c.curve_type.value,
@@ -181,6 +241,9 @@ class LearningJourney:
         ]
 
     def reset(self) -> None:
+        """
+        Reset.
+        """
         self._points.clear()
         self._curves.clear()
         self._save()

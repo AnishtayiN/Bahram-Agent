@@ -1,3 +1,9 @@
+"""
+Homeassistant.
+
+Public objects: ``HomeAssistantTool``.
+"""
+
 from __future__ import annotations
 
 import logging
@@ -7,11 +13,34 @@ logger = logging.getLogger(__name__)
 
 
 class HomeAssistantTool:
+    """
+    Home assistant tool.
+    """
+
     def __init__(self, url: str = "", token: str = "") -> None:
+        """
+        Initialise a HomeAssistantTool instance.
+
+        Args:
+            url (str): url string. Defaults to ``''``.
+            token (str): token string. Defaults to ``''``.
+        """
         self.url = url.rstrip("/")
         self.token = token
 
     async def list_entities(self, domain: str = "") -> dict[str, Any]:
+        """
+        List entities.
+
+        Args:
+            domain (str): domain string. Defaults to ``''``.
+
+        Returns:
+            dict[str, Any]: a mapping of str, Any.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         if not self.url or not self.token:
             return {"error": "Home Assistant not configured"}
 
@@ -39,6 +68,18 @@ class HomeAssistantTool:
             return {"error": str(e)}
 
     async def get_state(self, entity_id: str) -> dict[str, Any]:
+        """
+        Return the state.
+
+        Args:
+            entity_id (str): entity id string.
+
+        Returns:
+            dict[str, Any]: a mapping of str, Any.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         if not self.url or not self.token:
             return {"error": "Home Assistant not configured"}
 
@@ -69,6 +110,21 @@ class HomeAssistantTool:
         entity_id: str,
         data: dict = None,
     ) -> dict[str, Any]:
+        """
+        Call service.
+
+        Args:
+            domain (str): domain string.
+            service (str): service string.
+            entity_id (str): entity id string.
+            data (dict): mapping of data. Defaults to ``None``.
+
+        Returns:
+            dict[str, Any]: a mapping of str, Any.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         if not self.url or not self.token:
             return {"error": "Home Assistant not configured"}
 

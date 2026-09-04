@@ -1,3 +1,9 @@
+"""
+Modes.
+
+Public objects: ``VoiceTranscriber``, ``TextToSpeech``.
+"""
+
 from __future__ import annotations
 
 import logging
@@ -8,7 +14,18 @@ logger = logging.getLogger(__name__)
 
 
 class VoiceTranscriber:
+    """
+    Voice transcriber.
+    """
+
     def __init__(self, provider: str = "openai", api_key: str = "") -> None:
+        """
+        Initialise a VoiceTranscriber instance.
+
+        Args:
+            provider (str): provider string. Defaults to ``'openai'``.
+            api_key (str): api key string. Defaults to ``''``.
+        """
         self.provider = provider
         self.api_key = api_key
 
@@ -17,6 +34,19 @@ class VoiceTranscriber:
         audio_path: str,
         language: str = "en",
     ) -> dict[str, Any]:
+        """
+        Transcribe.
+
+        Args:
+            audio_path (str): audio path string.
+            language (str): language string. Defaults to ``'en'``.
+
+        Returns:
+            dict[str, Any]: a mapping of str, Any.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         if not self.api_key:
             return {"error": f"No API key configured for {self.provider}"}
 
@@ -53,7 +83,18 @@ class VoiceTranscriber:
 
 
 class TextToSpeech:
+    """
+    Text to speech.
+    """
+
     def __init__(self, provider: str = "openai", api_key: str = "") -> None:
+        """
+        Initialise a TextToSpeech instance.
+
+        Args:
+            provider (str): provider string. Defaults to ``'openai'``.
+            api_key (str): api key string. Defaults to ``''``.
+        """
         self.provider = provider
         self.api_key = api_key
 
@@ -63,6 +104,20 @@ class TextToSpeech:
         voice: str = "alloy",
         output_path: str = "output.mp3",
     ) -> dict[str, Any]:
+        """
+        Synthesize.
+
+        Args:
+            text (str): text string.
+            voice (str): voice string. Defaults to ``'alloy'``.
+            output_path (str): output path string. Defaults to ``'output.mp3'``.
+
+        Returns:
+            dict[str, Any]: a mapping of str, Any.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         if not self.api_key:
             return {"error": f"No API key configured for {self.provider}"}
 

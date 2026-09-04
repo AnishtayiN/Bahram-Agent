@@ -1,3 +1,9 @@
+"""
+Complexity.
+
+Public objects: ``ComplexityMetric``, ``ComplexityAnalyzer``.
+"""
+
 from __future__ import annotations
 
 import logging
@@ -10,6 +16,17 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class ComplexityMetric:
+    """
+    Complexity metric.
+
+    Attributes:
+        name (str): name of the object.
+        value (float): numeric value for value.
+        threshold (float): numeric value for threshold.
+        status (str): status string.
+        description (str): human readable description.
+    """
+
     name: str
     value: float
     threshold: float
@@ -18,7 +35,14 @@ class ComplexityMetric:
 
 
 class ComplexityAnalyzer:
+    """
+    Complexity analyzer.
+    """
+
     def __init__(self) -> None:
+        """
+        Initialise a ComplexityAnalyzer instance.
+        """
         self._thresholds = {
             "cyclomatic": {"good": 10, "warning": 20, "critical": 30},
             "cognitive": {"good": 15, "warning": 25, "critical": 50},
@@ -28,6 +52,18 @@ class ComplexityAnalyzer:
         }
 
     async def analyze(self, file_path: str) -> dict[str, Any]:
+        """
+        Analyze.
+
+        Args:
+            file_path (str): path of the file to operate on.
+
+        Returns:
+            dict[str, Any]: a mapping of str, Any.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         try:
             with open(file_path, encoding="utf-8", errors="replace") as f:
                 content = f.read()
@@ -136,6 +172,15 @@ class ComplexityAnalyzer:
         return max_depth
 
     def get_report(self, analysis: dict) -> str:
+        """
+        Return the report.
+
+        Args:
+            analysis (dict): mapping of analysis.
+
+        Returns:
+            str: the rendered string.
+        """
         if "error" in analysis:
             return f"Error: {analysis['error']}"
 

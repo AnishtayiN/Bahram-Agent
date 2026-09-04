@@ -1,3 +1,9 @@
+"""
+Migration.
+
+Public objects: ``MigrationRule``, ``CodeMigration``.
+"""
+
 from __future__ import annotations
 
 import logging
@@ -11,6 +17,17 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class MigrationRule:
+    """
+    Migration rule.
+
+    Attributes:
+        name (str): name of the object.
+        source_pattern (str): source pattern string.
+        target_pattern (str): target pattern string.
+        language (str): language string.
+        description (str): human readable description.
+    """
+
     name: str
     source_pattern: str
     target_pattern: str
@@ -19,7 +36,14 @@ class MigrationRule:
 
 
 class CodeMigration:
+    """
+    Code migration.
+    """
+
     def __init__(self) -> None:
+        """
+        Initialise a CodeMigration instance.
+        """
         self._rules: dict[str, list[MigrationRule]] = {
             "python2_to_3": [
                 MigrationRule(
@@ -80,6 +104,21 @@ class CodeMigration:
         migration_type: str,
         dry_run: bool = False,
     ) -> dict[str, Any]:
+        """
+        Migrate.
+
+        Args:
+            source_path (str): source path string.
+            target_path (str): target path string.
+            migration_type (str): migration type string.
+            dry_run (bool): when ``True`` nothing is written. Defaults to ``False``.
+
+        Returns:
+            dict[str, Any]: a mapping of str, Any.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         rules = self._rules.get(migration_type, [])
         if not rules:
             return {"error": f"Unknown migration type: {migration_type}"}
@@ -154,9 +193,24 @@ class CodeMigration:
         }
 
     def get_migration_types(self) -> list[str]:
+        """
+        Return the migration types.
+
+        Returns:
+            list[str]: a sequence of str entries (empty when there is nothing to report).
+        """
         return list(self._rules.keys())
 
     def get_rules(self, migration_type: str) -> list[dict]:
+        """
+        Return the rules.
+
+        Args:
+            migration_type (str): migration type string.
+
+        Returns:
+            list[dict]: a sequence of dict entries (empty when there is nothing to report).
+        """
         rules = self._rules.get(migration_type, [])
         return [
             {

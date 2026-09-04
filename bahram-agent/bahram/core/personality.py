@@ -1,3 +1,9 @@
+"""
+Personality.
+
+Public objects: ``Personality``.
+"""
+
 from __future__ import annotations
 
 import logging
@@ -7,12 +13,25 @@ logger = logging.getLogger(__name__)
 
 
 class Personality:
+    """
+    Personality.
+    """
+
     def __init__(self, workspace_root: str = ".") -> None:
+        """
+        Initialise a Personality instance.
+
+        Args:
+            workspace_root (str): workspace root string. Defaults to ``'.'``.
+        """
         self.workspace_root = Path(workspace_root)
         self._soul_content: str = ""
         self._loaded = False
 
     def load(self) -> None:
+        """
+        Load.
+        """
         if self._loaded:
             return
 
@@ -27,10 +46,22 @@ class Personality:
         self._loaded = True
 
     def get_personality(self) -> str:
+        """
+        Return the personality.
+
+        Returns:
+            str: the rendered string.
+        """
         self.load()
         return self._soul_content
 
     def get_system_prompt_addition(self) -> str:
+        """
+        Return the system prompt addition.
+
+        Returns:
+            str: the rendered string.
+        """
         personality = self.get_personality()
         if not personality:
             return ""
@@ -38,6 +69,12 @@ class Personality:
         return f"\n\n## Your Personality\n{personality}"
 
     def set_personality(self, content: str) -> None:
+        """
+        Set the personality.
+
+        Args:
+            content (str): text content to process.
+        """
         self._soul_content = content
         self._save()
 
@@ -49,5 +86,11 @@ class Personality:
             logger.warning(f"Failed to save SOUL.md: {e}")
 
     def has_personality(self) -> bool:
+        """
+        Return ``True`` when the object has personality.
+
+        Returns:
+            bool: ``True`` when the operation succeeds, otherwise ``False``.
+        """
         self.load()
         return bool(self._soul_content)

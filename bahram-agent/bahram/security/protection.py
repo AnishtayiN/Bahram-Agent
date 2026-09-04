@@ -1,3 +1,9 @@
+"""
+Protection.
+
+Public objects: ``SSRFProtector``, ``PromptInjectionDetector``, ``SecurityManager``.
+"""
+
 from __future__ import annotations
 
 import logging
@@ -8,6 +14,10 @@ logger = logging.getLogger(__name__)
 
 
 class SSRFProtector:
+    """
+    Ssrf protector.
+    """
+
     BLOCKED_RANGES = [
         ("10.0.0.0", "10.255.255.255"),
         ("172.16.0.0", "172.31.255.255"),
@@ -31,9 +41,25 @@ class SSRFProtector:
     ]
 
     def __init__(self, allow_private: bool = False) -> None:
+        """
+        Initialise a SSRFProtector instance.
+
+        Args:
+            allow_private (bool): when ``True``, enable allow private. Defaults to ``False``.
+        """
         self.allow_private = allow_private
 
     def check_url(self, url: str) -> tuple[bool, str]:
+        """
+        Check url.
+
+        Args:
+            url (str): url string.
+
+        Returns:
+            tuple[bool, str]: a sequence of bool, str entries (empty when there is nothing to
+                report).
+        """
         if self.allow_private:
             return True, ""
 
@@ -89,6 +115,10 @@ class SSRFProtector:
 
 
 class PromptInjectionDetector:
+    """
+    Prompt injection detector.
+    """
+
     SUSPICIOUS_PATTERNS = [
         (r"ignore\s+(all\s+)?previous\s+instructions", "instruction override"),
         (r"disregard\s+(all\s+)?previous", "instruction override"),
@@ -108,6 +138,16 @@ class PromptInjectionDetector:
     ]
 
     def scan_file(self, content: str) -> tuple[bool, list[str]]:
+        """
+        Scan file.
+
+        Args:
+            content (str): text content to process.
+
+        Returns:
+            tuple[bool, list[str]]: a sequence of bool, list[str] entries (empty when there is
+                nothing to report).
+        """
         findings = []
 
         for pattern, description in self.SUSPICIOUS_PATTERNS:
@@ -117,6 +157,16 @@ class PromptInjectionDetector:
         return len(findings) > 0, findings
 
     def scan_file_safe(self, filepath: str) -> tuple[bool, list[str]]:
+        """
+        Scan file safe.
+
+        Args:
+            filepath (str): filepath string.
+
+        Returns:
+            tuple[bool, list[str]]: a sequence of bool, list[str] entries (empty when there is
+                nothing to report).
+        """
         try:
             content = Path(filepath).read_text(encoding="utf-8", errors="ignore")
             return self.scan_file(content)
@@ -126,13 +176,43 @@ class PromptInjectionDetector:
 
 
 class SecurityManager:
+    """
+    Security manager.
+    """
+
     def __init__(self, config: dict = None) -> None:
+        """
+        Initialise a SecurityManager instance.
+
+        Args:
+            config (dict): configuration object. Defaults to ``None``.
+        """
         config = config or {}
         self.ssrf = SSRFProtector(allow_private=config.get("allow_private_urls", False))
         self.injection = PromptInjectionDetector()
 
     def check_url(self, url: str) -> tuple[bool, str]:
+        """
+        Check url.
+
+        Args:
+            url (str): url string.
+
+        Returns:
+            tuple[bool, str]: a sequence of bool, str entries (empty when there is nothing to
+                report).
+        """
         return self.ssrf.check_url(url)
 
     def scan_context_file(self, filepath: str) -> tuple[bool, list[str]]:
+        """
+        Scan context file.
+
+        Args:
+            filepath (str): filepath string.
+
+        Returns:
+            tuple[bool, list[str]]: a sequence of bool, list[str] entries (empty when there is
+                nothing to report).
+        """
         return self.injection.scan_file_safe(filepath)

@@ -1,3 +1,11 @@
+"""Speech-to-text support for voice messages.
+
+Public objects: ``VoiceTranscriber``.
+
+Status: optional - requires ``openai-whisper`` or an external STT command
+configured through ``BAHRAM_STT_COMMAND``.
+"""
+
 from __future__ import annotations
 
 import asyncio
@@ -8,11 +16,33 @@ logger = logging.getLogger(__name__)
 
 
 class VoiceTranscriber:
+    """
+    Voice transcriber.
+    """
+
     def __init__(self, method: str = "whisper") -> None:
+        """
+        Initialise a VoiceTranscriber instance.
+
+        Args:
+            method (str): method string. Defaults to ``'whisper'``.
+        """
         self.method = method
         self._whisper_model = None
 
     async def transcribe(self, audio_path: str) -> str | None:
+        """
+        Transcribe.
+
+        Args:
+            audio_path (str): audio path string.
+
+        Returns:
+            str | None: the resulting object, or ``None`` when it is not available.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         try:
             if self.method == "whisper":
                 return await self._transcribe_whisper(audio_path)
@@ -72,6 +102,18 @@ class VoiceTranscriber:
             return None
 
     async def convert_ogg_to_wav(self, ogg_path: str) -> str:
+        """
+        Convert ogg to wav.
+
+        Args:
+            ogg_path (str): ogg path string.
+
+        Returns:
+            str: the rendered string.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         wav_path = tempfile.mktemp(suffix=".wav")
 
         try:

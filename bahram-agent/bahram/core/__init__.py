@@ -1,3 +1,7 @@
+"""
+init .
+"""
+
 from bahram.core.agent import Agent
 from bahram.core.config import Config
 from bahram.core.context import Context

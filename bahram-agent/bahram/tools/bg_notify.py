@@ -1,3 +1,9 @@
+"""
+Bg notify.
+
+Public objects: ``BackgroundTask``, ``BackgroundNotifier``.
+"""
+
 from __future__ import annotations
 
 import asyncio
@@ -12,6 +18,21 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class BackgroundTask:
+    """
+    Background task.
+
+    Attributes:
+        task_id (str): task identifier.
+        name (str): name of the object.
+        status (str): status string.
+        result (Any): result.
+        error (str): error string.
+        start_time (float): numeric value for start time.
+        end_time (float): numeric value for end time.
+        notify_chat_id (str): notify chat id string.
+        notify_platform (str): notify platform string.
+    """
+
     task_id: str
     name: str
     status: str = "pending"
@@ -24,11 +45,24 @@ class BackgroundTask:
 
 
 class BackgroundNotifier:
+    """
+    Background notifier.
+    """
+
     def __init__(self) -> None:
+        """
+        Initialise a BackgroundNotifier instance.
+        """
         self._tasks: dict[str, BackgroundTask] = {}
         self._notify_fn: Callable | None = None
 
     def set_notify_function(self, fn: Callable) -> None:
+        """
+        Set the notify function.
+
+        Args:
+            fn (Callable): callable used for fn.
+        """
         self._notify_fn = fn
 
     def start_task(
@@ -38,6 +72,15 @@ class BackgroundNotifier:
         notify_chat_id: str = "",
         notify_platform: str = "",
     ) -> None:
+        """
+        Start task.
+
+        Args:
+            task_id (str): task identifier.
+            name (str): name of the object.
+            notify_chat_id (str): notify chat id string. Defaults to ``''``.
+            notify_platform (str): notify platform string. Defaults to ``''``.
+        """
         self._tasks[task_id] = BackgroundTask(
             task_id=task_id,
             name=name,
@@ -48,6 +91,13 @@ class BackgroundNotifier:
         )
 
     def complete_task(self, task_id: str, result: Any = None) -> None:
+        """
+        Complete task.
+
+        Args:
+            task_id (str): task identifier.
+            result (Any): result. Defaults to ``None``.
+        """
         if task_id in self._tasks:
             task = self._tasks[task_id]
             task.status = "completed"
@@ -56,6 +106,13 @@ class BackgroundNotifier:
             self._send_notification(task, f"Task '{task.name}' completed")
 
     def fail_task(self, task_id: str, error: str) -> None:
+        """
+        Fail task.
+
+        Args:
+            task_id (str): task identifier.
+            error (str): error string.
+        """
         if task_id in self._tasks:
             task = self._tasks[task_id]
             task.status = "failed"
@@ -78,6 +135,12 @@ class BackgroundNotifier:
             logger.warning(f"Failed to send notification: {e}")
 
     def get_active_tasks(self) -> list[dict]:
+        """
+        Return the active tasks.
+
+        Returns:
+            list[dict]: a sequence of dict entries (empty when there is nothing to report).
+        """
         return [
             {
                 "id": t.task_id,
@@ -90,6 +153,15 @@ class BackgroundNotifier:
         ]
 
     def get_task(self, task_id: str) -> dict | None:
+        """
+        Return the task.
+
+        Args:
+            task_id (str): task identifier.
+
+        Returns:
+            dict | None: a mapping of str, Any.
+        """
         task = self._tasks.get(task_id)
         if task:
             return {
@@ -102,6 +174,15 @@ class BackgroundNotifier:
         return None
 
     def cleanup_old(self, max_age_seconds: int = 3600) -> int:
+        """
+        Cleanup old.
+
+        Args:
+            max_age_seconds (int): numeric value for max age seconds. Defaults to ``3600``.
+
+        Returns:
+            int: the computed numeric value.
+        """
         now = time.time()
         to_remove = [
             tid

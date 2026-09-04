@@ -1,3 +1,9 @@
+"""
+Dependency.
+
+Public objects: ``Dependency``, ``DependencyAnalyzer``.
+"""
+
 from __future__ import annotations
 
 import logging
@@ -11,6 +17,16 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class Dependency:
+    """
+    Dependency.
+
+    Attributes:
+        name (str): name of the object.
+        version (str): version string.
+        source (str): source string.
+        is_direct (bool): when ``True``, enable is direct.
+    """
+
     name: str
     version: str = ""
     source: str = ""
@@ -18,10 +34,29 @@ class Dependency:
 
 
 class DependencyAnalyzer:
+    """
+    Dependency analyzer.
+    """
+
     def __init__(self, project_root: str = ".") -> None:
+        """
+        Initialise a DependencyAnalyzer instance.
+
+        Args:
+            project_root (str): project root string. Defaults to ``'.'``.
+        """
         self.project_root = Path(project_root)
 
     async def analyze(self) -> dict[str, Any]:
+        """
+        Analyze.
+
+        Returns:
+            dict[str, Any]: a mapping of str, Any.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         deps = {
             "python": await self._analyze_python(),
             "javascript": await self._analyze_javascript(),
@@ -71,6 +106,15 @@ class DependencyAnalyzer:
         return deps
 
     def get_report(self, deps: dict[str, Any]) -> str:
+        """
+        Return the report.
+
+        Args:
+            deps (dict[str, Any]): mapping of deps.
+
+        Returns:
+            str: the rendered string.
+        """
         lines = ["## Dependency Report", ""]
 
         if deps["python"]:
@@ -89,6 +133,15 @@ class DependencyAnalyzer:
         return "\n".join(lines)
 
     def check_outdated(self, deps: dict[str, Any]) -> list[dict]:
+        """
+        Check outdated.
+
+        Args:
+            deps (dict[str, Any]): mapping of deps.
+
+        Returns:
+            list[dict]: a sequence of dict entries (empty when there is nothing to report).
+        """
         outdated = []
 
         return outdated

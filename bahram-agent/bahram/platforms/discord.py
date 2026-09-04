@@ -1,3 +1,9 @@
+"""
+Discord.
+
+Public objects: ``DiscordPlatform``.
+"""
+
 from __future__ import annotations
 
 import logging
@@ -8,11 +14,29 @@ logger = logging.getLogger(__name__)
 
 
 class DiscordPlatform(BasePlatform):
+    """
+    Discord platform.
+    """
+
     @property
     def name(self) -> str:
+        """
+        Return the registry name of the DiscordPlatform object.
+
+        Returns the constant string ``'discord'``.
+
+        Returns:
+            str: the rendered string.
+        """
         return "discord"
 
     async def start(self) -> None:
+        """
+        Start the component and acquire any resources it needs.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         try:
             import discord
             from discord.ext import commands
@@ -57,17 +81,43 @@ class DiscordPlatform(BasePlatform):
             logger.error(f"Failed to start Discord bot: {e}")
 
     async def stop(self) -> None:
+        """
+        Stop the component and release any resources it holds.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         if hasattr(self, "bot"):
             await self.bot.close()
             logger.info("Discord bot stopped")
 
     async def send_message(self, chat_id: str, content: str) -> None:
+        """
+        Send message.
+
+        Args:
+            chat_id (str): chat id string.
+            content (str): text content to process.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         if hasattr(self, "bot"):
             channel = self.bot.get_channel(int(chat_id))
             if channel:
                 await channel.send(content)
 
     async def reply(self, message: PlatformMessage, content: str) -> None:
+        """
+        Reply.
+
+        Args:
+            message (PlatformMessage): message to process.
+            content (str): text content to process.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         if hasattr(self, "bot"):
             channel = self.bot.get_channel(int(message.chat_id))
             if channel:

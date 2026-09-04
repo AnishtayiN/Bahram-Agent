@@ -1,3 +1,9 @@
+"""LLM provider registry.
+
+Public objects: ``init_providers`` - builds the provider map from the API keys
+that are actually present in the environment or configuration.
+"""
+
 from __future__ import annotations
 
 import logging
@@ -67,6 +73,16 @@ PROVIDER_MAP: dict[str, type[BaseProvider]] = {
 
 
 async def init_providers(engine: Any, config: Any) -> None:
+    """
+    Initialise providers.
+
+    Args:
+        engine (Any): engine.
+        config (Any): configuration object.
+
+    Note:
+        Coroutine - must be awaited.
+    """
     for provider_name, provider_config in config.providers.items():
         try:
             provider_class = PROVIDER_MAP.get(provider_name)

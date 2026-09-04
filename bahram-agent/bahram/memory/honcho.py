@@ -1,3 +1,9 @@
+"""
+Honcho.
+
+Public objects: ``HonchoModel``.
+"""
+
 from __future__ import annotations
 
 import json
@@ -9,7 +15,17 @@ logger = logging.getLogger(__name__)
 
 
 class HonchoModel:
+    """
+    Honcho model.
+    """
+
     def __init__(self, data_dir: str = "data/honcho") -> None:
+        """
+        Initialise a HonchoModel instance.
+
+        Args:
+            data_dir (str): directory that holds the on-disk state. Defaults to ``'data/honcho'``.
+        """
         self.data_dir = Path(data_dir)
         self.data_dir.mkdir(parents=True, exist_ok=True)
         self._profiles: dict[str, dict] = {}
@@ -33,6 +49,15 @@ class HonchoModel:
             logger.error(f"Failed to save profiles: {e}")
 
     def get_profile(self, user_id: str) -> dict:
+        """
+        Return the profile.
+
+        Args:
+            user_id (str): user identifier.
+
+        Returns:
+            dict: a mapping of str, Any.
+        """
         if user_id not in self._profiles:
             self._profiles[user_id] = {
                 "id": user_id,
@@ -47,12 +72,27 @@ class HonchoModel:
         return self._profiles[user_id]
 
     def update_profile(self, user_id: str, updates: dict) -> None:
+        """
+        Update profile.
+
+        Args:
+            user_id (str): user identifier.
+            updates (dict): mapping of updates.
+        """
         profile = self.get_profile(user_id)
         profile.update(updates)
         profile["updated"] = datetime.now().isoformat()
         self._save_profiles()
 
     def record_interaction(self, user_id: str, message: str, response: str) -> None:
+        """
+        Record interaction.
+
+        Args:
+            user_id (str): user identifier.
+            message (str): message to process.
+            response (str): response string.
+        """
         profile = self.get_profile(user_id)
         profile["interactions"] = profile.get("interactions", 0) + 1
 
@@ -100,6 +140,14 @@ class HonchoModel:
         profile["communication_style"] = style
 
     def add_topic(self, user_id: str, topic: str, sentiment: float = 0.0) -> None:
+        """
+        Add topic.
+
+        Args:
+            user_id (str): user identifier.
+            topic (str): topic string.
+            sentiment (float): numeric value for sentiment. Defaults to ``0.0``.
+        """
         profile = self.get_profile(user_id)
         topics = profile.get("topics", {})
 
@@ -118,6 +166,15 @@ class HonchoModel:
         self._save_profiles()
 
     def get_recommendations(self, user_id: str) -> list[str]:
+        """
+        Return the recommendations.
+
+        Args:
+            user_id (str): user identifier.
+
+        Returns:
+            list[str]: a sequence of str entries (empty when there is nothing to report).
+        """
         profile = self.get_profile(user_id)
         topics = profile.get("topics", {})
 
@@ -130,6 +187,15 @@ class HonchoModel:
         return [topic for topic, _ in sorted_topics[:5]]
 
     def get_user_summary(self, user_id: str) -> str:
+        """
+        Return the user summary.
+
+        Args:
+            user_id (str): user identifier.
+
+        Returns:
+            str: the rendered string.
+        """
         profile = self.get_profile(user_id)
         preferences = profile.get("preferences", {})
         topics = profile.get("topics", {})
@@ -149,8 +215,20 @@ class HonchoModel:
         return summary
 
     def list_profiles(self) -> list[str]:
+        """
+        List profiles.
+
+        Returns:
+            list[str]: a sequence of str entries (empty when there is nothing to report).
+        """
         return list(self._profiles.keys())
 
     def delete_profile(self, user_id: str) -> None:
+        """
+        Delete profile.
+
+        Args:
+            user_id (str): user identifier.
+        """
         self._profiles.pop(user_id, None)
         self._save_profiles()

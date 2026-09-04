@@ -1,3 +1,9 @@
+"""
+Pairing.
+
+Public objects: ``PairingRequest``, ``DMPairingManager``.
+"""
+
 from __future__ import annotations
 
 import json
@@ -12,6 +18,18 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class PairingRequest:
+    """
+    Pairing request.
+
+    Attributes:
+        code (str): source code to execute.
+        platform (str): platform string.
+        user_id (str): user identifier.
+        timestamp (float): numeric value for timestamp.
+        expires_at (float): numeric value for expires at.
+        used (bool): when ``True``, enable used.
+    """
+
     code: str
     platform: str
     user_id: str
@@ -21,7 +39,17 @@ class PairingRequest:
 
 
 class DMPairingManager:
+    """
+    Dm pairing manager.
+    """
+
     def __init__(self, data_dir: str = "data/security") -> None:
+        """
+        Initialise a DMPairingManager instance.
+
+        Args:
+            data_dir (str): directory that holds the on-disk state. Defaults to ``'data/security'``.
+        """
         self.data_dir = Path(data_dir)
         self.data_dir.mkdir(parents=True, exist_ok=True)
         self._requests: list[PairingRequest] = []
@@ -47,6 +75,16 @@ class DMPairingManager:
             json.dump(data, f, indent=2)
 
     def generate_code(self, platform: str, user_id: str) -> str:
+        """
+        Generate code.
+
+        Args:
+            platform (str): platform string.
+            user_id (str): user identifier.
+
+        Returns:
+            str: the rendered string.
+        """
         code = secrets.token_urlsafe(self._code_length)[: self._code_length]
         request = PairingRequest(
             code=code,
@@ -59,6 +97,15 @@ class DMPairingManager:
         return code
 
     def verify_code(self, code: str) -> dict | None:
+        """
+        Verify code.
+
+        Args:
+            code (str): source code to execute.
+
+        Returns:
+            dict | None: a mapping of str, Any.
+        """
         for request in self._requests:
             if request.code == code and not request.used and time.time() < request.expires_at:
                 request.used = True
@@ -75,10 +122,30 @@ class DMPairingManager:
         return None
 
     def is_paired(self, platform: str, user_id: str) -> bool:
+        """
+        Return ``True`` when paired.
+
+        Args:
+            platform (str): platform string.
+            user_id (str): user identifier.
+
+        Returns:
+            bool: ``True`` when the operation succeeds, otherwise ``False``.
+        """
         user_key = f"{platform}:{user_id}"
         return user_key in self._paired_users
 
     def unpair(self, platform: str, user_id: str) -> bool:
+        """
+        Unpair.
+
+        Args:
+            platform (str): platform string.
+            user_id (str): user identifier.
+
+        Returns:
+            bool: ``True`` when the operation succeeds, otherwise ``False``.
+        """
         user_key = f"{platform}:{user_id}"
         if user_key in self._paired_users:
             del self._paired_users[user_key]
@@ -87,6 +154,12 @@ class DMPairingManager:
         return False
 
     def list_paired(self) -> list[dict]:
+        """
+        List paired.
+
+        Returns:
+            list[dict]: a sequence of dict entries (empty when there is nothing to report).
+        """
         return [
             {
                 "platform": v["platform"],
@@ -97,6 +170,12 @@ class DMPairingManager:
         ]
 
     def cleanup_expired(self) -> int:
+        """
+        Cleanup expired.
+
+        Returns:
+            int: the computed numeric value.
+        """
         now = time.time()
         expired = [r for r in self._requests if r.expires_at < now or r.used]
         for r in expired:

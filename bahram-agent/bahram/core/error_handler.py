@@ -1,3 +1,9 @@
+"""
+Error handler.
+
+Public objects: ``ErrorSolution``, ``ErrorHandler``.
+"""
+
 from __future__ import annotations
 
 import logging
@@ -8,6 +14,16 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class ErrorSolution:
+    """
+    Error solution.
+
+    Attributes:
+        error_type (str): error type string.
+        solution (str): solution string.
+        confidence (float): numeric value for confidence.
+        steps (list[str]): collection of steps.
+    """
+
     error_type: str
     solution: str
     confidence: float
@@ -15,7 +31,14 @@ class ErrorSolution:
 
 
 class ErrorHandler:
+    """
+    Error handler.
+    """
+
     def __init__(self) -> None:
+        """
+        Initialise a ErrorHandler instance.
+        """
         self._solutions: dict[str, list[ErrorSolution]] = {
             "ModuleNotFoundError": [
                 ErrorSolution(
@@ -112,6 +135,15 @@ class ErrorHandler:
         }
 
     def handle_error(self, error: Exception) -> ErrorSolution:
+        """
+        Handle error.
+
+        Args:
+            error (Exception): error.
+
+        Returns:
+            ErrorSolution: the resulting ErrorSolution.
+        """
         error_type = type(error).__name__
         error_msg = str(error)
 
@@ -130,15 +162,40 @@ class ErrorHandler:
         )
 
     def get_solution(self, error_type: str) -> ErrorSolution | None:
+        """
+        Return the solution.
+
+        Args:
+            error_type (str): error type string.
+
+        Returns:
+            ErrorSolution | None: the resulting object, or ``None`` when it is not available.
+        """
         solutions = self._solutions.get(error_type, [])
         return solutions[0] if solutions else None
 
     def add_solution(self, solution: ErrorSolution) -> None:
+        """
+        Add solution.
+
+        Args:
+            solution (ErrorSolution): solution.
+        """
         if solution.error_type not in self._solutions:
             self._solutions[solution.error_type] = []
         self._solutions[solution.error_type].append(solution)
 
     def format_error(self, error: Exception, solution: ErrorSolution = None) -> str:
+        """
+        Format error.
+
+        Args:
+            error (Exception): error.
+            solution (ErrorSolution): solution. Defaults to ``None``.
+
+        Returns:
+            str: the rendered string.
+        """
         lines = [
             f"**Error:** `{type(error).__name__}`",
             f"**Message:** {error}",
@@ -156,6 +213,12 @@ class ErrorHandler:
         return "\n".join(lines)
 
     def get_all_solutions(self) -> dict[str, list[str]]:
+        """
+        Return the all solutions.
+
+        Returns:
+            dict[str, list[str]]: a mapping of str, list[str].
+        """
         return {
             error_type: [s.solution for s in solutions]
             for error_type, solutions in self._solutions.items()

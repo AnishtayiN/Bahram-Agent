@@ -1,3 +1,9 @@
+"""
+Search.
+
+Public objects: ``SessionSearch``.
+"""
+
 from __future__ import annotations
 
 import json
@@ -8,11 +14,28 @@ logger = logging.getLogger(__name__)
 
 
 class SessionSearch:
+    """
+    Session search.
+    """
+
     def __init__(self, data_dir: str = "data/sessions") -> None:
+        """
+        Initialise a SessionSearch instance.
+
+        Args:
+            data_dir (str): directory that holds the on-disk state. Defaults to ``'data/sessions'``.
+        """
         self.data_dir = Path(data_dir)
         self.data_dir.mkdir(parents=True, exist_ok=True)
 
     def index_session(self, session_id: str, messages: list[dict]) -> None:
+        """
+        Index session.
+
+        Args:
+            session_id (str): session identifier.
+            messages (list[dict]): chat messages to send to the model.
+        """
         index_file = self.data_dir / f"{session_id}.json"
 
         content_parts = []
@@ -36,6 +59,16 @@ class SessionSearch:
         query: str,
         limit: int = 10,
     ) -> list[dict]:
+        """
+        Search.
+
+        Args:
+            query (str): search query.
+            limit (int): maximum number of items to return. Defaults to ``10``.
+
+        Returns:
+            list[dict]: a sequence of dict entries (empty when there is nothing to report).
+        """
         results = []
         query_lower = query.lower()
 
@@ -67,6 +100,15 @@ class SessionSearch:
         return results[:limit]
 
     def get_session(self, session_id: str) -> dict | None:
+        """
+        Return the session.
+
+        Args:
+            session_id (str): session identifier.
+
+        Returns:
+            dict | None: a mapping of str, Any.
+        """
         index_file = self.data_dir / f"{session_id}.json"
         if index_file.exists():
             with open(index_file) as f:
@@ -74,4 +116,10 @@ class SessionSearch:
         return None
 
     def list_sessions(self) -> list[str]:
+        """
+        List sessions.
+
+        Returns:
+            list[str]: a sequence of str entries (empty when there is nothing to report).
+        """
         return [f.stem for f in self.data_dir.glob("*.json")]

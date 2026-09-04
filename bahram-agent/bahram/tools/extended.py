@@ -1,3 +1,9 @@
+"""
+Extended.
+
+Public objects: ``GitTool``, ``ProcessListTool``, ``ContainerTool``, ``DocumentReadTool``.
+"""
+
 from __future__ import annotations
 
 import asyncio
@@ -10,16 +16,43 @@ logger = logging.getLogger(__name__)
 
 
 class GitTool(BaseTool):
+    """
+    Git tool.
+    """
+
     @property
     def name(self) -> str:
+        """
+        Return the registry name of the GitTool object.
+
+        Returns the constant string ``'git'``.
+
+        Returns:
+            str: the rendered string.
+        """
         return "git"
 
     @property
     def description(self) -> str:
+        """
+        Return the human readable description shown to the model.
+
+        Returns the constant string ``'Execute git commands (status, log, diff, add, commit, branch,
+            checkout, etc.).'``.
+
+        Returns:
+            str: the rendered string.
+        """
         return "Execute git commands (status, log, diff, add, commit, branch, checkout, etc.)."
 
     @property
     def parameters(self) -> dict[str, Any]:
+        """
+        Return the JSON schema describing this tool's arguments.
+
+        Returns:
+            dict[str, Any]: a mapping of str, Any.
+        """
         return {
             "type": "object",
             "properties": {
@@ -38,6 +71,18 @@ class GitTool(BaseTool):
         }
 
     async def execute(self, **kwargs: Any) -> str:
+        """
+        Execute the tool and return its textual result.
+
+        Args:
+            **kwargs (Any): keyword arguments forwarded to the implementation.
+
+        Returns:
+            str: the rendered string.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         command = kwargs.get("command", "")
         workdir = kwargs.get("workdir", None)
 
@@ -67,16 +112,43 @@ class GitTool(BaseTool):
 
 
 class ProcessListTool(BaseTool):
+    """
+    Process list tool.
+    """
+
     @property
     def name(self) -> str:
+        """
+        Return the registry name of the ProcessListTool object.
+
+        Returns the constant string ``'process_list'``.
+
+        Returns:
+            str: the rendered string.
+        """
         return "process_list"
 
     @property
     def description(self) -> str:
+        """
+        Return the human readable description shown to the model.
+
+        Returns the constant string ``'List running processes or get info about a specific
+            process.'``.
+
+        Returns:
+            str: the rendered string.
+        """
         return "List running processes or get info about a specific process."
 
     @property
     def parameters(self) -> dict[str, Any]:
+        """
+        Return the JSON schema describing this tool's arguments.
+
+        Returns:
+            dict[str, Any]: a mapping of str, Any.
+        """
         return {
             "type": "object",
             "properties": {
@@ -92,6 +164,18 @@ class ProcessListTool(BaseTool):
         }
 
     async def execute(self, **kwargs: Any) -> str:
+        """
+        Execute the tool and return its textual result.
+
+        Args:
+            **kwargs (Any): keyword arguments forwarded to the implementation.
+
+        Returns:
+            str: the rendered string.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         pid = kwargs.get("pid")
         proc_filter = kwargs.get("filter", "")
 
@@ -118,16 +202,43 @@ class ProcessListTool(BaseTool):
 
 
 class ContainerTool(BaseTool):
+    """
+    Container tool.
+    """
+
     @property
     def name(self) -> str:
+        """
+        Return the registry name of the ContainerTool object.
+
+        Returns the constant string ``'container'``.
+
+        Returns:
+            str: the rendered string.
+        """
         return "container"
 
     @property
     def description(self) -> str:
+        """
+        Return the human readable description shown to the model.
+
+        Returns the constant string ``'Run container operations (list, inspect, exec, logs,
+            stats).'``.
+
+        Returns:
+            str: the rendered string.
+        """
         return "Run container operations (list, inspect, exec, logs, stats)."
 
     @property
     def parameters(self) -> dict[str, Any]:
+        """
+        Return the JSON schema describing this tool's arguments.
+
+        Returns:
+            dict[str, Any]: a mapping of str, Any.
+        """
         return {
             "type": "object",
             "properties": {
@@ -149,6 +260,18 @@ class ContainerTool(BaseTool):
         }
 
     async def execute(self, **kwargs: Any) -> str:
+        """
+        Execute the tool and return its textual result.
+
+        Args:
+            **kwargs (Any): keyword arguments forwarded to the implementation.
+
+        Returns:
+            str: the rendered string.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         action = kwargs.get("action", "")
         container = kwargs.get("container", "")
         command = kwargs.get("command", "")
@@ -183,16 +306,43 @@ class ContainerTool(BaseTool):
 
 
 class DocumentReadTool(BaseTool):
+    """
+    Document read tool.
+    """
+
     @property
     def name(self) -> str:
+        """
+        Return the registry name of the DocumentReadTool object.
+
+        Returns the constant string ``'document_read'``.
+
+        Returns:
+            str: the rendered string.
+        """
         return "document_read"
 
     @property
     def description(self) -> str:
+        """
+        Return the human readable description shown to the model.
+
+        Returns the constant string ``'Read and extract text from documents (PDF, DOCX, TXT, MD,
+            CSV, JSON, YAML).'``.
+
+        Returns:
+            str: the rendered string.
+        """
         return "Read and extract text from documents (PDF, DOCX, TXT, MD, CSV, JSON, YAML)."
 
     @property
     def parameters(self) -> dict[str, Any]:
+        """
+        Return the JSON schema describing this tool's arguments.
+
+        Returns:
+            dict[str, Any]: a mapping of str, Any.
+        """
         return {
             "type": "object",
             "properties": {
@@ -209,6 +359,18 @@ class DocumentReadTool(BaseTool):
         }
 
     async def execute(self, **kwargs: Any) -> str:
+        """
+        Execute the tool and return its textual result.
+
+        Args:
+            **kwargs (Any): keyword arguments forwarded to the implementation.
+
+        Returns:
+            str: the rendered string.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         import os
 
         file_path = kwargs.get("file_path", "")

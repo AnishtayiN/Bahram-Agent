@@ -1,3 +1,11 @@
+"""Skill hub: discover, install and audit shareable Bahram skills.
+
+Public objects: ``HubSkill``, ``SkillHub``.
+
+Status: standalone capability module - it is NOT wired into ``Agent``. See
+docs/FEATURE_MATRIX.md.
+"""
+
 from __future__ import annotations
 
 import json
@@ -10,6 +18,19 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class HubSkill:
+    """
+    Hub skill.
+
+    Attributes:
+        name (str): name of the object.
+        description (str): human readable description.
+        source (str): source string.
+        version (str): version string.
+        author (str): author string.
+        tags (list[str]): collection of tags.
+        installed (bool): when ``True``, enable installed.
+    """
+
     name: str
     description: str
     source: str
@@ -20,7 +41,17 @@ class HubSkill:
 
 
 class SkillHub:
+    """
+    Skill hub.
+    """
+
     def __init__(self, skills_dir: str = "skills") -> None:
+        """
+        Initialise a SkillHub instance.
+
+        Args:
+            skills_dir (str): skills dir string. Defaults to ``'skills'``.
+        """
         self.skills_dir = Path(skills_dir)
         self.hub_dir = self.skills_dir / ".hub"
         self.installed: dict[str, HubSkill] = {}
@@ -63,19 +94,68 @@ class SkillHub:
             logger.error(f"Failed to save installed skills: {e}")
 
     async def search(self, query: str, source: str = "all") -> list[HubSkill]:
+        """
+        Search.
 
+        Args:
+            query (str): search query.
+            source (str): source string. Defaults to ``'all'``.
+
+        Returns:
+            list[HubSkill]: a sequence of HubSkill entries (empty when there is nothing to report).
+
+        Note:
+            Coroutine - must be awaited.
+        """
         logger.info(f"Searching for: {query} (source: {source})")
         return []
 
     async def browse(self, source: str = "all") -> list[HubSkill]:
+        """
+        Browse.
+
+        Args:
+            source (str): source string. Defaults to ``'all'``.
+
+        Returns:
+            list[HubSkill]: a sequence of HubSkill entries (empty when there is nothing to report).
+
+        Note:
+            Coroutine - must be awaited.
+        """
         logger.info(f"Browsing skills (source: {source})")
         return []
 
     async def inspect(self, skill_id: str) -> HubSkill | None:
+        """
+        Inspect.
+
+        Args:
+            skill_id (str): skill id string.
+
+        Returns:
+            HubSkill | None: the resulting object, or ``None`` when it is not available.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         logger.info(f"Inspecting skill: {skill_id}")
         return None
 
     async def install(self, skill_id: str, force: bool = False) -> bool:
+        """
+        Install.
+
+        Args:
+            skill_id (str): skill id string.
+            force (bool): when ``True``, skip the safety confirmation. Defaults to ``False``.
+
+        Returns:
+            bool: ``True`` when the operation succeeds, otherwise ``False``.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         logger.info(f"Installing skill: {skill_id}")
 
         if skill_id in self.installed and not force:
@@ -93,6 +173,18 @@ class SkillHub:
         return True
 
     async def uninstall(self, skill_id: str) -> bool:
+        """
+        Uninstall.
+
+        Args:
+            skill_id (str): skill id string.
+
+        Returns:
+            bool: ``True`` when the operation succeeds, otherwise ``False``.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         if skill_id in self.installed:
             del self.installed[skill_id]
             self._save_installed()
@@ -101,6 +193,15 @@ class SkillHub:
         return False
 
     async def update(self) -> int:
+        """
+        Update.
+
+        Returns:
+            int: the computed numeric value.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         updated = 0
         for skill_id in list(self.installed.keys()):
             updated += 1
@@ -108,18 +209,58 @@ class SkillHub:
         return updated
 
     async def audit(self) -> dict[str, str]:
+        """
+        Audit.
+
+        Returns:
+            dict[str, str]: a mapping of str, str.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         results = {}
         for skill_id in self.installed:
             results[skill_id] = "safe"
         return results
 
     def list_installed(self) -> list[HubSkill]:
+        """
+        List installed.
+
+        Returns:
+            list[HubSkill]: a sequence of HubSkill entries (empty when there is nothing to report).
+        """
         return list(self.installed.values())
 
     async def publish(self, skill_path: str, repo: str = "") -> bool:
+        """
+        Publish.
+
+        Args:
+            skill_path (str): skill path string.
+            repo (str): repo string. Defaults to ``''``.
+
+        Returns:
+            bool: ``True`` when the operation succeeds, otherwise ``False``.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         logger.info(f"Publishing skill: {skill_path} to {repo}")
         return True
 
     async def add_tap(self, repo: str) -> bool:
+        """
+        Add tap.
+
+        Args:
+            repo (str): repo string.
+
+        Returns:
+            bool: ``True`` when the operation succeeds, otherwise ``False``.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         logger.info(f"Adding tap: {repo}")
         return True

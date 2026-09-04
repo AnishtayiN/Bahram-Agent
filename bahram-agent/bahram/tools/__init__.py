@@ -119,7 +119,7 @@ def discover_tool_classes() -> dict[str, type[BaseTool]]:
             module = importlib.import_module(f"{package}.{mod_name}")
         except Exception:
             # A module that cannot be imported simply contributes no tools.
-            logger.debug("Skipping tool module %s: import failed", mod_name, exc_info=True)
+            logger.warning("Skipping tool module %s: import failed", mod_name, exc_info=True)
             continue
         for _attr, obj in vars(module).items():
             if not inspect.isclass(obj) or not issubclass(obj, BaseTool):
@@ -131,7 +131,7 @@ def discover_tool_classes() -> dict[str, type[BaseTool]]:
             try:
                 name = obj().name
             except Exception:
-                logger.debug("Skipping tool class %s: cannot read name", obj, exc_info=True)
+                logger.warning("Skipping tool class %s: cannot read name", obj, exc_info=True)
                 continue
             found[name] = obj
     return found

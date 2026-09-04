@@ -1,3 +1,9 @@
+"""
+API generator.
+
+Public objects: ``APIEndpoint``, ``APIGenerator``.
+"""
+
 from __future__ import annotations
 
 import logging
@@ -8,6 +14,18 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class APIEndpoint:
+    """
+    API endpoint.
+
+    Attributes:
+        path (str): filesystem path to operate on.
+        method (str): method string.
+        handler (str): handler string.
+        description (str): human readable description.
+        parameters (list[dict]): collection of parameters.
+        response_schema (dict): mapping of response schema.
+    """
+
     path: str
     method: str
     handler: str
@@ -17,7 +35,14 @@ class APIEndpoint:
 
 
 class APIGenerator:
+    """
+    API generator.
+    """
+
     def __init__(self) -> None:
+        """
+        Initialise a APIGenerator instance.
+        """
         self._endpoints: list[APIEndpoint] = []
         self._templates: dict[str, str] = {
             "fastapi": self._get_fastapi_template(),
@@ -26,9 +51,24 @@ class APIGenerator:
         }
 
     def add_endpoint(self, endpoint: APIEndpoint) -> None:
+        """
+        Add endpoint.
+
+        Args:
+            endpoint (APIEndpoint): endpoint.
+        """
         self._endpoints.append(endpoint)
 
     def generate(self, framework: str = "fastapi") -> str:
+        """
+        Generate.
+
+        Args:
+            framework (str): framework string. Defaults to ``'fastapi'``.
+
+        Returns:
+            str: the rendered string.
+        """
         template = self._templates.get(framework, "")
         if not template:
             return f"# Unsupported framework: {framework}"
@@ -69,6 +109,12 @@ class APIGenerator:
         return ""
 
     def generate_openapi(self) -> dict:
+        """
+        Generate openapi.
+
+        Returns:
+            dict: a mapping of str, Any.
+        """
         paths = {}
         for endpoint in self._endpoints:
             if endpoint.path not in paths:

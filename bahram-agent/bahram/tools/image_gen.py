@@ -1,3 +1,9 @@
+"""
+Image gen.
+
+Public objects: ``ImageGenTool``.
+"""
+
 from __future__ import annotations
 
 import logging
@@ -8,7 +14,14 @@ logger = logging.getLogger(__name__)
 
 
 class ImageGenTool:
+    """
+    Image gen tool.
+    """
+
     def __init__(self) -> None:
+        """
+        Initialise a ImageGenTool instance.
+        """
         self._provider: str = "openai"
         self._api_key: str = ""
         self._output_dir: str = "data/images"
@@ -20,6 +33,21 @@ class ImageGenTool:
         style: str = "vivid",
         output_path: str = None,
     ) -> dict[str, Any]:
+        """
+        Generate.
+
+        Args:
+            prompt (str): prompt string.
+            size (str): size string. Defaults to ``'1024x1024'``.
+            style (str): style string. Defaults to ``'vivid'``.
+            output_path (str): output path string. Defaults to ``None``.
+
+        Returns:
+            dict[str, Any]: a mapping of str, Any.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         if self._provider == "openai":
             return await self._generate_openai(prompt, size, style, output_path)
         else:
@@ -77,7 +105,19 @@ class ImageGenTool:
             return {"error": str(e)}
 
     def set_provider(self, provider: str) -> None:
+        """
+        Set the provider.
+
+        Args:
+            provider (str): provider string.
+        """
         self._provider = provider
 
     def set_api_key(self, api_key: str) -> None:
+        """
+        Set the api key.
+
+        Args:
+            api_key (str): api key string.
+        """
         self._api_key = api_key

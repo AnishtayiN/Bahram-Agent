@@ -1,3 +1,9 @@
+"""
+Smart doc.
+
+Public objects: ``DocSection``, ``SmartDocGenerator``.
+"""
+
 from __future__ import annotations
 
 import logging
@@ -10,13 +16,29 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class DocSection:
+    """
+    Doc section.
+
+    Attributes:
+        name (str): name of the object.
+        content (str): text content to process.
+        level (int): numeric value for level.
+    """
+
     name: str
     content: str
     level: int = 1
 
 
 class SmartDocGenerator:
+    """
+    Smart doc generator.
+    """
+
     def __init__(self) -> None:
+        """
+        Initialise a SmartDocGenerator instance.
+        """
         self._templates: dict[str, str] = {
             "markdown": "# {title}\n\n{content}\n",
             "rst": "{title}\n{underline}\n\n{content}\n",
@@ -30,6 +52,21 @@ class SmartDocGenerator:
         format: str = "markdown",
         include_examples: bool = True,
     ) -> bool:
+        """
+        Generate.
+
+        Args:
+            source_path (str): source path string.
+            output_path (str): output path string.
+            format (str): format string. Defaults to ``'markdown'``.
+            include_examples (bool): when ``True``, enable include examples. Defaults to ``True``.
+
+        Returns:
+            bool: ``True`` when the operation succeeds, otherwise ``False``.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         try:
             source = Path(source_path)
             if not source.exists():

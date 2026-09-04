@@ -1,3 +1,9 @@
+"""
+Session resume.
+
+Public objects: ``SessionState``, ``SessionResumeManager``.
+"""
+
 from __future__ import annotations
 
 import json
@@ -11,6 +17,19 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class SessionState:
+    """
+    Session state.
+
+    Attributes:
+        session_id (str): session identifier.
+        platform (str): platform string.
+        chat_id (str): chat id string.
+        last_message (str): last message string.
+        timestamp (float): numeric value for timestamp.
+        context (dict): mapping of context.
+        conversation_history (list[dict]): collection of conversation history.
+    """
+
     session_id: str
     platform: str
     chat_id: str
@@ -21,7 +40,17 @@ class SessionState:
 
 
 class SessionResumeManager:
+    """
+    Session resume manager.
+    """
+
     def __init__(self, data_dir: str = "data/gateway") -> None:
+        """
+        Initialise a SessionResumeManager instance.
+
+        Args:
+            data_dir (str): directory that holds the on-disk state. Defaults to ``'data/gateway'``.
+        """
         self.data_dir = Path(data_dir)
         self.data_dir.mkdir(parents=True, exist_ok=True)
         self._sessions: dict[str, SessionState] = {}
@@ -65,6 +94,17 @@ class SessionResumeManager:
         context: dict = None,
         history: list[dict] = None,
     ) -> None:
+        """
+        Save session.
+
+        Args:
+            session_id (str): session identifier.
+            platform (str): platform string.
+            chat_id (str): chat id string.
+            last_message (str): last message string.
+            context (dict): mapping of context. Defaults to ``None``.
+            history (list[dict]): collection of history. Defaults to ``None``.
+        """
         self._sessions[session_id] = SessionState(
             session_id=session_id,
             platform=platform,
@@ -77,9 +117,28 @@ class SessionResumeManager:
         self._save()
 
     def get_session(self, session_id: str) -> SessionState | None:
+        """
+        Return the session.
+
+        Args:
+            session_id (str): session identifier.
+
+        Returns:
+            SessionState | None: the resulting object, or ``None`` when it is not available.
+        """
         return self._sessions.get(session_id)
 
     def get_recent_sessions(self, platform: str = None, limit: int = 10) -> list[dict]:
+        """
+        Return the recent sessions.
+
+        Args:
+            platform (str): platform string. Defaults to ``None``.
+            limit (int): maximum number of items to return. Defaults to ``10``.
+
+        Returns:
+            list[dict]: a sequence of dict entries (empty when there is nothing to report).
+        """
         sessions = list(self._sessions.values())
         if platform:
             sessions = [s for s in sessions if s.platform == platform]
@@ -97,6 +156,15 @@ class SessionResumeManager:
         ]
 
     def cleanup_old(self, max_age_seconds: int = 86400) -> int:
+        """
+        Cleanup old.
+
+        Args:
+            max_age_seconds (int): numeric value for max age seconds. Defaults to ``86400``.
+
+        Returns:
+            int: the computed numeric value.
+        """
         now = time.time()
         to_remove = [
             sid

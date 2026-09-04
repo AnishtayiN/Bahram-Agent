@@ -1,3 +1,9 @@
+"""
+Compressor.
+
+Public objects: ``CompressionResult``, ``ContextCompressor``.
+"""
+
 from __future__ import annotations
 
 import json
@@ -10,6 +16,16 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class CompressionResult:
+    """
+    Compression result.
+
+    Attributes:
+        compressed (str): compressed string.
+        original_tokens (int): numeric value for original tokens.
+        compressed_tokens (int): numeric value for compressed tokens.
+        ratio (float): numeric value for ratio.
+    """
+
     compressed: str
     original_tokens: int
     compressed_tokens: int
@@ -17,7 +33,14 @@ class CompressionResult:
 
 
 class ContextCompressor:
+    """
+    Context compressor.
+    """
+
     def __init__(self) -> None:
+        """
+        Initialise a ContextCompressor instance.
+        """
         self._compression_level = 0.5
         self._enabled = True
 
@@ -27,6 +50,20 @@ class ContextCompressor:
         model_fn: Callable = None,
         target_tokens: int = 4000,
     ) -> CompressionResult:
+        """
+        Compress.
+
+        Args:
+            messages (list[dict]): chat messages to send to the model.
+            model_fn (Callable): callable used for model fn. Defaults to ``None``.
+            target_tokens (int): numeric value for target tokens. Defaults to ``4000``.
+
+        Returns:
+            CompressionResult: the resulting CompressionResult.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         if not self._enabled or not messages:
             return CompressionResult(
                 compressed=json.dumps(messages),
@@ -112,7 +149,19 @@ class ContextCompressor:
         return json.dumps(result)
 
     def set_level(self, level: float) -> None:
+        """
+        Set the level.
+
+        Args:
+            level (float): numeric value for level.
+        """
         self._compression_level = max(0, min(1, level))
 
     def set_enabled(self, enabled: bool) -> None:
+        """
+        Set the enabled.
+
+        Args:
+            enabled (bool): when ``True`` the object is active.
+        """
         self._enabled = enabled

@@ -1,3 +1,9 @@
+"""
+Agent.
+
+Public objects: ``Session``, ``Agent``.
+"""
+
 from __future__ import annotations
 
 import logging
@@ -19,6 +25,16 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class Session:
+    """
+    Session.
+
+    Attributes:
+        id (str): id string.
+        created_at (float): numeric value for created at.
+        updated_at (float): numeric value for updated at.
+        metadata (dict[str, Any]): mapping of metadata.
+    """
+
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
     created_at: float = field(default_factory=time.time)
     updated_at: float = field(default_factory=time.time)
@@ -26,7 +42,18 @@ class Session:
 
 
 class Agent:
+    """
+    Agent.
+    """
+
     def __init__(self, config: Config | None = None, config_path: str | None = None) -> None:
+        """
+        Initialise a Agent instance.
+
+        Args:
+            config (Config | None): configuration object. Defaults to ``None``.
+            config_path (str | None): config path string. Defaults to ``None``.
+        """
         if config:
             self.config = config
         elif config_path:
@@ -73,6 +100,12 @@ class Agent:
         )
 
     async def start(self) -> None:
+        """
+        Start the component and acquire any resources it needs.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         logger.info("Starting Bahram Agent...")
         await self._init_providers()
         await self._init_tools()
@@ -176,6 +209,12 @@ class Agent:
         return providers[0] if providers else None
 
     async def stop(self) -> None:
+        """
+        Stop the component and release any resources it holds.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         logger.info("Stopping Bahram Agent...")
         logger.info("Bahram Agent stopped")
 
@@ -203,6 +242,15 @@ class Agent:
             await self._skills.load_skills()
 
     def create_session(self, metadata: dict[str, Any] | None = None) -> Session:
+        """
+        Create session.
+
+        Args:
+            metadata (dict[str, Any] | None): mapping of metadata. Defaults to ``None``.
+
+        Returns:
+            Session: the resulting Session.
+        """
         session = Session(metadata=metadata or {})
         self.sessions[session.id] = session
         self.context.create(session.id)
@@ -211,6 +259,15 @@ class Agent:
         return session
 
     def get_session(self, session_id: str) -> Session | None:
+        """
+        Return the session.
+
+        Args:
+            session_id (str): session identifier.
+
+        Returns:
+            Session | None: the resulting object, or ``None`` when it is not available.
+        """
         if session_id in self.sessions:
             return self.sessions[session_id]
         stored = self._store.get_session(session_id)
@@ -223,6 +280,12 @@ class Agent:
         return None
 
     def delete_session(self, session_id: str) -> None:
+        """
+        Delete session.
+
+        Args:
+            session_id (str): session identifier.
+        """
         self.sessions.pop(session_id, None)
         self.context.delete(session_id)
         self._store.delete_session(session_id)
@@ -235,6 +298,21 @@ class Agent:
         model: str | None = None,
         use_planning: bool = False,
     ) -> AgentResponse:
+        """
+        Run.
+
+        Args:
+            message (str): message to process.
+            session_id (str | None): session identifier. Defaults to ``None``.
+            model (str | None): model identifier in ``provider/model`` form. Defaults to ``None``.
+            use_planning (bool): when ``True``, enable use planning. Defaults to ``False``.
+
+        Returns:
+            AgentResponse: the resulting AgentResponse.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         if session_id is None:
             session = self.create_session()
             session_id = session.id
@@ -370,6 +448,20 @@ class Agent:
         session_id: str | None = None,
         model: str | None = None,
     ) -> AgentResponse:
+        """
+        Chat.
+
+        Args:
+            message (str): message to process.
+            session_id (str | None): session identifier. Defaults to ``None``.
+            model (str | None): model identifier in ``provider/model`` form. Defaults to ``None``.
+
+        Returns:
+            AgentResponse: the resulting AgentResponse.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         return await self.run(message, session_id, model)
 
     async def run_with_plan(
@@ -378,6 +470,20 @@ class Agent:
         session_id: str | None = None,
         model: str | None = None,
     ) -> AgentResponse:
+        """
+        Run with plan.
+
+        Args:
+            message (str): message to process.
+            session_id (str | None): session identifier. Defaults to ``None``.
+            model (str | None): model identifier in ``provider/model`` form. Defaults to ``None``.
+
+        Returns:
+            AgentResponse: the resulting AgentResponse.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         return await self.run(message, session_id, model, use_planning=True)
 
     async def delegate_to_subagent(
@@ -388,6 +494,25 @@ class Agent:
         context: str = "",
         model: str | None = None,
     ) -> Any:
+        """
+        Delegate to subagent.
+
+        Args:
+            objective (str): objective string.
+            parent_run_id (str): parent run id string. Defaults to ``''``.
+            allowed_tools (list[str] | None): collection of allowed tools. Defaults to ``None``.
+            context (str): context string. Defaults to ``''``.
+            model (str | None): model identifier in ``provider/model`` form. Defaults to ``None``.
+
+        Returns:
+            Any: the resulting Any.
+
+        Raises:
+            RuntimeError: if the operation cannot be completed.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         if not self._subagent_engine:
             raise RuntimeError("Subagent engine not initialized")
 
@@ -405,6 +530,23 @@ class Agent:
         session_id: str,
         payload: dict[str, Any] | None = None,
     ) -> Any:
+        """
+        Create background job.
+
+        Args:
+            job_type (str): job type string.
+            session_id (str): session identifier.
+            payload (dict[str, Any] | None): mapping of payload. Defaults to ``None``.
+
+        Returns:
+            Any: the resulting Any.
+
+        Raises:
+            RuntimeError: if the operation cannot be completed.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         if not self._job_engine:
             raise RuntimeError("Job engine not initialized")
 
@@ -423,6 +565,22 @@ class Agent:
         tool_results: list[dict[str, Any]],
         success: bool,
     ) -> dict[str, Any]:
+        """
+        Analyze and learn.
+
+        Args:
+            run_id (str): run identifier.
+            goal (str): goal string.
+            trajectory_steps (list[dict[str, Any]]): collection of trajectory steps.
+            tool_results (list[dict[str, Any]]): collection of tool results.
+            success (bool): when ``True``, enable success.
+
+        Returns:
+            dict[str, Any]: a mapping of str, Any.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         if not self._learning_engine:
             return {"error": "Learning engine not initialized"}
 
@@ -443,6 +601,20 @@ class Agent:
         return analysis
 
     def checkpoint_run(self, run_id: str, plan: Any, context_summary: str = "") -> Any:
+        """
+        Checkpoint run.
+
+        Args:
+            run_id (str): run identifier.
+            plan (Any): plan.
+            context_summary (str): context summary string. Defaults to ``''``.
+
+        Returns:
+            Any: the resulting Any.
+
+        Raises:
+            RuntimeError: if the operation cannot be completed.
+        """
         if not self._recovery_manager:
             raise RuntimeError("Recovery manager not initialized")
 
@@ -481,6 +653,20 @@ class Agent:
         session_id: str | None = None,
         model: str | None = None,
     ) -> AsyncIterator[str]:
+        """
+        Chat streaming.
+
+        Args:
+            message (str): message to process.
+            session_id (str | None): session identifier. Defaults to ``None``.
+            model (str | None): model identifier in ``provider/model`` form. Defaults to ``None``.
+
+        Returns:
+            AsyncIterator[str]: the resulting AsyncIterator[str].
+
+        Note:
+            Coroutine - must be awaited.
+        """
         if session_id is None:
             session = self.create_session()
             session_id = session.id
@@ -585,15 +771,43 @@ class Agent:
         return "\n".join(skill_descriptions) if skill_descriptions else ""
 
     def get_history(self, session_id: str) -> list[Message]:
+        """
+        Return the history.
+
+        Args:
+            session_id (str): session identifier.
+
+        Returns:
+            list[Message]: a sequence of Message entries (empty when there is nothing to report).
+        """
         ctx = self.context.get(session_id)
         if ctx:
             return ctx.get_messages()
         return []
 
     def clear_history(self, session_id: str) -> None:
+        """
+        Clear history.
+
+        Args:
+            session_id (str): session identifier.
+        """
         self.context.clear(session_id)
 
     async def execute_command(self, command: str, **kwargs: Any) -> Any:
+        """
+        Execute command.
+
+        Args:
+            command (str): shell command to execute.
+            **kwargs (Any): keyword arguments forwarded to the implementation.
+
+        Returns:
+            Any: the resulting Any.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         logger.info(f"Executing command: {command}")
         if self.engine._tool_executor is None:
             from bahram.core.engine import ToolExecutor
@@ -611,13 +825,30 @@ class Agent:
 
 
 class _MCPToolAdapter:
+    """
+    MCP tool adapter.
+    """
+
     def __init__(self, client: Any, tool_def: dict) -> None:
+        """
+        Initialise a _MCPToolAdapter instance.
+
+        Args:
+            client (Any): client.
+            tool_def (dict): mapping of tool def.
+        """
         self._client = client
         self._tool_def = tool_def
         self.name = tool_def.get("name", "unknown")
         self.description = tool_def.get("description", "")
 
     def schema(self) -> dict:
+        """
+        Return the OpenAI-style function schema for this tool.
+
+        Returns:
+            dict: a mapping of str, Any.
+        """
         return {
             "name": f"mcp_{self.name}",
             "description": self.description,
@@ -625,5 +856,17 @@ class _MCPToolAdapter:
         }
 
     async def execute(self, **kwargs: Any) -> str:
+        """
+        Execute the tool and return its textual result.
+
+        Args:
+            **kwargs (Any): keyword arguments forwarded to the implementation.
+
+        Returns:
+            str: the rendered string.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         result = await self._client.call_tool(self.name, kwargs)
         return str(result)

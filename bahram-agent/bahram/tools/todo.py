@@ -1,3 +1,9 @@
+"""
+Todo.
+
+Public objects: ``TodoItem``, ``TodoTool``.
+"""
+
 from __future__ import annotations
 
 import json
@@ -10,6 +16,18 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class TodoItem:
+    """
+    Todo item.
+
+    Attributes:
+        id (str): id string.
+        content (str): text content to process.
+        status (str): status string.
+        priority (str): priority string.
+        created_at (float): numeric value for created at.
+        completed_at (float): numeric value for completed at.
+    """
+
     id: str
     content: str
     status: str = "pending"
@@ -19,7 +37,17 @@ class TodoItem:
 
 
 class TodoTool:
+    """
+    Todo tool.
+    """
+
     def __init__(self, data_dir: str = "data") -> None:
+        """
+        Initialise a TodoTool instance.
+
+        Args:
+            data_dir (str): directory that holds the on-disk state. Defaults to ``'data'``.
+        """
         self.data_dir = Path(data_dir)
         self.data_dir.mkdir(parents=True, exist_ok=True)
         self._todos: dict[str, TodoItem] = {}
@@ -58,6 +86,16 @@ class TodoTool:
         content: str,
         priority: str = "medium",
     ) -> TodoItem:
+        """
+        Add.
+
+        Args:
+            content (str): text content to process.
+            priority (str): priority string. Defaults to ``'medium'``.
+
+        Returns:
+            TodoItem: the resulting TodoItem.
+        """
         import time
         import uuid
 
@@ -73,6 +111,16 @@ class TodoTool:
         return todo
 
     def update_status(self, todo_id: str, status: str) -> bool:
+        """
+        Update status.
+
+        Args:
+            todo_id (str): todo id string.
+            status (str): status string.
+
+        Returns:
+            bool: ``True`` when the operation succeeds, otherwise ``False``.
+        """
         if todo_id in self._todos:
             import time
 
@@ -84,6 +132,15 @@ class TodoTool:
         return False
 
     def delete(self, todo_id: str) -> bool:
+        """
+        Delete.
+
+        Args:
+            todo_id (str): todo id string.
+
+        Returns:
+            bool: ``True`` when the operation succeeds, otherwise ``False``.
+        """
         if todo_id in self._todos:
             del self._todos[todo_id]
             self._save()
@@ -91,6 +148,15 @@ class TodoTool:
         return False
 
     def list_todos(self, status: str = None) -> list[dict]:
+        """
+        List todos.
+
+        Args:
+            status (str): status string. Defaults to ``None``.
+
+        Returns:
+            list[dict]: a sequence of dict entries (empty when there is nothing to report).
+        """
         todos = list(self._todos.values())
         if status:
             todos = [t for t in todos if t.status == status]
@@ -105,6 +171,12 @@ class TodoTool:
         ]
 
     def get_summary(self) -> dict[str, int]:
+        """
+        Return the summary.
+
+        Returns:
+            dict[str, int]: a mapping of str, int.
+        """
         return {
             "total": len(self._todos),
             "pending": sum(1 for t in self._todos.values() if t.status == "pending"),
@@ -113,6 +185,12 @@ class TodoTool:
         }
 
     def clear_completed(self) -> int:
+        """
+        Clear completed.
+
+        Returns:
+            int: the computed numeric value.
+        """
         completed = [t.id for t in self._todos.values() if t.status == "completed"]
         for todo_id in completed:
             del self._todos[todo_id]

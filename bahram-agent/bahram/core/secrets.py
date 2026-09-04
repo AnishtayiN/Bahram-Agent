@@ -1,3 +1,9 @@
+"""
+Secrets.
+
+Public objects: ``SecretEntry``, ``SecretsManager``.
+"""
+
 from __future__ import annotations
 
 import base64
@@ -12,6 +18,17 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class SecretEntry:
+    """
+    Secret entry.
+
+    Attributes:
+        name (str): name of the object.
+        value (str): value string.
+        description (str): human readable description.
+        category (str): category string.
+        created_at (float): numeric value for created at.
+    """
+
     name: str
     value: str
     description: str = ""
@@ -20,7 +37,17 @@ class SecretEntry:
 
 
 class SecretsManager:
+    """
+    Secrets manager.
+    """
+
     def __init__(self, data_dir: str = "data/secrets") -> None:
+        """
+        Initialise a SecretsManager instance.
+
+        Args:
+            data_dir (str): directory that holds the on-disk state. Defaults to ``'data/secrets'``.
+        """
         self.data_dir = Path(data_dir)
         self.data_dir.mkdir(parents=True, exist_ok=True)
         self._secrets: dict[str, SecretEntry] = {}
@@ -75,6 +102,15 @@ class SecretsManager:
         description: str = "",
         category: str = "general",
     ) -> None:
+        """
+        Set the secret.
+
+        Args:
+            name (str): name of the object.
+            value (str): value string.
+            description (str): human readable description. Defaults to ``''``.
+            category (str): category string. Defaults to ``'general'``.
+        """
         import time
 
         self._secrets[name] = SecretEntry(
@@ -87,10 +123,28 @@ class SecretsManager:
         self._save()
 
     def get_secret(self, name: str) -> str | None:
+        """
+        Return the secret.
+
+        Args:
+            name (str): name of the object.
+
+        Returns:
+            str | None: the resulting object, or ``None`` when it is not available.
+        """
         entry = self._secrets.get(name)
         return entry.value if entry else None
 
     def get_secret_info(self, name: str) -> dict | None:
+        """
+        Return the secret info.
+
+        Args:
+            name (str): name of the object.
+
+        Returns:
+            dict | None: a mapping of str, Any.
+        """
         entry = self._secrets.get(name)
         if entry:
             return {
@@ -102,6 +156,15 @@ class SecretsManager:
         return None
 
     def delete_secret(self, name: str) -> bool:
+        """
+        Delete secret.
+
+        Args:
+            name (str): name of the object.
+
+        Returns:
+            bool: ``True`` when the operation succeeds, otherwise ``False``.
+        """
         if name in self._secrets:
             del self._secrets[name]
             self._save()
@@ -109,6 +172,15 @@ class SecretsManager:
         return False
 
     def list_secrets(self, category: str = None) -> list[dict]:
+        """
+        List secrets.
+
+        Args:
+            category (str): category string. Defaults to ``None``.
+
+        Returns:
+            list[dict]: a sequence of dict entries (empty when there is nothing to report).
+        """
         secrets = list(self._secrets.values())
         if category:
             secrets = [s for s in secrets if s.category == category]
@@ -122,6 +194,15 @@ class SecretsManager:
         ]
 
     def import_from_env(self, prefix: str = "") -> int:
+        """
+        Import from env.
+
+        Args:
+            prefix (str): prefix string. Defaults to ``''``.
+
+        Returns:
+            int: the computed numeric value.
+        """
         count = 0
         for key, value in os.environ.items():
             if prefix and not key.startswith(prefix):

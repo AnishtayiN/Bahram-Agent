@@ -1,3 +1,9 @@
+"""
+Task planner.
+
+Public objects: ``TaskStep``, ``TaskPlan``, ``TaskPlanner``.
+"""
+
 from __future__ import annotations
 
 import logging
@@ -9,6 +15,17 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class TaskStep:
+    """
+    Task step.
+
+    Attributes:
+        id (str): id string.
+        description (str): human readable description.
+        dependencies (list[str]): collection of dependencies.
+        status (str): status string.
+        result (Any): result.
+    """
+
     id: str
     description: str
     dependencies: list[str] = field(default_factory=list)
@@ -18,6 +35,17 @@ class TaskStep:
 
 @dataclass
 class TaskPlan:
+    """
+    Task plan.
+
+    Attributes:
+        id (str): id string.
+        goal (str): goal string.
+        steps (list[TaskStep]): collection of steps.
+        status (str): status string.
+        created_at (float): numeric value for created at.
+    """
+
     id: str
     goal: str
     steps: list[TaskStep] = field(default_factory=list)
@@ -26,11 +54,31 @@ class TaskPlan:
 
 
 class TaskPlanner:
+    """
+    Task planner.
+    """
+
     def __init__(self) -> None:
+        """
+        Initialise a TaskPlanner instance.
+        """
         self._plans: dict[str, TaskPlan] = {}
         self._step_counter = 0
 
     async def create_plan(self, goal: str, context: dict = None) -> TaskPlan:
+        """
+        Create plan.
+
+        Args:
+            goal (str): goal string.
+            context (dict): mapping of context. Defaults to ``None``.
+
+        Returns:
+            TaskPlan: the resulting TaskPlan.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         import time
         import uuid
 
@@ -109,6 +157,18 @@ class TaskPlanner:
         ]
 
     def update_step(self, plan_id: str, step_id: str, status: str, result: Any = None) -> bool:
+        """
+        Update step.
+
+        Args:
+            plan_id (str): plan identifier.
+            step_id (str): plan-step identifier.
+            status (str): status string.
+            result (Any): result. Defaults to ``None``.
+
+        Returns:
+            bool: ``True`` when the operation succeeds, otherwise ``False``.
+        """
         plan = self._plans.get(plan_id)
         if plan:
             for step in plan.steps:
@@ -119,6 +179,15 @@ class TaskPlanner:
         return False
 
     def get_plan(self, plan_id: str) -> dict | None:
+        """
+        Return the plan.
+
+        Args:
+            plan_id (str): plan identifier.
+
+        Returns:
+            dict | None: a mapping of str, Any.
+        """
         plan = self._plans.get(plan_id)
         if plan:
             return {
@@ -138,6 +207,15 @@ class TaskPlanner:
         return None
 
     def get_next_step(self, plan_id: str) -> TaskStep | None:
+        """
+        Return the next step.
+
+        Args:
+            plan_id (str): plan identifier.
+
+        Returns:
+            TaskStep | None: the resulting object, or ``None`` when it is not available.
+        """
         plan = self._plans.get(plan_id)
         if plan:
             for step in plan.steps:
@@ -151,6 +229,15 @@ class TaskPlanner:
         return None
 
     def get_progress(self, plan_id: str) -> dict[str, Any]:
+        """
+        Return the progress.
+
+        Args:
+            plan_id (str): plan identifier.
+
+        Returns:
+            dict[str, Any]: a mapping of str, Any.
+        """
         plan = self._plans.get(plan_id)
         if plan:
             total = len(plan.steps)

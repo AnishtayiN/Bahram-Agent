@@ -1,3 +1,9 @@
+"""
+Ai generator.
+
+Public objects: ``GeneratedFile``, ``AICodeGenerator``.
+"""
+
 from __future__ import annotations
 
 import logging
@@ -9,6 +15,16 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class GeneratedFile:
+    """
+    Generated file.
+
+    Attributes:
+        path (str): filesystem path to operate on.
+        content (str): text content to process.
+        language (str): language string.
+        description (str): human readable description.
+    """
+
     path: str
     content: str
     language: str
@@ -16,7 +32,14 @@ class GeneratedFile:
 
 
 class AICodeGenerator:
+    """
+    Ai code generator.
+    """
+
     def __init__(self) -> None:
+        """
+        Initialise a AICodeGenerator instance.
+        """
         self._templates: dict[str, dict] = {
             "fastapi": {
                 "files": [
@@ -49,6 +72,21 @@ class AICodeGenerator:
         framework: str = "fastapi",
         output_dir: str = "generated",
     ) -> list[GeneratedFile]:
+        """
+        Generate.
+
+        Args:
+            description (str): human readable description.
+            framework (str): framework string. Defaults to ``'fastapi'``.
+            output_dir (str): output dir string. Defaults to ``'generated'``.
+
+        Returns:
+            list[GeneratedFile]: a sequence of GeneratedFile entries (empty when there is nothing to
+                report).
+
+        Note:
+            Coroutine - must be awaited.
+        """
         template = self._templates.get(framework, {})
         if not template:
             return []

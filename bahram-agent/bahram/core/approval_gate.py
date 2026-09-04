@@ -1,3 +1,9 @@
+"""
+Approval gate.
+
+Public objects: ``ApprovalGate``, ``ApprovalGateManager``.
+"""
+
 from __future__ import annotations
 
 import logging
@@ -9,6 +15,18 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class ApprovalGate:
+    """
+    Approval gate.
+
+    Attributes:
+        name (str): name of the object.
+        pattern (str): pattern string.
+        description (str): human readable description.
+        require_approval (bool): when ``True``, enable require approval.
+        auto_approve (bool): when ``True``, enable auto approve.
+        approver (str): approver string.
+    """
+
     name: str
     pattern: str
     description: str
@@ -18,7 +36,17 @@ class ApprovalGate:
 
 
 class ApprovalGateManager:
+    """
+    Approval gate manager.
+    """
+
     def __init__(self, data_dir: str = "data/security") -> None:
+        """
+        Initialise a ApprovalGateManager instance.
+
+        Args:
+            data_dir (str): directory that holds the on-disk state. Defaults to ``'data/security'``.
+        """
         self.data_dir = Path(data_dir)
         self.data_dir.mkdir(parents=True, exist_ok=True)
         self._gates: list[ApprovalGate] = []
@@ -55,6 +83,16 @@ class ApprovalGateManager:
         ]
 
     def check_write(self, file_path: str) -> tuple[bool, str]:
+        """
+        Check write.
+
+        Args:
+            file_path (str): path of the file to operate on.
+
+        Returns:
+            tuple[bool, str]: a sequence of bool, str entries (empty when there is nothing to
+                report).
+        """
         path = Path(file_path)
 
         for gate in self._gates:
@@ -88,6 +126,17 @@ class ApprovalGateManager:
         return False
 
     def request_approval(self, write_id: str, file_path: str, reason: str) -> dict:
+        """
+        Request approval.
+
+        Args:
+            write_id (str): write id string.
+            file_path (str): path of the file to operate on.
+            reason (str): reason string.
+
+        Returns:
+            dict: a mapping of str, Any.
+        """
         self._pending[write_id] = {
             "file_path": file_path,
             "reason": reason,
@@ -96,19 +145,49 @@ class ApprovalGateManager:
         return self._pending[write_id]
 
     def approve(self, write_id: str) -> bool:
+        """
+        Approve.
+
+        Args:
+            write_id (str): write id string.
+
+        Returns:
+            bool: ``True`` when the operation succeeds, otherwise ``False``.
+        """
         if write_id in self._pending:
             self._pending[write_id]["status"] = "approved"
             return True
         return False
 
     def deny(self, write_id: str) -> bool:
+        """
+        Deny.
+
+        Args:
+            write_id (str): write id string.
+
+        Returns:
+            bool: ``True`` when the operation succeeds, otherwise ``False``.
+        """
         if write_id in self._pending:
             self._pending[write_id]["status"] = "denied"
             return True
         return False
 
     def get_pending(self) -> list[dict]:
+        """
+        Return the pending.
+
+        Returns:
+            list[dict]: a sequence of dict entries (empty when there is nothing to report).
+        """
         return [{"id": k, **v} for k, v in self._pending.items() if v["status"] == "pending"]
 
     def add_gate(self, gate: ApprovalGate) -> None:
+        """
+        Add gate.
+
+        Args:
+            gate (ApprovalGate): gate.
+        """
         self._gates.append(gate)

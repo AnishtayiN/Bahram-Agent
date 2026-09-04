@@ -1,3 +1,9 @@
+"""
+Gateway service.
+
+Public objects: ``GatewayService``.
+"""
+
 from __future__ import annotations
 
 import logging
@@ -16,12 +22,31 @@ PLIST_FILE = Path.home() / "Library" / "LaunchAgents" / "com.bahram.agent.plist"
 
 
 class GatewayService:
+    """
+    Gateway service.
+    """
+
     def __init__(self, work_dir: str | None = None) -> None:
+        """
+        Initialise a GatewayService instance.
+
+        Args:
+            work_dir (str | None): work dir string. Defaults to ``None``.
+        """
         self._platform = platform.system().lower()
         self._work_dir = work_dir or os.getcwd()
         self._python_path = sys.executable
 
     def install_service(self, system: bool = False) -> dict:
+        """
+        Install service.
+
+        Args:
+            system (bool): when ``True``, enable system. Defaults to ``False``.
+
+        Returns:
+            dict: a mapping of str, Any.
+        """
         if self._platform == "linux":
             return self._install_systemd(system)
         elif self._platform == "darwin":
@@ -29,6 +54,12 @@ class GatewayService:
         return {"error": f"Unsupported platform: {self._platform}"}
 
     def uninstall_service(self) -> dict:
+        """
+        Uninstall service.
+
+        Returns:
+            dict: a mapping of str, Any.
+        """
         if self._platform == "linux":
             return self._uninstall_systemd()
         elif self._platform == "darwin":
@@ -36,6 +67,12 @@ class GatewayService:
         return {"error": f"Unsupported platform: {self._platform}"}
 
     def start_service(self) -> dict:
+        """
+        Start service.
+
+        Returns:
+            dict: a mapping of str, Any.
+        """
         if self._platform == "linux":
             return self._systemctl("start")
         elif self._platform == "darwin":
@@ -43,6 +80,12 @@ class GatewayService:
         return {"error": f"Unsupported platform: {self._platform}"}
 
     def stop_service(self) -> dict:
+        """
+        Stop service.
+
+        Returns:
+            dict: a mapping of str, Any.
+        """
         if self._platform == "linux":
             return self._systemctl("stop")
         elif self._platform == "darwin":
@@ -50,6 +93,12 @@ class GatewayService:
         return {"error": f"Unsupported platform: {self._platform}"}
 
     def get_status(self) -> dict:
+        """
+        Return the status.
+
+        Returns:
+            dict: a mapping of str, Any.
+        """
         if self._platform == "linux":
             return self._systemctl("is-active")
         elif self._platform == "darwin":

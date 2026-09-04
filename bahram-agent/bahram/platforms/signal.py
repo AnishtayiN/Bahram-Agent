@@ -1,3 +1,9 @@
+"""
+Signal.
+
+Public objects: ``SignalAdapter``.
+"""
+
 from __future__ import annotations
 
 import logging
@@ -8,15 +14,44 @@ logger = logging.getLogger(__name__)
 
 
 class SignalAdapter:
+    """
+    Signal adapter.
+    """
+
     def __init__(self, number: str = "", api_url: str = "http://localhost:8080") -> None:
+        """
+        Initialise a SignalAdapter instance.
+
+        Args:
+            number (str): number string. Defaults to ``''``.
+            api_url (str): api url string. Defaults to ``'http://localhost:8080'``.
+        """
         self.number = number
         self.api_url = api_url.rstrip("/")
         self._message_fn: Callable | None = None
 
     def set_message_function(self, fn: Callable) -> None:
+        """
+        Set the message function.
+
+        Args:
+            fn (Callable): callable used for fn.
+        """
         self._message_fn = fn
 
     async def handle_webhook(self, data: dict) -> dict[str, Any]:
+        """
+        Handle webhook.
+
+        Args:
+            data (dict): mapping of data.
+
+        Returns:
+            dict[str, Any]: a mapping of str, Any.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         try:
             envelope = data.get("envelope", {})
 
@@ -39,6 +74,20 @@ class SignalAdapter:
             return {"status": "error", "error": str(e)}
 
     async def send_message(self, chat_id: str, text: str, **kwargs) -> bool:
+        """
+        Send message.
+
+        Args:
+            chat_id (str): chat id string.
+            text (str): text string.
+            **kwargs: keyword arguments forwarded to the implementation.
+
+        Returns:
+            bool: ``True`` when the operation succeeds, otherwise ``False``.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         try:
             import httpx
 
@@ -58,6 +107,19 @@ class SignalAdapter:
             return False
 
     async def send_image(self, chat_id: str, image_path: str) -> bool:
+        """
+        Send image.
+
+        Args:
+            chat_id (str): chat id string.
+            image_path (str): image path string.
+
+        Returns:
+            bool: ``True`` when the operation succeeds, otherwise ``False``.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         try:
             import httpx
 
@@ -78,6 +140,12 @@ class SignalAdapter:
             return False
 
     def get_platform_info(self) -> dict[str, Any]:
+        """
+        Return the platform info.
+
+        Returns:
+            dict[str, Any]: a mapping of str, Any.
+        """
         return {
             "name": "signal",
             "version": "1.0.0",

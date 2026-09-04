@@ -1,3 +1,9 @@
+"""
+Translator.
+
+Public objects: ``TranslationRule``, ``CodeTranslator``.
+"""
+
 from __future__ import annotations
 
 import logging
@@ -9,6 +15,18 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class TranslationRule:
+    """
+    Translation rule.
+
+    Attributes:
+        name (str): name of the object.
+        source_lang (str): source lang string.
+        target_lang (str): target lang string.
+        source_pattern (str): source pattern string.
+        target_pattern (str): target pattern string.
+        description (str): human readable description.
+    """
+
     name: str
     source_lang: str
     target_lang: str
@@ -18,7 +36,14 @@ class TranslationRule:
 
 
 class CodeTranslator:
+    """
+    Code translator.
+    """
+
     def __init__(self) -> None:
+        """
+        Initialise a CodeTranslator instance.
+        """
         self._rules: dict[str, list[TranslationRule]] = {
             "python_to_javascript": [
                 TranslationRule(
@@ -145,6 +170,20 @@ class CodeTranslator:
         source_lang: str,
         target_lang: str,
     ) -> str:
+        """
+        Translate.
+
+        Args:
+            code (str): source code to execute.
+            source_lang (str): source lang string.
+            target_lang (str): target lang string.
+
+        Returns:
+            str: the rendered string.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         rules_key = f"{source_lang}_to_{target_lang}"
         rules = self._rules.get(rules_key, [])
 
@@ -159,6 +198,12 @@ class CodeTranslator:
         return translated
 
     def get_supported_translations(self) -> list[dict]:
+        """
+        Return the supported translations.
+
+        Returns:
+            list[dict]: a sequence of dict entries (empty when there is nothing to report).
+        """
         translations = []
         for key in self._rules.keys():
             source, target = key.split("_to_")
@@ -172,6 +217,16 @@ class CodeTranslator:
         return translations
 
     def get_rules(self, source_lang: str, target_lang: str) -> list[dict]:
+        """
+        Return the rules.
+
+        Args:
+            source_lang (str): source lang string.
+            target_lang (str): target lang string.
+
+        Returns:
+            list[dict]: a sequence of dict entries (empty when there is nothing to report).
+        """
         rules_key = f"{source_lang}_to_{target_lang}"
         rules = self._rules.get(rules_key, [])
         return [

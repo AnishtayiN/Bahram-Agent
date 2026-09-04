@@ -1,3 +1,9 @@
+"""
+Channel overrides.
+
+Public objects: ``ChannelOverride``, ``ChannelOverrideManager``.
+"""
+
 from __future__ import annotations
 
 import json
@@ -10,6 +16,17 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class ChannelOverride:
+    """
+    Channel override.
+
+    Attributes:
+        channel_id (str): channel id string.
+        model (str): model identifier in ``provider/model`` form.
+        provider (str): provider string.
+        system_prompt (str): system prompt string.
+        personality (str): personality string.
+    """
+
     channel_id: str
     model: str = ""
     provider: str = ""
@@ -18,7 +35,17 @@ class ChannelOverride:
 
 
 class ChannelOverrideManager:
+    """
+    Channel override manager.
+    """
+
     def __init__(self, config_dir: str = "data/gateway") -> None:
+        """
+        Initialise a ChannelOverrideManager instance.
+
+        Args:
+            config_dir (str): config dir string. Defaults to ``'data/gateway'``.
+        """
         self.config_dir = Path(config_dir)
         self.config_dir.mkdir(parents=True, exist_ok=True)
         self._overrides: dict[str, dict[str, ChannelOverride]] = {}
@@ -62,6 +89,20 @@ class ChannelOverrideManager:
         system_prompt: str = "",
         personality: str = "",
     ) -> ChannelOverride:
+        """
+        Set the override.
+
+        Args:
+            platform (str): platform string.
+            channel_id (str): channel id string.
+            model (str): model identifier in ``provider/model`` form. Defaults to ``''``.
+            provider (str): provider string. Defaults to ``''``.
+            system_prompt (str): system prompt string. Defaults to ``''``.
+            personality (str): personality string. Defaults to ``''``.
+
+        Returns:
+            ChannelOverride: the resulting ChannelOverride.
+        """
         if platform not in self._overrides:
             self._overrides[platform] = {}
 
@@ -77,9 +118,29 @@ class ChannelOverrideManager:
         return override
 
     def get_override(self, platform: str, channel_id: str) -> ChannelOverride | None:
+        """
+        Return the override.
+
+        Args:
+            platform (str): platform string.
+            channel_id (str): channel id string.
+
+        Returns:
+            ChannelOverride | None: the resulting object, or ``None`` when it is not available.
+        """
         return self._overrides.get(platform, {}).get(channel_id)
 
     def remove_override(self, platform: str, channel_id: str) -> bool:
+        """
+        Remove override.
+
+        Args:
+            platform (str): platform string.
+            channel_id (str): channel id string.
+
+        Returns:
+            bool: ``True`` when the operation succeeds, otherwise ``False``.
+        """
         if platform in self._overrides and channel_id in self._overrides[platform]:
             del self._overrides[platform][channel_id]
             self._save_overrides()
@@ -87,6 +148,15 @@ class ChannelOverrideManager:
         return False
 
     def list_overrides(self, platform: str = None) -> list[dict]:
+        """
+        List overrides.
+
+        Args:
+            platform (str): platform string. Defaults to ``None``.
+
+        Returns:
+            list[dict]: a sequence of dict entries (empty when there is nothing to report).
+        """
         results = []
         platforms = [platform] if platform else self._overrides.keys()
         for p in platforms:

@@ -1,3 +1,9 @@
+"""
+Browser.
+
+Public objects: ``BrowserState``, ``BrowserTool``.
+"""
+
 from __future__ import annotations
 
 import logging
@@ -9,6 +15,16 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class BrowserState:
+    """
+    Browser state.
+
+    Attributes:
+        url (str): url string.
+        title (str): title string.
+        content (str): text content to process.
+        screenshot (bytes): screenshot.
+    """
+
     url: str = ""
     title: str = ""
     content: str = ""
@@ -16,12 +32,31 @@ class BrowserState:
 
 
 class BrowserTool:
+    """
+    Browser tool.
+    """
+
     def __init__(self) -> None:
+        """
+        Initialise a BrowserTool instance.
+        """
         self._browser = None
         self._page = None
         self._headless: bool = True
 
     async def start(self, headless: bool = True) -> bool:
+        """
+        Start the component and acquire any resources it needs.
+
+        Args:
+            headless (bool): when ``True``, enable headless. Defaults to ``True``.
+
+        Returns:
+            bool: ``True`` when the operation succeeds, otherwise ``False``.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         try:
             from playwright.async_api import async_playwright
 
@@ -39,12 +74,30 @@ class BrowserTool:
             return False
 
     async def stop(self) -> None:
+        """
+        Stop the component and release any resources it holds.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         if self._browser:
             await self._browser.close()
         if self._playwright:
             await self._playwright.stop()
 
     async def navigate(self, url: str) -> dict[str, Any]:
+        """
+        Navigate.
+
+        Args:
+            url (str): url string.
+
+        Returns:
+            dict[str, Any]: a mapping of str, Any.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         if not self._page:
             return {"error": "Browser not started"}
 
@@ -62,6 +115,18 @@ class BrowserTool:
             return {"error": str(e)}
 
     async def click(self, selector: str) -> bool:
+        """
+        Click.
+
+        Args:
+            selector (str): selector string.
+
+        Returns:
+            bool: ``True`` when the operation succeeds, otherwise ``False``.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         if not self._page:
             return False
 
@@ -73,6 +138,19 @@ class BrowserTool:
             return False
 
     async def type_text(self, selector: str, text: str) -> bool:
+        """
+        Type text.
+
+        Args:
+            selector (str): selector string.
+            text (str): text string.
+
+        Returns:
+            bool: ``True`` when the operation succeeds, otherwise ``False``.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         if not self._page:
             return False
 
@@ -84,6 +162,15 @@ class BrowserTool:
             return False
 
     async def get_content(self) -> str:
+        """
+        Return the content.
+
+        Returns:
+            str: the rendered string.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         if not self._page:
             return ""
 
@@ -93,6 +180,15 @@ class BrowserTool:
             return ""
 
     async def screenshot(self) -> bytes | None:
+        """
+        Screenshot.
+
+        Returns:
+            bytes | None: the resulting object, or ``None`` when it is not available.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         if not self._page:
             return None
 
@@ -102,6 +198,18 @@ class BrowserTool:
             return None
 
     async def evaluate(self, expression: str) -> Any:
+        """
+        Evaluate.
+
+        Args:
+            expression (str): expression string.
+
+        Returns:
+            Any: the resulting Any.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         if not self._page:
             return None
 
@@ -111,4 +219,10 @@ class BrowserTool:
             return {"error": str(e)}
 
     def is_running(self) -> bool:
+        """
+        Return ``True`` when running.
+
+        Returns:
+            bool: ``True`` when the operation succeeds, otherwise ``False``.
+        """
         return self._browser is not None

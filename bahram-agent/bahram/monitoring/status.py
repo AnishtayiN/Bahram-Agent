@@ -1,3 +1,10 @@
+"""
+Status.
+
+Public objects: ``redact_secrets``, ``RuntimeStatus``, ``status_report``, ``ComponentHealth``,
+    ``doctor_check``.
+"""
+
 from __future__ import annotations
 
 import logging
@@ -63,6 +70,12 @@ class RuntimeStatus:
     estimated_cost: float = 0.0
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Serialise the object to a JSON-serialisable dictionary.
+
+        Returns:
+            dict[str, Any]: a mapping of str, Any.
+        """
         return {
             "active_runs": self.active_runs,
             "active_jobs": self.active_jobs,
@@ -151,6 +164,15 @@ def status_report(
 
 @dataclass
 class ComponentHealth:
+    """
+    Component health.
+
+    Attributes:
+        name (str): name of the object.
+        healthy (bool): when ``True``, enable healthy.
+        message (str): message to process.
+    """
+
     name: str
     healthy: bool
     message: str = ""

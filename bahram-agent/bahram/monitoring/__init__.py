@@ -1,3 +1,7 @@
+"""
+init .
+"""
+
 from __future__ import annotations
 
 from bahram.monitoring.status import RuntimeStatus, doctor_check, redact_secrets, status_report

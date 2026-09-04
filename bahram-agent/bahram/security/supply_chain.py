@@ -1,3 +1,9 @@
+"""
+Supply chain.
+
+Public objects: ``SupplyChainIssue``, ``SupplyChainChecker``.
+"""
+
 from __future__ import annotations
 
 import json
@@ -11,6 +17,16 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class SupplyChainIssue:
+    """
+    Supply chain issue.
+
+    Attributes:
+        package (str): package string.
+        severity (str): severity string.
+        description (str): human readable description.
+        recommendation (str): recommendation string.
+    """
+
     package: str
     severity: str
     description: str
@@ -18,12 +34,29 @@ class SupplyChainIssue:
 
 
 class SupplyChainChecker:
+    """
+    Supply chain checker.
+    """
+
     def __init__(self, data_dir: str = "data/security") -> None:
+        """
+        Initialise a SupplyChainChecker instance.
+
+        Args:
+            data_dir (str): directory that holds the on-disk state. Defaults to ``'data/security'``.
+        """
         self.data_dir = Path(data_dir)
         self.data_dir.mkdir(parents=True, exist_ok=True)
         self._issues: list[SupplyChainIssue] = []
 
     def check_python_packages(self) -> list[SupplyChainIssue]:
+        """
+        Check python packages.
+
+        Returns:
+            list[SupplyChainIssue]: a sequence of SupplyChainIssue entries (empty when there is
+                nothing to report).
+        """
         issues = []
 
         try:
@@ -65,6 +98,16 @@ class SupplyChainChecker:
         }
 
     def check_file_permissions(self, path: str) -> list[SupplyChainIssue]:
+        """
+        Check file permissions.
+
+        Args:
+            path (str): filesystem path to operate on.
+
+        Returns:
+            list[SupplyChainIssue]: a sequence of SupplyChainIssue entries (empty when there is
+                nothing to report).
+        """
         issues = []
         file_path = Path(path)
 
@@ -87,6 +130,16 @@ class SupplyChainChecker:
     def scan_dependencies(
         self, requirements_file: str = "requirements.txt"
     ) -> list[SupplyChainIssue]:
+        """
+        Scan dependencies.
+
+        Args:
+            requirements_file (str): requirements file string. Defaults to ``'requirements.txt'``.
+
+        Returns:
+            list[SupplyChainIssue]: a sequence of SupplyChainIssue entries (empty when there is
+                nothing to report).
+        """
         issues = []
         req_path = Path(requirements_file)
 
@@ -111,6 +164,12 @@ class SupplyChainChecker:
         return issues
 
     def get_all_issues(self) -> list[dict]:
+        """
+        Return the all issues.
+
+        Returns:
+            list[dict]: a sequence of dict entries (empty when there is nothing to report).
+        """
         issues = []
         issues.extend(self.check_python_packages())
         issues.extend(self.scan_dependencies())

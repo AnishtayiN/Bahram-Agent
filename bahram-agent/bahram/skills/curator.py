@@ -1,3 +1,9 @@
+"""
+Curator.
+
+Public objects: ``CurationAction``, ``Curator``.
+"""
+
 from __future__ import annotations
 
 import logging
@@ -10,6 +16,17 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class CurationAction:
+    """
+    Curation action.
+
+    Attributes:
+        action (str): action string.
+        skill_name (str): skill name string.
+        reason (str): reason string.
+        details (dict): mapping of details.
+        timestamp (str): timestamp string.
+    """
+
     action: str
     skill_name: str
     reason: str
@@ -18,7 +35,17 @@ class CurationAction:
 
 
 class Curator:
+    """
+    Curator.
+    """
+
     def __init__(self, skills_dir: str = "skills") -> None:
+        """
+        Initialise a Curator instance.
+
+        Args:
+            skills_dir (str): skills dir string. Defaults to ``'skills'``.
+        """
         self.skills_dir = Path(skills_dir)
         self._actions: list[CurationAction] = []
         self._stats: dict[str, int] = {
@@ -30,6 +57,13 @@ class Curator:
         }
 
     def analyze_skills(self) -> list[CurationAction]:
+        """
+        Analyze skills.
+
+        Returns:
+            list[CurationAction]: a sequence of CurationAction entries (empty when there is nothing
+                to report).
+        """
         actions = []
 
         skills = self._load_all_skills()
@@ -115,7 +149,20 @@ class Curator:
         return [s for s in skills if s["size"] > 10000]
 
     def get_stats(self) -> dict:
+        """
+        Return the stats.
+
+        Returns:
+            dict: a mapping of str, Any.
+        """
         return self._stats.copy()
 
     def get_pending_actions(self) -> list[CurationAction]:
+        """
+        Return the pending actions.
+
+        Returns:
+            list[CurationAction]: a sequence of CurationAction entries (empty when there is nothing
+                to report).
+        """
         return self._actions.copy()

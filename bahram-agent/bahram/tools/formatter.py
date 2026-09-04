@@ -1,3 +1,9 @@
+"""
+Formatter.
+
+Public objects: ``FormatRule``, ``SmartFormatter``.
+"""
+
 from __future__ import annotations
 
 import logging
@@ -9,6 +15,17 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class FormatRule:
+    """
+    Format rule.
+
+    Attributes:
+        name (str): name of the object.
+        language (str): language string.
+        pattern (str): pattern string.
+        replacement (str): replacement string.
+        description (str): human readable description.
+    """
+
     name: str
     language: str
     pattern: str
@@ -17,7 +34,14 @@ class FormatRule:
 
 
 class SmartFormatter:
+    """
+    Smart formatter.
+    """
+
     def __init__(self) -> None:
+        """
+        Initialise a SmartFormatter instance.
+        """
         self._rules: dict[str, list[FormatRule]] = {
             "python": [
                 FormatRule(
@@ -49,6 +73,21 @@ class SmartFormatter:
         language: str,
         rules: list[str] = None,
     ) -> tuple[str, list[dict]]:
+        """
+        Format.
+
+        Args:
+            code (str): source code to execute.
+            language (str): language string.
+            rules (list[str]): collection of rules. Defaults to ``None``.
+
+        Returns:
+            tuple[str, list[dict]]: a sequence of str, list[dict] entries (empty when there is
+                nothing to report).
+
+        Note:
+            Coroutine - must be awaited.
+        """
         rules_list = self._rules.get(language, [])
         if rules:
             rules_list = [r for r in rules_list if r.name in rules]
@@ -71,6 +110,19 @@ class SmartFormatter:
         return formatted, changes
 
     async def check_style(self, code: str, language: str) -> list[dict]:
+        """
+        Check style.
+
+        Args:
+            code (str): source code to execute.
+            language (str): language string.
+
+        Returns:
+            list[dict]: a sequence of dict entries (empty when there is nothing to report).
+
+        Note:
+            Coroutine - must be awaited.
+        """
         rules_list = self._rules.get(language, [])
         issues = []
 
@@ -88,6 +140,15 @@ class SmartFormatter:
         return issues
 
     def get_rules(self, language: str) -> list[dict]:
+        """
+        Return the rules.
+
+        Args:
+            language (str): language string.
+
+        Returns:
+            list[dict]: a sequence of dict entries (empty when there is nothing to report).
+        """
         rules = self._rules.get(language, [])
         return [
             {
@@ -99,6 +160,12 @@ class SmartFormatter:
         ]
 
     def add_rule(self, rule: FormatRule) -> None:
+        """
+        Add rule.
+
+        Args:
+            rule (FormatRule): rule.
+        """
         if rule.language not in self._rules:
             self._rules[rule.language] = []
         self._rules[rule.language].append(rule)

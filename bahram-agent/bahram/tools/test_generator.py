@@ -1,3 +1,9 @@
+"""
+Test generator.
+
+Public objects: ``GeneratedTest``, ``TestGenerator``.
+"""
+
 from __future__ import annotations
 
 import logging
@@ -10,6 +16,16 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class GeneratedTest:
+    """
+    Generated test.
+
+    Attributes:
+        name (str): name of the object.
+        code (str): source code to execute.
+        file_path (str): path of the file to operate on.
+        test_type (str): test type string.
+    """
+
     name: str
     code: str
     file_path: str
@@ -17,7 +33,14 @@ class GeneratedTest:
 
 
 class TestGenerator:
+    """
+    Test generator.
+    """
+
     def __init__(self) -> None:
+        """
+        Initialise a TestGenerator instance.
+        """
         self._test_templates: dict[str, str] = {
             "unit": "",
             "integration": "",
@@ -29,6 +52,21 @@ class TestGenerator:
         output_dir: str,
         test_type: str = "unit",
     ) -> list[GeneratedTest]:
+        """
+        Generate tests.
+
+        Args:
+            source_path (str): source path string.
+            output_dir (str): output dir string.
+            test_type (str): test type string. Defaults to ``'unit'``.
+
+        Returns:
+            list[GeneratedTest]: a sequence of GeneratedTest entries (empty when there is nothing to
+                report).
+
+        Note:
+            Coroutine - must be awaited.
+        """
         try:
             source = Path(source_path)
             if not source.exists():

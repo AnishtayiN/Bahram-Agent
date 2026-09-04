@@ -1,3 +1,10 @@
+"""
+Engine.
+
+Public objects: ``MessageRole``, ``RunState``, ``Message``, ``ToolCall``, ``ToolResult``,
+    ``AgentResponse``, ``LLMProvider``, ``TrajectoryStep`` (+4 more).
+"""
+
 from __future__ import annotations
 
 import asyncio
@@ -20,6 +27,10 @@ except ImportError:
 
 
 class MessageRole(str, Enum):
+    """
+    Message role.
+    """
+
     SYSTEM = "system"
     USER = "user"
     ASSISTANT = "assistant"
@@ -27,6 +38,10 @@ class MessageRole(str, Enum):
 
 
 class RunState(str, Enum):
+    """
+    Run state.
+    """
+
     CREATED = "created"
     LOADING = "loading"
     PLANNING = "planning"
@@ -44,6 +59,18 @@ class RunState(str, Enum):
 
 @dataclass
 class Message:
+    """
+    Message.
+
+    Attributes:
+        role (MessageRole): role.
+        content (str): text content to process.
+        name (str | None): name of the object.
+        tool_call_id (str | None): tool call id string.
+        timestamp (float): numeric value for timestamp.
+        metadata (dict[str, Any]): mapping of metadata.
+    """
+
     role: MessageRole
     content: str
     name: str | None = None
@@ -54,6 +81,15 @@ class Message:
 
 @dataclass
 class ToolCall:
+    """
+    Tool call.
+
+    Attributes:
+        id (str): id string.
+        name (str): name of the object.
+        arguments (dict[str, Any]): mapping of arguments.
+    """
+
     id: str
     name: str
     arguments: dict[str, Any]
@@ -61,6 +97,17 @@ class ToolCall:
 
 @dataclass
 class ToolResult:
+    """
+    Tool result.
+
+    Attributes:
+        tool_call_id (str): tool call id string.
+        content (str): text content to process.
+        success (bool): when ``True``, enable success.
+        error (str | None): error string.
+        metadata (dict[str, Any]): mapping of metadata.
+    """
+
     tool_call_id: str
     content: str
     success: bool
@@ -70,6 +117,17 @@ class ToolResult:
 
 @dataclass
 class AgentResponse:
+    """
+    Agent response.
+
+    Attributes:
+        content (str): text content to process.
+        tool_calls (list[ToolCall]): collection of tool calls.
+        thinking (str | None): thinking string.
+        metadata (dict[str, Any]): mapping of metadata.
+        state (RunState): state.
+    """
+
     content: str
     tool_calls: list[ToolCall] = field(default_factory=list)
     thinking: str | None = None
@@ -78,23 +136,79 @@ class AgentResponse:
 
 
 class LLMProvider(Protocol):
+    """
+    LLM provider.
+    """
+
     async def complete(
         self,
         messages: list[Message],
         tools: list[dict[str, Any]] | None = None,
         **kwargs: Any,
-    ) -> AgentResponse: ...
+    ) -> AgentResponse:
+        """Send a chat completion request and return the full response.
+
+        Args:
+            messages (list[Message]): conversation history to send.
+            tools (list[dict[str, Any]] | None): OpenAI-style tool schemas the
+                model may call. Defaults to ``None``.
+            **kwargs (Any): provider specific overrides (``model``,
+                ``temperature``, ``max_tokens``, ...).
+
+        Returns:
+            AgentResponse: the assistant message plus any tool calls.
+
+        Raises:
+            Exception: transport/HTTP errors propagate to
+                :class:`AgentEngine`, which fails over to the next provider.
+
+        Note:
+            Coroutine - must be awaited.
+        """
+        ...
 
     async def stream(
         self,
         messages: list[Message],
         tools: list[dict[str, Any]] | None = None,
         **kwargs: Any,
-    ) -> AsyncIterator[str]: ...
+    ) -> AsyncIterator[str]:
+        """Stream a chat completion token by token.
+
+        Args:
+            messages (list[Message]): conversation history to send.
+            tools (list[dict[str, Any]] | None): tool schemas. Defaults to
+                ``None``.
+            **kwargs (Any): provider specific overrides.
+
+        Returns:
+            AsyncIterator[str]: async iterator yielding text deltas.
+
+        Note:
+            Coroutine - must be awaited; iterate the result with ``async for``.
+        """
+        ...
 
 
 @dataclass
 class TrajectoryStep:
+    """
+    Trajectory step.
+
+    Attributes:
+        step_id (str): plan-step identifier.
+        iteration (int): numeric value for iteration.
+        provider (str): provider string.
+        model (str): model identifier in ``provider/model`` form.
+        tool_calls (list[dict[str, Any]]): collection of tool calls.
+        tool_results (list[dict[str, Any]]): collection of tool results.
+        content_length (int): numeric value for content length.
+        duration_ms (float): numeric value for duration ms.
+        timestamp (float): numeric value for timestamp.
+        state (str): state string.
+        error (str | None): error string.
+    """
+
     step_id: str
     iteration: int
     provider: str
@@ -110,6 +224,24 @@ class TrajectoryStep:
 
 @dataclass
 class Trajectory:
+    """
+    Trajectory.
+
+    Attributes:
+        run_id (str): run identifier.
+        session_id (str): session identifier.
+        goal (str): goal string.
+        steps (list[TrajectoryStep]): collection of steps.
+        started_at (float): numeric value for started at.
+        finished_at (float | None): numeric value for finished at.
+        status (str): status string.
+        final_content (str): final content string.
+        total_tool_calls (int): numeric value for total tool calls.
+        total_duration_ms (float): numeric value for total duration ms.
+        model (str): model identifier in ``provider/model`` form.
+        provider (str): provider string.
+    """
+
     run_id: str
     session_id: str
     goal: str
@@ -124,6 +256,12 @@ class Trajectory:
     provider: str = ""
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Serialise the object to a JSON-serialisable dictionary.
+
+        Returns:
+            dict[str, Any]: a mapping of str, Any.
+        """
         return {
             "run_id": self.run_id,
             "session_id": self.session_id,
@@ -157,6 +295,17 @@ class Trajectory:
 
 @dataclass
 class RunConfig:
+    """
+    Run config.
+
+    Attributes:
+        max_iterations (int): numeric value for max iterations.
+        max_runtime_seconds (float): numeric value for max runtime seconds.
+        max_tool_calls (int): numeric value for max tool calls.
+        max_retries (int): numeric value for max retries.
+        tool_timeout_seconds (float): numeric value for tool timeout seconds.
+    """
+
     max_iterations: int = 15
     max_runtime_seconds: float = 300.0
     max_tool_calls: int = 50
@@ -165,7 +314,18 @@ class RunConfig:
 
 
 class ToolExecutor:
+    """
+    Tool executor.
+    """
+
     def __init__(self, tools: dict[str, Any], approval_system: Any = None) -> None:
+        """
+        Initialise a ToolExecutor instance.
+
+        Args:
+            tools (dict[str, Any]): mapping of tools.
+            approval_system (Any): approval system. Defaults to ``None``.
+        """
         self.tools = tools
         self.approval_system = approval_system
         self._log: list[dict[str, Any]] = []
@@ -173,6 +333,19 @@ class ToolExecutor:
         self._inflight: dict[str, asyncio.Event] = {}
 
     async def execute(self, tool_call: ToolCall, timeout: float = 120.0) -> ToolResult:
+        """
+        Execute the tool and return its textual result.
+
+        Args:
+            tool_call (ToolCall): tool call.
+            timeout (float): timeout in seconds. Defaults to ``120.0``.
+
+        Returns:
+            ToolResult: the resulting ToolResult.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         tool_call_id = tool_call.id
 
         # Return cached results for already-executed tool calls (idempotency).
@@ -276,7 +449,17 @@ class ToolExecutor:
 
 
 class AgentEngine:
+    """
+    Agent engine.
+    """
+
     def __init__(self, config: Any = None) -> None:
+        """
+        Initialise a AgentEngine instance.
+
+        Args:
+            config (Any): configuration object. Defaults to ``None``.
+        """
         self.config = config
         self.providers: dict[str, LLMProvider] = {}
         self.tools: dict[str, Any] = {}
@@ -300,12 +483,30 @@ class AgentEngine:
             self._approval_system = None
 
     def set_budget_manager(self, budget_manager: Any) -> None:
+        """
+        Set the budget manager.
+
+        Args:
+            budget_manager (Any): budget manager.
+        """
         self._budget_manager = budget_manager
 
     def set_event_tracker(self, event_tracker: Any) -> None:
+        """
+        Set the event tracker.
+
+        Args:
+            event_tracker (Any): event tracker.
+        """
         self._event_tracker = event_tracker
 
     def set_trajectory_dir(self, trajectory_dir: str) -> None:
+        """
+        Set the trajectory dir.
+
+        Args:
+            trajectory_dir (str): trajectory dir string.
+        """
         self._trajectory_dir = trajectory_dir
 
     def _persist_trajectory(self, trajectory: Trajectory) -> None:
@@ -319,15 +520,38 @@ class AgentEngine:
             logger.warning(f"Failed to persist trajectory: {e}")
 
     def register_provider(self, name: str, provider: LLMProvider) -> None:
+        """
+        Register provider.
+
+        Args:
+            name (str): name of the object.
+            provider (LLMProvider): provider.
+        """
         self.providers[name] = provider
         logger.info(f"Registered provider: {name}")
 
     def register_tool(self, name: str, tool: Any) -> None:
+        """
+        Register tool.
+
+        Args:
+            name (str): name of the object.
+            tool (Any): tool.
+        """
         self.tools[name] = tool
         self._tool_executor = ToolExecutor(self.tools, self._approval_system)
         logger.info(f"Registered tool: {name}")
 
     def get_provider(self, model: str) -> LLMProvider:
+        """
+        Return the provider.
+
+        Args:
+            model (str): model identifier in ``provider/model`` form.
+
+        Returns:
+            LLMProvider: the resulting LLMProvider.
+        """
         provider_name = model.split("/")[0] if "/" in model else "anthropic"
 
         if provider_name in self.providers:
@@ -351,10 +575,22 @@ class AgentEngine:
         raise ValueError(f"Provider '{failed_provider}' not registered and no fallback available")
 
     def record_provider_success(self, provider_name: str) -> None:
+        """
+        Record provider success.
+
+        Args:
+            provider_name (str): provider name string.
+        """
         if self._circuit_breaker is not None:
             self._circuit_breaker.record_success(provider_name)
 
     def record_provider_failure(self, provider_name: str) -> None:
+        """
+        Record provider failure.
+
+        Args:
+            provider_name (str): provider name string.
+        """
         if self._circuit_breaker is not None:
             self._circuit_breaker.record_failure(provider_name)
         if self._event_tracker is not None and hasattr(
@@ -371,6 +607,13 @@ class AgentEngine:
             )
 
     def get_tools_schema(self) -> list[dict[str, Any]]:
+        """
+        Return the tools schema.
+
+        Returns:
+            list[dict[str, Any]]: a sequence of dict[str, Any] entries (empty when there is nothing
+                to report).
+        """
         schemas = []
         for name, tool in self.tools.items():
             if hasattr(tool, "schema"):
@@ -378,9 +621,15 @@ class AgentEngine:
         return schemas
 
     def cancel(self) -> None:
+        """
+        Cancel.
+        """
         self._cancel_event.set()
 
     def reset_cancel(self) -> None:
+        """
+        Reset cancel.
+        """
         self._cancel_event.clear()
 
     def _get_run_config(self) -> RunConfig:
@@ -399,6 +648,20 @@ class AgentEngine:
         model: str | None = None,
         session_id: str = "",
     ) -> AgentResponse:
+        """
+        Run.
+
+        Args:
+            messages (list[Message]): chat messages to send to the model.
+            model (str | None): model identifier in ``provider/model`` form. Defaults to ``None``.
+            session_id (str): session identifier. Defaults to ``''``.
+
+        Returns:
+            AgentResponse: the resulting AgentResponse.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         run_cfg = self._get_run_config()
         model = model or (
             self.config.agent.model if self.config else "anthropic/claude-sonnet-4-20250514"
@@ -620,6 +883,19 @@ class AgentEngine:
         messages: list[Message],
         model: str | None = None,
     ) -> AsyncIterator[str]:
+        """
+        Run streaming.
+
+        Args:
+            messages (list[Message]): chat messages to send to the model.
+            model (str | None): model identifier in ``provider/model`` form. Defaults to ``None``.
+
+        Returns:
+            AsyncIterator[str]: the resulting AsyncIterator[str].
+
+        Note:
+            Coroutine - must be awaited.
+        """
         run_cfg = self._get_run_config()
         model = model or (
             self.config.agent.model if self.config else "anthropic/claude-sonnet-4-20250514"

@@ -1,3 +1,9 @@
+"""
+Explainer.
+
+Public objects: ``CodeExplanation``, ``CodeExplainer``.
+"""
+
 from __future__ import annotations
 
 import logging
@@ -9,6 +15,17 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class CodeExplanation:
+    """
+    Code explanation.
+
+    Attributes:
+        line (int): numeric value for line.
+        code (str): source code to execute.
+        explanation (str): explanation string.
+        complexity (str): complexity string.
+        concepts (list[str]): collection of concepts.
+    """
+
     line: int
     code: str
     explanation: str
@@ -17,7 +34,14 @@ class CodeExplanation:
 
 
 class CodeExplainer:
+    """
+    Code explainer.
+    """
+
     def __init__(self) -> None:
+        """
+        Initialise a CodeExplainer instance.
+        """
         self._patterns: dict[str, str] = {
             r"def\s+(\w+)\s*\(([^)]*)\)": (
                 "Function definition named '{name}' with parameters: {params}"
@@ -41,6 +65,19 @@ class CodeExplainer:
         }
 
     async def explain(self, code: str) -> list[CodeExplanation]:
+        """
+        Explain.
+
+        Args:
+            code (str): source code to execute.
+
+        Returns:
+            list[CodeExplanation]: a sequence of CodeExplanation entries (empty when there is
+                nothing to report).
+
+        Note:
+            Coroutine - must be awaited.
+        """
         explanations = []
         lines = code.split("\n")
 
@@ -118,6 +155,15 @@ class CodeExplainer:
         return "simple"
 
     def format_explanations(self, explanations: list[CodeExplanation]) -> str:
+        """
+        Format explanations.
+
+        Args:
+            explanations (list[CodeExplanation]): collection of explanations.
+
+        Returns:
+            str: the rendered string.
+        """
         if not explanations:
             return "No code to explain!"
 

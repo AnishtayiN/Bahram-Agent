@@ -1,3 +1,9 @@
+"""
+Task.
+
+Public objects: ``Task``, ``TaskTool``.
+"""
+
 from __future__ import annotations
 
 import asyncio
@@ -11,6 +17,19 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class Task:
+    """
+    Task.
+
+    Attributes:
+        task_id (str): task identifier.
+        name (str): name of the object.
+        status (str): status string.
+        result (Any): result.
+        error (str): error string.
+        start_time (float): numeric value for start time.
+        end_time (float): numeric value for end time.
+    """
+
     task_id: str
     name: str
     status: str = "pending"
@@ -21,7 +40,14 @@ class Task:
 
 
 class TaskTool:
+    """
+    Task tool.
+    """
+
     def __init__(self) -> None:
+        """
+        Initialise a TaskTool instance.
+        """
         self._tasks: dict[str, Task] = {}
         self._callbacks: dict[str, Callable] = {}
 
@@ -33,6 +59,22 @@ class TaskTool:
         *args,
         **kwargs,
     ) -> Task:
+        """
+        Launch.
+
+        Args:
+            task_id (str): task identifier.
+            name (str): name of the object.
+            func (Callable): callable used for func.
+            *args: positional arguments forwarded to the implementation.
+            **kwargs: keyword arguments forwarded to the implementation.
+
+        Returns:
+            Task: the resulting Task.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         import time
 
         task = Task(
@@ -67,22 +109,62 @@ class TaskTool:
         return task
 
     def get_task(self, task_id: str) -> Task | None:
+        """
+        Return the task.
+
+        Args:
+            task_id (str): task identifier.
+
+        Returns:
+            Task | None: the resulting object, or ``None`` when it is not available.
+        """
         return self._tasks.get(task_id)
 
     def get_status(self, task_id: str) -> str:
+        """
+        Return the status.
+
+        Args:
+            task_id (str): task identifier.
+
+        Returns:
+            str: the rendered string.
+        """
         task = self._tasks.get(task_id)
         return task.status if task else "not_found"
 
     def get_result(self, task_id: str) -> Any:
+        """
+        Return the result.
+
+        Args:
+            task_id (str): task identifier.
+
+        Returns:
+            Any: the resulting Any.
+        """
         task = self._tasks.get(task_id)
         if task and task.status == "completed":
             return task.result
         return None
 
     def set_callback(self, task_id: str, callback: Callable) -> None:
+        """
+        Set the callback.
+
+        Args:
+            task_id (str): task identifier.
+            callback (Callable): callable used for callback.
+        """
         self._callbacks[task_id] = callback
 
     def list_tasks(self) -> list[dict]:
+        """
+        List tasks.
+
+        Returns:
+            list[dict]: a sequence of dict entries (empty when there is nothing to report).
+        """
         return [
             {
                 "id": t.task_id,
@@ -94,6 +176,15 @@ class TaskTool:
         ]
 
     def cancel(self, task_id: str) -> bool:
+        """
+        Cancel.
+
+        Args:
+            task_id (str): task identifier.
+
+        Returns:
+            bool: ``True`` when the operation succeeds, otherwise ``False``.
+        """
         task = self._tasks.get(task_id)
         if task and task.status == "running":
             task.status = "cancelled"

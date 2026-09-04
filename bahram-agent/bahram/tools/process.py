@@ -1,3 +1,9 @@
+"""
+Process.
+
+Public objects: ``ProcessInfo``, ``ProcessManager``.
+"""
+
 from __future__ import annotations
 
 import asyncio
@@ -11,6 +17,19 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class ProcessInfo:
+    """
+    Process info.
+
+    Attributes:
+        pid (int): numeric value for pid.
+        name (str): name of the object.
+        command (str): shell command to execute.
+        status (str): status string.
+        start_time (float): numeric value for start time.
+        cpu_percent (float): numeric value for cpu percent.
+        memory_percent (float): numeric value for memory percent.
+    """
+
     pid: int
     name: str
     command: str
@@ -21,7 +40,14 @@ class ProcessInfo:
 
 
 class ProcessManager:
+    """
+    Process manager.
+    """
+
     def __init__(self) -> None:
+        """
+        Initialise a ProcessManager instance.
+        """
         self._processes: dict[int, ProcessInfo] = {}
         self._max_processes: int = 10
 
@@ -32,6 +58,21 @@ class ProcessManager:
         cwd: str = None,
         env: dict[str, str] = None,
     ) -> ProcessInfo:
+        """
+        Start the component and acquire any resources it needs.
+
+        Args:
+            name (str): name of the object.
+            command (str): shell command to execute.
+            cwd (str): cwd string. Defaults to ``None``.
+            env (dict[str, str]): mapping of env. Defaults to ``None``.
+
+        Returns:
+            ProcessInfo: the resulting ProcessInfo.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         import time
 
         proc = await asyncio.create_subprocess_shell(
@@ -64,6 +105,19 @@ class ProcessManager:
             logger.warning(f"Process monitoring failed: {e}")
 
     async def stop(self, pid: int, force: bool = False) -> bool:
+        """
+        Stop the component and release any resources it holds.
+
+        Args:
+            pid (int): numeric value for pid.
+            force (bool): when ``True``, skip the safety confirmation. Defaults to ``False``.
+
+        Returns:
+            bool: ``True`` when the operation succeeds, otherwise ``False``.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         try:
             if force:
                 os.kill(pid, signal.SIGKILL)
@@ -77,9 +131,27 @@ class ProcessManager:
             return False
 
     async def get_info(self, pid: int) -> ProcessInfo | None:
+        """
+        Return the info.
+
+        Args:
+            pid (int): numeric value for pid.
+
+        Returns:
+            ProcessInfo | None: the resulting object, or ``None`` when it is not available.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         return self._processes.get(pid)
 
     def list_processes(self) -> list[dict]:
+        """
+        List processes.
+
+        Returns:
+            list[dict]: a sequence of dict entries (empty when there is nothing to report).
+        """
         return [
             {
                 "pid": p.pid,
@@ -92,6 +164,15 @@ class ProcessManager:
         ]
 
     async def cleanup(self) -> int:
+        """
+        Cleanup.
+
+        Returns:
+            int: the computed numeric value.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         to_remove = [
             pid for pid, info in self._processes.items() if info.status in ("completed", "failed")
         ]

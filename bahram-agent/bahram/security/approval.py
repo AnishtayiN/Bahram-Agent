@@ -1,3 +1,9 @@
+"""
+Approval.
+
+Public objects: ``ApprovalMode``, ``ApprovalConfig``, ``ApprovalSystem``.
+"""
+
 from __future__ import annotations
 
 import fnmatch
@@ -10,6 +16,10 @@ logger = logging.getLogger(__name__)
 
 
 class ApprovalMode(str, Enum):
+    """
+    Approval mode.
+    """
+
     SMART = "smart"
     MANUAL = "manual"
     OFF = "off"
@@ -17,6 +27,18 @@ class ApprovalMode(str, Enum):
 
 @dataclass
 class ApprovalConfig:
+    """
+    Approval config.
+
+    Attributes:
+        mode (ApprovalMode): mode.
+        timeout (int): timeout in seconds.
+        cron_mode (str): cron mode string.
+        single_query_mode (str): single query mode string.
+        deny (list[str]): collection of deny.
+        allowlist (list[str]): collection of allowlist.
+    """
+
     mode: ApprovalMode = ApprovalMode.SMART
     timeout: int = 300
     cron_mode: str = "deny"
@@ -93,13 +115,32 @@ DANGEROUS_PATTERNS = [
 
 
 class ApprovalSystem:
+    """
+    Approval system.
+    """
+
     def __init__(self, config: ApprovalConfig = None) -> None:
+        """
+        Initialise a ApprovalSystem instance.
+
+        Args:
+            config (ApprovalConfig): configuration object. Defaults to ``None``.
+        """
         self.config = config or ApprovalConfig()
         self._session_allowlist: list[str] = []
 
     def check_command(self, command: str) -> tuple[bool, str]:
-
         # 1. Administrator deny policy always wins.
+        """
+        Check command.
+
+        Args:
+            command (str): shell command to execute.
+
+        Returns:
+            tuple[bool, str]: a sequence of bool, str entries (empty when there is nothing to
+                report).
+        """
         for deny_pattern in self.config.deny:
             if fnmatch.fnmatch(command.lower(), deny_pattern.lower()):
                 return True, f"DENIED by policy: {deny_pattern}"
@@ -129,15 +170,42 @@ class ApprovalSystem:
         return False
 
     def approve_once(self, command: str) -> None:
+        """
+        Approve once.
+
+        Args:
+            command (str): shell command to execute.
+        """
         self._session_allowlist.append(command)
 
     def approve_always(self, command: str) -> None:
+        """
+        Approve always.
+
+        Args:
+            command (str): shell command to execute.
+        """
         self.config.allowlist.append(command)
 
     def get_approval_mode(self) -> ApprovalMode:
+        """
+        Return the approval mode.
+
+        Returns:
+            ApprovalMode: the resulting ApprovalMode.
+        """
         return self.config.mode
 
     def should_prompt(self, command: str) -> bool:
+        """
+        Return ``True`` when prompt.
+
+        Args:
+            command (str): shell command to execute.
+
+        Returns:
+            bool: ``True`` when the operation succeeds, otherwise ``False``.
+        """
         if self.config.mode == ApprovalMode.OFF:
             return False
 
@@ -151,6 +219,15 @@ class ApprovalSystem:
         return True
 
     def assess_risk(self, command: str) -> str:
+        """
+        Assess risk.
+
+        Args:
+            command (str): shell command to execute.
+
+        Returns:
+            str: the rendered string.
+        """
         is_dangerous, reason = self.check_command(command)
 
         if not is_dangerous:

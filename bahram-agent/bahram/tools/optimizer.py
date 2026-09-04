@@ -1,3 +1,9 @@
+"""
+Optimizer.
+
+Public objects: ``OptimizationSuggestion``, ``PerformanceOptimizer``.
+"""
+
 from __future__ import annotations
 
 import logging
@@ -9,6 +15,20 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class OptimizationSuggestion:
+    """
+    Optimization suggestion.
+
+    Attributes:
+        file (str): file string.
+        line (int): numeric value for line.
+        type (str): type string.
+        severity (str): severity string.
+        description (str): human readable description.
+        before (str): before string.
+        after (str): after string.
+        impact (str): impact string.
+    """
+
     file: str
     line: int
     type: str
@@ -20,7 +40,14 @@ class OptimizationSuggestion:
 
 
 class PerformanceOptimizer:
+    """
+    Performance optimizer.
+    """
+
     def __init__(self) -> None:
+        """
+        Initialise a PerformanceOptimizer instance.
+        """
         self._rules: list[tuple[str, str, str, str, str]] = [
             (
                 r"for .+ in range\(len\((.+)\)\)",
@@ -75,6 +102,19 @@ class PerformanceOptimizer:
         ]
 
     async def analyze(self, file_path: str) -> list[OptimizationSuggestion]:
+        """
+        Analyze.
+
+        Args:
+            file_path (str): path of the file to operate on.
+
+        Returns:
+            list[OptimizationSuggestion]: a sequence of OptimizationSuggestion entries (empty when
+                there is nothing to report).
+
+        Note:
+            Coroutine - must be awaited.
+        """
         try:
             with open(file_path, encoding="utf-8", errors="replace") as f:
                 content = f.read()
@@ -105,6 +145,15 @@ class PerformanceOptimizer:
             return []
 
     def format_suggestions(self, suggestions: list[OptimizationSuggestion]) -> str:
+        """
+        Format suggestions.
+
+        Args:
+            suggestions (list[OptimizationSuggestion]): collection of suggestions.
+
+        Returns:
+            str: the rendered string.
+        """
         if not suggestions:
             return "No optimization suggestions!"
 
@@ -130,6 +179,15 @@ class PerformanceOptimizer:
         return "\n".join(lines)
 
     def get_summary(self, suggestions: list[OptimizationSuggestion]) -> dict[str, int]:
+        """
+        Return the summary.
+
+        Args:
+            suggestions (list[OptimizationSuggestion]): collection of suggestions.
+
+        Returns:
+            dict[str, int]: a mapping of str, int.
+        """
         summary = {"high": 0, "medium": 0, "low": 0}
         for s in suggestions:
             summary[s.impact] = summary.get(s.impact, 0) + 1

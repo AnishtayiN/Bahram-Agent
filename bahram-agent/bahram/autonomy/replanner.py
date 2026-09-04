@@ -1,3 +1,9 @@
+"""
+Replanner.
+
+Public objects: ``ReplanningStrategy``, ``Deviation``, ``Replanner``.
+"""
+
 from __future__ import annotations
 
 import logging
@@ -13,6 +19,10 @@ logger = logging.getLogger(__name__)
 
 
 class ReplanningStrategy:
+    """
+    Replanning strategy.
+    """
+
     RETRY = "retry"
     MODIFY_STEP = "modify_step"
     INSERT_STEP = "insert_step"
@@ -24,6 +34,18 @@ class ReplanningStrategy:
 
 @dataclass
 class Deviation:
+    """
+    Deviation.
+
+    Attributes:
+        step_id (str): plan-step identifier.
+        error (str): error string.
+        cause (str): cause string.
+        strategy (str): strategy string.
+        timestamp (float): numeric value for timestamp.
+        metadata (dict[str, Any]): mapping of metadata.
+    """
+
     step_id: str
     error: str
     cause: str
@@ -33,12 +55,24 @@ class Deviation:
 
 
 class Replanner:
+    """
+    Replanner.
+    """
+
     def __init__(
         self,
         planner: Planner,
         verification_engine: VerificationEngine,
         max_replan_attempts: int = 3,
     ) -> None:
+        """
+        Initialise a Replanner instance.
+
+        Args:
+            planner (Planner): planner.
+            verification_engine (VerificationEngine): verification engine.
+            max_replan_attempts (int): numeric value for max replan attempts. Defaults to ``3``.
+        """
         self._planner = planner
         self._verification_engine = verification_engine
         self._max_replan_attempts = max_replan_attempts
@@ -51,6 +85,21 @@ class Replanner:
         error: str,
         tool_result: str = "",
     ) -> Plan:
+        """
+        Handle step failure.
+
+        Args:
+            plan (Plan): plan.
+            step (PlanStep): step.
+            error (str): error string.
+            tool_result (str): tool result string. Defaults to ``''``.
+
+        Returns:
+            Plan: the resulting Plan.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         deviation = self._classify_failure(step, error, tool_result)
         self._deviations.append(deviation)
 
@@ -79,6 +128,20 @@ class Replanner:
         step: PlanStep,
         results: list[VerificationResult],
     ) -> Plan:
+        """
+        Handle verification failure.
+
+        Args:
+            plan (Plan): plan.
+            step (PlanStep): step.
+            results (list[VerificationResult]): collection of results.
+
+        Returns:
+            Plan: the resulting Plan.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         failed = [r for r in results if not r.passed]
         if not failed:
             return plan
@@ -207,4 +270,11 @@ class Replanner:
         return plan
 
     def get_deviations(self) -> list[Deviation]:
+        """
+        Return the deviations.
+
+        Returns:
+            list[Deviation]: a sequence of Deviation entries (empty when there is nothing to
+                report).
+        """
         return self._deviations[:]

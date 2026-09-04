@@ -1,3 +1,9 @@
+"""
+Delivery.
+
+Public objects: ``DeliveryEntry``, ``DeliveryLedger``.
+"""
+
 from __future__ import annotations
 
 import json
@@ -11,6 +17,21 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class DeliveryEntry:
+    """
+    Delivery entry.
+
+    Attributes:
+        message_id (str): message id string.
+        platform (str): platform string.
+        chat_id (str): chat id string.
+        content (str): text content to process.
+        status (str): status string.
+        timestamp (float): numeric value for timestamp.
+        attempts (int): numeric value for attempts.
+        max_attempts (int): numeric value for max attempts.
+        error (str): error string.
+    """
+
     message_id: str
     platform: str
     chat_id: str
@@ -23,7 +44,17 @@ class DeliveryEntry:
 
 
 class DeliveryLedger:
+    """
+    Delivery ledger.
+    """
+
     def __init__(self, data_dir: str = "data/gateway") -> None:
+        """
+        Initialise a DeliveryLedger instance.
+
+        Args:
+            data_dir (str): directory that holds the on-disk state. Defaults to ``'data/gateway'``.
+        """
         self.data_dir = Path(data_dir)
         self.data_dir.mkdir(parents=True, exist_ok=True)
         self._entries: dict[str, DeliveryEntry] = {}
@@ -67,6 +98,18 @@ class DeliveryLedger:
         chat_id: str,
         content: str,
     ) -> DeliveryEntry:
+        """
+        Record send.
+
+        Args:
+            message_id (str): message id string.
+            platform (str): platform string.
+            chat_id (str): chat id string.
+            content (str): text content to process.
+
+        Returns:
+            DeliveryEntry: the resulting DeliveryEntry.
+        """
         entry = DeliveryEntry(
             message_id=message_id,
             platform=platform,
@@ -80,6 +123,15 @@ class DeliveryLedger:
         return entry
 
     def mark_sent(self, message_id: str) -> bool:
+        """
+        Mark sent.
+
+        Args:
+            message_id (str): message id string.
+
+        Returns:
+            bool: ``True`` when the operation succeeds, otherwise ``False``.
+        """
         if message_id in self._entries:
             self._entries[message_id].status = "sent"
             self._save()
@@ -87,6 +139,16 @@ class DeliveryLedger:
         return False
 
     def mark_failed(self, message_id: str, error: str) -> bool:
+        """
+        Mark failed.
+
+        Args:
+            message_id (str): message id string.
+            error (str): error string.
+
+        Returns:
+            bool: ``True`` when the operation succeeds, otherwise ``False``.
+        """
         if message_id in self._entries:
             entry = self._entries[message_id]
             entry.attempts += 1
@@ -98,6 +160,12 @@ class DeliveryLedger:
         return False
 
     def get_pending(self) -> list[dict]:
+        """
+        Return the pending.
+
+        Returns:
+            list[dict]: a sequence of dict entries (empty when there is nothing to report).
+        """
         return [
             {
                 "message_id": e.message_id,
@@ -111,6 +179,12 @@ class DeliveryLedger:
         ]
 
     def get_retryable(self) -> list[dict]:
+        """
+        Return the retryable.
+
+        Returns:
+            list[dict]: a sequence of dict entries (empty when there is nothing to report).
+        """
         return [
             {
                 "message_id": e.message_id,
@@ -123,6 +197,15 @@ class DeliveryLedger:
         ]
 
     def cleanup(self, max_age_seconds: int = 86400) -> int:
+        """
+        Cleanup.
+
+        Args:
+            max_age_seconds (int): numeric value for max age seconds. Defaults to ``86400``.
+
+        Returns:
+            int: the computed numeric value.
+        """
         now = time.time()
         to_remove = [
             msg_id

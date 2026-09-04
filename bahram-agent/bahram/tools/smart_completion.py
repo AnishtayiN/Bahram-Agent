@@ -1,3 +1,9 @@
+"""
+Smart completion.
+
+Public objects: ``CompletionContext``, ``SmartCodeCompletion``.
+"""
+
 from __future__ import annotations
 
 import logging
@@ -8,6 +14,18 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class CompletionContext:
+    """
+    Completion context.
+
+    Attributes:
+        file_path (str): path of the file to operate on.
+        line (int): numeric value for line.
+        column (int): numeric value for column.
+        language (str): language string.
+        code_before (str): code before string.
+        code_after (str): code after string.
+    """
+
     file_path: str
     line: int
     column: int
@@ -17,7 +35,14 @@ class CompletionContext:
 
 
 class SmartCodeCompletion:
+    """
+    Smart code completion.
+    """
+
     def __init__(self) -> None:
+        """
+        Initialise a SmartCodeCompletion instance.
+        """
         self._snippets: dict[str, list[dict]] = {
             "python": [
                 {
@@ -123,6 +148,16 @@ class SmartCodeCompletion:
         context: CompletionContext,
         trigger: str = "",
     ) -> list[dict]:
+        """
+        Complete.
+
+        Args:
+            context (CompletionContext): context.
+            trigger (str): trigger string. Defaults to ``''``.
+
+        Returns:
+            list[dict]: a sequence of dict entries (empty when there is nothing to report).
+        """
         completions = []
         language = context.language
 
@@ -203,6 +238,16 @@ class SmartCodeCompletion:
         ]
 
     def get_snippet(self, language: str, trigger: str) -> str | None:
+        """
+        Return the snippet.
+
+        Args:
+            language (str): language string.
+            trigger (str): trigger string.
+
+        Returns:
+            str | None: the resulting object, or ``None`` when it is not available.
+        """
         snippets = self._snippets.get(language, [])
         for snippet in snippets:
             if snippet["trigger"] == trigger:

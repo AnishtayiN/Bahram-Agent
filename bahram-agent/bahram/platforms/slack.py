@@ -1,3 +1,9 @@
+"""
+Slack.
+
+Public objects: ``SlackAdapter``.
+"""
+
 from __future__ import annotations
 
 import logging
@@ -8,16 +14,39 @@ logger = logging.getLogger(__name__)
 
 
 class SlackAdapter:
+    """
+    Slack adapter.
+    """
+
     def __init__(self, token: str = "", signing_secret: str = "") -> None:
+        """
+        Initialise a SlackAdapter instance.
+
+        Args:
+            token (str): token string. Defaults to ``''``.
+            signing_secret (str): signing secret string. Defaults to ``''``.
+        """
         self.token = token
         self.signing_secret = signing_secret
         self._app = None
         self._message_fn: Callable | None = None
 
     def set_message_function(self, fn: Callable) -> None:
+        """
+        Set the message function.
+
+        Args:
+            fn (Callable): callable used for fn.
+        """
         self._message_fn = fn
 
     async def start(self) -> None:
+        """
+        Start the component and acquire any resources it needs.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         if not self.token:
             logger.warning("Slack token not configured")
             return
@@ -49,6 +78,20 @@ class SlackAdapter:
             logger.error(f"Failed to start Slack adapter: {e}")
 
     async def send_message(self, chat_id: str, text: str, **kwargs) -> bool:
+        """
+        Send message.
+
+        Args:
+            chat_id (str): chat id string.
+            text (str): text string.
+            **kwargs: keyword arguments forwarded to the implementation.
+
+        Returns:
+            bool: ``True`` when the operation succeeds, otherwise ``False``.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         if not self._app:
             return False
 
@@ -64,6 +107,19 @@ class SlackAdapter:
             return False
 
     async def send_dm(self, user_id: str, text: str) -> bool:
+        """
+        Send dm.
+
+        Args:
+            user_id (str): user identifier.
+            text (str): text string.
+
+        Returns:
+            bool: ``True`` when the operation succeeds, otherwise ``False``.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         if not self._app:
             return False
 
@@ -77,6 +133,12 @@ class SlackAdapter:
             return False
 
     def get_platform_info(self) -> dict[str, Any]:
+        """
+        Return the platform info.
+
+        Returns:
+            dict[str, Any]: a mapping of str, Any.
+        """
         return {
             "name": "slack",
             "version": "1.0.0",

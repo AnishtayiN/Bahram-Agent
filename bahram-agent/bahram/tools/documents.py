@@ -1,3 +1,9 @@
+"""
+Documents.
+
+Public objects: ``DocumentTool``.
+"""
+
 from __future__ import annotations
 
 import logging
@@ -8,7 +14,14 @@ logger = logging.getLogger(__name__)
 
 
 class DocumentTool:
+    """
+    Document tool.
+    """
+
     def __init__(self) -> None:
+        """
+        Initialise a DocumentTool instance.
+        """
         self._max_size: int = 10 * 1024 * 1024
 
     async def extract(
@@ -16,6 +29,19 @@ class DocumentTool:
         file_path: str,
         format: str = "text",
     ) -> dict[str, Any]:
+        """
+        Extract.
+
+        Args:
+            file_path (str): path of the file to operate on.
+            format (str): format string. Defaults to ``'text'``.
+
+        Returns:
+            dict[str, Any]: a mapping of str, Any.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         path = Path(file_path)
 
         if not path.exists():
@@ -86,4 +112,10 @@ class DocumentTool:
             return {"error": "python-docx not installed. Run: pip install python-docx"}
 
     def set_max_size(self, max_size: int) -> None:
+        """
+        Set the max size.
+
+        Args:
+            max_size (int): numeric value for max size.
+        """
         self._max_size = max_size

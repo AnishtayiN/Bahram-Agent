@@ -1,3 +1,9 @@
+"""
+API connector.
+
+Public objects: ``APIConfig``, ``APIConnector``.
+"""
+
 from __future__ import annotations
 
 import logging
@@ -9,6 +15,18 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class APIConfig:
+    """
+    API config.
+
+    Attributes:
+        name (str): name of the object.
+        base_url (str): base url string.
+        auth_type (str): auth type string.
+        auth_value (str): auth value string.
+        headers (dict[str, str]): mapping of headers.
+        timeout (float): timeout in seconds.
+    """
+
     name: str
     base_url: str
     auth_type: str = "bearer"
@@ -18,11 +36,24 @@ class APIConfig:
 
 
 class APIConnector:
+    """
+    API connector.
+    """
+
     def __init__(self) -> None:
+        """
+        Initialise a APIConnector instance.
+        """
         self._apis: dict[str, APIConfig] = {}
         self._cache: dict[str, Any] = {}
 
     def register_api(self, config: APIConfig) -> None:
+        """
+        Register api.
+
+        Args:
+            config (APIConfig): configuration object.
+        """
         self._apis[config.name] = config
 
     async def request(
@@ -34,6 +65,23 @@ class APIConnector:
         params: dict = None,
         use_cache: bool = False,
     ) -> dict[str, Any]:
+        """
+        Request.
+
+        Args:
+            api_name (str): api name string.
+            method (str): method string.
+            path (str): filesystem path to operate on.
+            data (dict): mapping of data. Defaults to ``None``.
+            params (dict): mapping of params. Defaults to ``None``.
+            use_cache (bool): when ``True``, enable use cache. Defaults to ``False``.
+
+        Returns:
+            dict[str, Any]: a mapping of str, Any.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         config = self._apis.get(api_name)
         if not config:
             return {"error": f"API '{api_name}' not found"}
@@ -87,21 +135,88 @@ class APIConnector:
             return {"error": str(e)}
 
     async def get(self, api_name: str, path: str, **kwargs) -> dict:
+        """
+        Get.
+
+        Args:
+            api_name (str): api name string.
+            path (str): filesystem path to operate on.
+            **kwargs: keyword arguments forwarded to the implementation.
+
+        Returns:
+            dict: a mapping of str, Any.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         return await self.request(api_name, "GET", path, **kwargs)
 
     async def post(self, api_name: str, path: str, data: dict = None, **kwargs) -> dict:
+        """
+        Post.
+
+        Args:
+            api_name (str): api name string.
+            path (str): filesystem path to operate on.
+            data (dict): mapping of data. Defaults to ``None``.
+            **kwargs: keyword arguments forwarded to the implementation.
+
+        Returns:
+            dict: a mapping of str, Any.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         return await self.request(api_name, "POST", path, data=data, **kwargs)
 
     async def put(self, api_name: str, path: str, data: dict = None, **kwargs) -> dict:
+        """
+        Put.
+
+        Args:
+            api_name (str): api name string.
+            path (str): filesystem path to operate on.
+            data (dict): mapping of data. Defaults to ``None``.
+            **kwargs: keyword arguments forwarded to the implementation.
+
+        Returns:
+            dict: a mapping of str, Any.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         return await self.request(api_name, "PUT", path, data=data, **kwargs)
 
     async def delete(self, api_name: str, path: str, **kwargs) -> dict:
+        """
+        Delete.
+
+        Args:
+            api_name (str): api name string.
+            path (str): filesystem path to operate on.
+            **kwargs: keyword arguments forwarded to the implementation.
+
+        Returns:
+            dict: a mapping of str, Any.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         return await self.request(api_name, "DELETE", path, **kwargs)
 
     def clear_cache(self) -> None:
+        """
+        Clear cache.
+        """
         self._cache.clear()
 
     def list_apis(self) -> list[dict]:
+        """
+        List apis.
+
+        Returns:
+            list[dict]: a sequence of dict entries (empty when there is nothing to report).
+        """
         return [
             {
                 "name": api.name,

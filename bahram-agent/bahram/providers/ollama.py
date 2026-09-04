@@ -1,3 +1,9 @@
+"""
+Ollama.
+
+Public objects: ``OllamaProvider``.
+"""
+
 from __future__ import annotations
 
 import json
@@ -12,9 +18,22 @@ logger = logging.getLogger(__name__)
 
 
 class OllamaProvider(BaseProvider):
+    """
+    Ollama provider.
+    """
+
     def __init__(
         self, api_key: str = "", model: str = "", base_url: str = "", **kwargs: Any
     ) -> None:
+        """
+        Initialise a OllamaProvider instance.
+
+        Args:
+            api_key (str): api key string. Defaults to ``''``.
+            model (str): model identifier in ``provider/model`` form. Defaults to ``''``.
+            base_url (str): base url string. Defaults to ``''``.
+            **kwargs (Any): keyword arguments forwarded to the implementation.
+        """
         super().__init__(api_key=api_key, model=model or "llama3", **kwargs)
         self.base_url = (base_url or "http://localhost:11434").rstrip("/")
         self.temperature = kwargs.get("temperature", 0.7)
@@ -109,9 +128,21 @@ class OllamaProvider(BaseProvider):
             raise ImportError("httpx not installed. Run: pip install httpx")
 
     def get_models(self) -> list[str]:
+        """
+        Return the models.
+
+        Returns:
+            list[str]: a sequence of str entries (empty when there is nothing to report).
+        """
         return ["llama3", "llama3.1", "codellama", "mistral"]
 
     def get_provider_info(self) -> dict[str, Any]:
+        """
+        Return the provider info.
+
+        Returns:
+            dict[str, Any]: a mapping of str, Any.
+        """
         return {
             "name": "ollama",
             "configured": True,

@@ -1,3 +1,9 @@
+"""
+Delegation.
+
+Public objects: ``DelegatedTask``, ``DelegationTool``.
+"""
+
 from __future__ import annotations
 
 import asyncio
@@ -11,6 +17,18 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class DelegatedTask:
+    """
+    Delegated task.
+
+    Attributes:
+        task_id (str): task identifier.
+        agent (str): agent string.
+        description (str): human readable description.
+        status (str): status string.
+        result (Any): result.
+        error (str): error string.
+    """
+
     task_id: str
     agent: str
     description: str
@@ -20,11 +38,25 @@ class DelegatedTask:
 
 
 class DelegationTool:
+    """
+    Delegation tool.
+    """
+
     def __init__(self) -> None:
+        """
+        Initialise a DelegationTool instance.
+        """
         self._agents: dict[str, Callable] = {}
         self._tasks: dict[str, DelegatedTask] = {}
 
     def register_agent(self, name: str, handler: Callable) -> None:
+        """
+        Register agent.
+
+        Args:
+            name (str): name of the object.
+            handler (Callable): callable used for handler.
+        """
         self._agents[name] = handler
 
     async def delegate(
@@ -34,6 +66,21 @@ class DelegationTool:
         description: str,
         **kwargs,
     ) -> dict[str, Any]:
+        """
+        Delegate.
+
+        Args:
+            agent (str): agent string.
+            task_id (str): task identifier.
+            description (str): human readable description.
+            **kwargs: keyword arguments forwarded to the implementation.
+
+        Returns:
+            dict[str, Any]: a mapping of str, Any.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         if agent not in self._agents:
             return {"error": f"Agent '{agent}' not registered"}
 
@@ -62,6 +109,15 @@ class DelegationTool:
             return {"status": "failed", "error": str(e)}
 
     def get_task(self, task_id: str) -> dict | None:
+        """
+        Return the task.
+
+        Args:
+            task_id (str): task identifier.
+
+        Returns:
+            dict | None: a mapping of str, Any.
+        """
         task = self._tasks.get(task_id)
         if task:
             return {
@@ -75,9 +131,21 @@ class DelegationTool:
         return None
 
     def list_agents(self) -> list[str]:
+        """
+        List agents.
+
+        Returns:
+            list[str]: a sequence of str entries (empty when there is nothing to report).
+        """
         return list(self._agents.keys())
 
     def list_tasks(self) -> list[dict]:
+        """
+        List tasks.
+
+        Returns:
+            list[dict]: a sequence of dict entries (empty when there is nothing to report).
+        """
         return [
             {
                 "task_id": t.task_id,

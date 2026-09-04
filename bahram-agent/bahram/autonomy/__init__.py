@@ -1,3 +1,7 @@
+"""
+init .
+"""
+
 from __future__ import annotations
 
 from bahram.autonomy.budget import BudgetManager

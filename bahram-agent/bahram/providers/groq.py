@@ -1,3 +1,9 @@
+"""
+Groq.
+
+Public objects: ``GroqProvider``.
+"""
+
 from __future__ import annotations
 
 import json
@@ -12,9 +18,21 @@ logger = logging.getLogger(__name__)
 
 
 class GroqProvider(BaseProvider):
+    """
+    Groq provider.
+    """
+
     BASE_URL = "https://api.groq.com/openai/v1"
 
     def __init__(self, api_key: str = "", model: str = "", **kwargs: Any) -> None:
+        """
+        Initialise a GroqProvider instance.
+
+        Args:
+            api_key (str): api key string. Defaults to ``''``.
+            model (str): model identifier in ``provider/model`` form. Defaults to ``''``.
+            **kwargs (Any): keyword arguments forwarded to the implementation.
+        """
         super().__init__(api_key=api_key, model=model or "llama3-8b-8192", **kwargs)
         self.temperature = kwargs.get("temperature", 0.7)
         self.max_tokens = kwargs.get("max_tokens", 4096)
@@ -110,7 +128,19 @@ class GroqProvider(BaseProvider):
             raise ImportError("httpx not installed. Run: pip install httpx")
 
     def get_models(self) -> list[str]:
+        """
+        Return the models.
+
+        Returns:
+            list[str]: a sequence of str entries (empty when there is nothing to report).
+        """
         return ["llama3-8b-8192", "llama3-70b-8192", "mixtral-8x7b-32768", "gemma-7b-it"]
 
     def get_provider_info(self) -> dict[str, Any]:
+        """
+        Return the provider info.
+
+        Returns:
+            dict[str, Any]: a mapping of str, Any.
+        """
         return {"name": "groq", "configured": bool(self.api_key), "model": self.model}

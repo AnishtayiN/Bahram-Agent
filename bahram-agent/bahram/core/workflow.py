@@ -1,3 +1,9 @@
+"""
+Workflow.
+
+Public objects: ``WorkflowStep``, ``Workflow``, ``WorkflowAutomation``.
+"""
+
 from __future__ import annotations
 
 import asyncio
@@ -11,6 +17,19 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class WorkflowStep:
+    """
+    Workflow step.
+
+    Attributes:
+        id (str): id string.
+        name (str): name of the object.
+        action (str): action string.
+        params (dict): mapping of params.
+        dependencies (list[str]): collection of dependencies.
+        status (str): status string.
+        result (Any): result.
+    """
+
     id: str
     name: str
     action: str
@@ -22,6 +41,17 @@ class WorkflowStep:
 
 @dataclass
 class Workflow:
+    """
+    Workflow.
+
+    Attributes:
+        id (str): id string.
+        name (str): name of the object.
+        steps (list[WorkflowStep]): collection of steps.
+        status (str): status string.
+        current_step (int): numeric value for current step.
+    """
+
     id: str
     name: str
     steps: list[WorkflowStep] = field(default_factory=list)
@@ -30,15 +60,39 @@ class Workflow:
 
 
 class WorkflowAutomation:
+    """
+    Workflow automation.
+    """
+
     def __init__(self) -> None:
+        """
+        Initialise a WorkflowAutomation instance.
+        """
         self._workflows: dict[str, Workflow] = {}
         self._actions: dict[str, Callable] = {}
         self._history: list[dict] = []
 
     def register_action(self, name: str, action: Callable) -> None:
+        """
+        Register action.
+
+        Args:
+            name (str): name of the object.
+            action (Callable): callable used for action.
+        """
         self._actions[name] = action
 
     def create_workflow(self, name: str, steps: list[dict]) -> Workflow:
+        """
+        Create workflow.
+
+        Args:
+            name (str): name of the object.
+            steps (list[dict]): collection of steps.
+
+        Returns:
+            Workflow: the resulting Workflow.
+        """
         import uuid
 
         workflow_id = str(uuid.uuid4())[:8]
@@ -62,6 +116,18 @@ class WorkflowAutomation:
         return workflow
 
     async def execute(self, workflow_id: str) -> dict[str, Any]:
+        """
+        Execute the tool and return its textual result.
+
+        Args:
+            workflow_id (str): workflow id string.
+
+        Returns:
+            dict[str, Any]: a mapping of str, Any.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         workflow = self._workflows.get(workflow_id)
         if not workflow:
             return {"error": f"Workflow '{workflow_id}' not found"}
@@ -97,6 +163,7 @@ class WorkflowAutomation:
                         {"step": step.name, "status": "failed", "error": "Action not found"}
                     )
             except Exception as e:
+                logger.error("Workflow step %s failed: %s", step.name, e, exc_info=True)
                 step.status = "failed"
                 results.append({"step": step.name, "status": "failed", "error": str(e)})
 
@@ -112,6 +179,15 @@ class WorkflowAutomation:
         return {"status": "completed", "results": results}
 
     def get_workflow(self, workflow_id: str) -> dict | None:
+        """
+        Return the workflow.
+
+        Args:
+            workflow_id (str): workflow id string.
+
+        Returns:
+            dict | None: a mapping of str, Any.
+        """
         workflow = self._workflows.get(workflow_id)
         if workflow:
             return {
@@ -131,6 +207,15 @@ class WorkflowAutomation:
         return None
 
     def get_progress(self, workflow_id: str) -> dict[str, Any]:
+        """
+        Return the progress.
+
+        Args:
+            workflow_id (str): workflow id string.
+
+        Returns:
+            dict[str, Any]: a mapping of str, Any.
+        """
         workflow = self._workflows.get(workflow_id)
         if workflow:
             total = len(workflow.steps)
@@ -143,6 +228,12 @@ class WorkflowAutomation:
         return {"total": 0, "completed": 0, "progress": 0}
 
     def list_workflows(self) -> list[dict]:
+        """
+        List workflows.
+
+        Returns:
+            list[dict]: a sequence of dict entries (empty when there is nothing to report).
+        """
         return [
             {
                 "id": w.id,
@@ -154,4 +245,10 @@ class WorkflowAutomation:
         ]
 
     def get_history(self) -> list[dict]:
+        """
+        Return the history.
+
+        Returns:
+            list[dict]: a sequence of dict entries (empty when there is nothing to report).
+        """
         return self._history.copy()

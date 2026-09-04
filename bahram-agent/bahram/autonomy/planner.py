@@ -1,3 +1,9 @@
+"""
+Planner.
+
+Public objects: ``LLMProviderForPlanner``, ``Planner``.
+"""
+
 from __future__ import annotations
 
 import json
@@ -12,9 +18,29 @@ logger = logging.getLogger(__name__)
 
 
 class LLMProviderForPlanner(Protocol):
+    """
+    LLM provider for planner.
+    """
+
     async def complete(
         self, messages: list[Any], tools: list[dict[str, Any]] | None = None, **kwargs: Any
-    ) -> Any: ...
+    ) -> Any:
+        """Send a chat completion request and return the raw provider response.
+
+        Args:
+            messages (list[Any]): conversation history to send.
+            tools (list[dict[str, Any]] | None): OpenAI-style tool schemas.
+                Defaults to ``None``.
+            **kwargs (Any): provider specific overrides.
+
+        Returns:
+            Any: the provider response object (``AgentResponse`` for the real
+                engine implementations).
+
+        Note:
+            Coroutine - must be awaited.
+        """
+        ...
 
 
 PLANNING_SYSTEM_PROMPT = """You are a planning engine. Given a goal, create a structured \
@@ -73,11 +99,27 @@ Output ONLY valid JSON, no markdown."""
 
 
 class Planner:
+    """
+    Planner.
+    """
+
     def __init__(self, provider: LLMProviderForPlanner | None = None) -> None:
+        """
+        Initialise a Planner instance.
+
+        Args:
+            provider (LLMProviderForPlanner | None): provider. Defaults to ``None``.
+        """
         self._provider = provider
         self._plans: dict[str, Plan] = {}
 
     def set_provider(self, provider: LLMProviderForPlanner) -> None:
+        """
+        Set the provider.
+
+        Args:
+            provider (LLMProviderForPlanner): provider.
+        """
         self._provider = provider
 
     async def create_plan(
@@ -89,6 +131,23 @@ class Planner:
         memory_context: str = "",
         skill_context: str = "",
     ) -> Plan:
+        """
+        Create plan.
+
+        Args:
+            goal (str): goal string.
+            run_id (str): run identifier. Defaults to ``''``.
+            context (str): context string. Defaults to ``''``.
+            available_tools (list[str] | None): collection of available tools. Defaults to ``None``.
+            memory_context (str): memory context string. Defaults to ``''``.
+            skill_context (str): skill context string. Defaults to ``''``.
+
+        Returns:
+            Plan: the resulting Plan.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         plan_id = f"plan_{uuid.uuid4().hex[:8]}"
         run_id = run_id or f"run_{uuid.uuid4().hex[:8]}"
 
@@ -146,6 +205,21 @@ class Planner:
         error: str,
         context: str = "",
     ) -> Plan:
+        """
+        Replan.
+
+        Args:
+            plan (Plan): plan.
+            failed_step (PlanStep): failed step.
+            error (str): error string.
+            context (str): context string. Defaults to ``''``.
+
+        Returns:
+            Plan: the resulting Plan.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         if self._provider is None:
             plan = self._replan_fallback(plan, failed_step, error)
             plan.replan_count += 1
@@ -187,15 +261,39 @@ Produce a revised plan."""
         return plan
 
     def get_plan(self, plan_id: str) -> Plan | None:
+        """
+        Return the plan.
+
+        Args:
+            plan_id (str): plan identifier.
+
+        Returns:
+            Plan | None: the resulting object, or ``None`` when it is not available.
+        """
         return self._plans.get(plan_id)
 
     def get_plan_by_run(self, run_id: str) -> Plan | None:
+        """
+        Return the plan by run.
+
+        Args:
+            run_id (str): run identifier.
+
+        Returns:
+            Plan | None: the resulting object, or ``None`` when it is not available.
+        """
         for plan in self._plans.values():
             if plan.run_id == run_id:
                 return plan
         return None
 
     def list_plans(self) -> list[Plan]:
+        """
+        List plans.
+
+        Returns:
+            list[Plan]: a sequence of Plan entries (empty when there is nothing to report).
+        """
         return list(self._plans.values())
 
     def _parse_plan_response(self, content: str) -> dict[str, Any]:

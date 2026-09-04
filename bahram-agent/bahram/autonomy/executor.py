@@ -1,3 +1,9 @@
+"""
+Executor.
+
+Public objects: ``LLMProviderForExecutor``, ``PlanExecutor``.
+"""
+
 from __future__ import annotations
 
 import logging
@@ -14,12 +20,36 @@ logger = logging.getLogger(__name__)
 
 
 class LLMProviderForExecutor(Protocol):
+    """
+    LLM provider for executor.
+    """
+
     async def complete(
         self, messages: list[Any], tools: list[dict[str, Any]] | None = None, **kwargs: Any
-    ) -> Any: ...
+    ) -> Any:
+        """Send a chat completion request and return the raw provider response.
+
+        Args:
+            messages (list[Any]): conversation history to send.
+            tools (list[dict[str, Any]] | None): OpenAI-style tool schemas.
+                Defaults to ``None``.
+            **kwargs (Any): provider specific overrides.
+
+        Returns:
+            Any: the provider response object (``AgentResponse`` for the real
+                engine implementations).
+
+        Note:
+            Coroutine - must be awaited.
+        """
+        ...
 
 
 class PlanExecutor:
+    """
+    Plan executor.
+    """
+
     def __init__(
         self,
         engine: Any,
@@ -30,6 +60,18 @@ class PlanExecutor:
         event_tracker: EventTracker | None = None,
         recovery_manager: Any = None,
     ) -> None:
+        """
+        Initialise a PlanExecutor instance.
+
+        Args:
+            engine (Any): engine.
+            planner (Any): planner.
+            verification_engine (VerificationEngine): verification engine.
+            replanner (Replanner): replanner.
+            budget_manager (BudgetManager | None): budget manager. Defaults to ``None``.
+            event_tracker (EventTracker | None): event tracker. Defaults to ``None``.
+            recovery_manager (Any): recovery manager. Defaults to ``None``.
+        """
         self._engine = engine
         self._planner = planner
         self._verification_engine = verification_engine
@@ -46,6 +88,22 @@ class PlanExecutor:
         session_id: str = "",
         run_id: str = "",
     ) -> Plan:
+        """
+        Execute plan.
+
+        Args:
+            plan (Plan): plan.
+            messages (list[Any]): chat messages to send to the model.
+            model (str | None): model identifier in ``provider/model`` form. Defaults to ``None``.
+            session_id (str): session identifier. Defaults to ``''``.
+            run_id (str): run identifier. Defaults to ``''``.
+
+        Returns:
+            Plan: the resulting Plan.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         plan.status = PlanStatus.EXECUTING
         plan.updated_at = time.time()
 
@@ -122,6 +180,7 @@ class PlanExecutor:
                         step.failure_reason = result.get("error", "Unknown error")
 
                 except Exception as e:
+                    logger.error("Step %s execution failed: %s", step.id, e, exc_info=True)
                     step.status = StepStatus.FAILED
                     step.failure_reason = str(e)
 

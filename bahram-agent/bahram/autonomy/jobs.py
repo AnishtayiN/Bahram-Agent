@@ -1,3 +1,9 @@
+"""
+Jobs.
+
+Public objects: ``JobStatus``, ``JobPriority``, ``Job``, ``JobEngine``.
+"""
+
 from __future__ import annotations
 
 import asyncio
@@ -17,6 +23,10 @@ logger = logging.getLogger(__name__)
 
 
 class JobStatus(str, Enum):
+    """
+    Job status.
+    """
+
     QUEUED = "queued"
     STARTING = "starting"
     RUNNING = "running"
@@ -29,6 +39,10 @@ class JobStatus(str, Enum):
 
 
 class JobPriority(str, Enum):
+    """
+    Job priority.
+    """
+
     LOW = "low"
     NORMAL = "normal"
     HIGH = "high"
@@ -45,6 +59,31 @@ PRIORITY_ORDER = {
 
 @dataclass
 class Job:
+    """
+    Job.
+
+    Attributes:
+        id (str): id string.
+        run_id (str): run identifier.
+        session_id (str): session identifier.
+        parent_job_id (str | None): parent job id string.
+        state (JobStatus): state.
+        priority (JobPriority): priority.
+        payload (dict[str, Any]): mapping of payload.
+        checkpoint_id (str | None): checkpoint id string.
+        attempt_count (int): numeric value for attempt count.
+        max_attempts (int): numeric value for max attempts.
+        created_at (float): numeric value for created at.
+        started_at (float | None): numeric value for started at.
+        updated_at (float | None): numeric value for updated at.
+        finished_at (float | None): numeric value for finished at.
+        result (str | None): result string.
+        error (str | None): error string.
+        user_id (str): user identifier.
+        capabilities (list[str]): collection of capabilities.
+        security_policy (dict[str, Any]): mapping of security policy.
+    """
+
     id: str
     run_id: str
     session_id: str
@@ -66,6 +105,12 @@ class Job:
     security_policy: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Serialise the object to a JSON-serialisable dictionary.
+
+        Returns:
+            dict[str, Any]: a mapping of str, Any.
+        """
         return {
             "id": self.id,
             "run_id": self.run_id,
@@ -93,9 +138,21 @@ JobHandler = Callable[..., Coroutine[Any, Any, str]]
 
 
 class JobEngine:
+    """
+    Job engine.
+    """
+
     def __init__(
         self, data_dir: str = "data/jobs", max_concurrent: int = 3, event_tracker: Any = None
     ) -> None:
+        """
+        Initialise a JobEngine instance.
+
+        Args:
+            data_dir (str): directory that holds the on-disk state. Defaults to ``'data/jobs'``.
+            max_concurrent (int): numeric value for max concurrent. Defaults to ``3``.
+            event_tracker (Any): event tracker. Defaults to ``None``.
+        """
         self._data_dir = Path(data_dir)
         try:
             self._data_dir.mkdir(parents=True, exist_ok=True)
@@ -240,6 +297,13 @@ class JobEngine:
         conn.commit()
 
     def register_handler(self, job_type: str, handler: JobHandler) -> None:
+        """
+        Register handler.
+
+        Args:
+            job_type (str): job type string.
+            handler (JobHandler): handler.
+        """
         self._handlers[job_type] = handler
 
     async def enqueue(
@@ -254,6 +318,27 @@ class JobEngine:
         capabilities: list[str] | None = None,
         security_policy: dict[str, Any] | None = None,
     ) -> Job:
+        """
+        Enqueue.
+
+        Args:
+            job_type (str): job type string.
+            run_id (str): run identifier.
+            session_id (str): session identifier.
+            payload (dict[str, Any] | None): mapping of payload. Defaults to ``None``.
+            priority (JobPriority): priority. Defaults to ``JobPriority.NORMAL``.
+            parent_job_id (str | None): parent job id string. Defaults to ``None``.
+            user_id (str): user identifier. Defaults to ``''``.
+            capabilities (list[str] | None): collection of capabilities. Defaults to ``None``.
+            security_policy (dict[str, Any] | None): mapping of security policy. Defaults to
+                ``None``.
+
+        Returns:
+            Job: the resulting Job.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         job = Job(
             id=f"job_{uuid.uuid4().hex[:8]}",
             run_id=run_id,
@@ -275,6 +360,15 @@ class JobEngine:
         return job
 
     async def start_job(self, job: Job) -> None:
+        """
+        Start job.
+
+        Args:
+            job (Job): job.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         if self._active_count >= self._max_concurrent:
             logger.warning(f"Cannot start job {job.id}: max concurrent jobs reached")
             return
@@ -338,6 +432,18 @@ class JobEngine:
             self._running_tasks.pop(job.id, None)
 
     async def cancel_job(self, job_id: str) -> bool:
+        """
+        Cancel job.
+
+        Args:
+            job_id (str): job identifier.
+
+        Returns:
+            bool: ``True`` when the operation succeeds, otherwise ``False``.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         task = self._running_tasks.get(job_id)
         if task:
             task.cancel()
@@ -351,6 +457,15 @@ class JobEngine:
         return False
 
     def get_job(self, job_id: str) -> Job | None:
+        """
+        Return the job.
+
+        Args:
+            job_id (str): job identifier.
+
+        Returns:
+            Job | None: the resulting object, or ``None`` when it is not available.
+        """
         conn = self._get_conn()
         row = conn.execute("SELECT * FROM jobs WHERE id = ?", (job_id,)).fetchone()
         if row:
@@ -363,6 +478,17 @@ class JobEngine:
         state: JobStatus | None = None,
         limit: int = 50,
     ) -> list[Job]:
+        """
+        List jobs.
+
+        Args:
+            session_id (str | None): session identifier. Defaults to ``None``.
+            state (JobStatus | None): state. Defaults to ``None``.
+            limit (int): maximum number of items to return. Defaults to ``50``.
+
+        Returns:
+            list[Job]: a sequence of Job entries (empty when there is nothing to report).
+        """
         conn = self._get_conn()
         query = "SELECT * FROM jobs WHERE 1=1"
         params: list[Any] = []
@@ -378,6 +504,12 @@ class JobEngine:
         return [self._row_to_job(r) for r in rows]
 
     def get_queue_depth(self) -> dict[str, int]:
+        """
+        Return the queue depth.
+
+        Returns:
+            dict[str, int]: a mapping of str, int.
+        """
         conn = self._get_conn()
         rows = conn.execute("SELECT state, COUNT(*) as cnt FROM jobs GROUP BY state").fetchall()
         return {row["state"]: row["cnt"] for row in rows}

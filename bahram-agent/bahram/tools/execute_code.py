@@ -1,3 +1,9 @@
+"""
+Execute code.
+
+Public objects: ``ExecuteCodeTool``.
+"""
+
 from __future__ import annotations
 
 import asyncio
@@ -12,16 +18,43 @@ logger = logging.getLogger(__name__)
 
 
 class ExecuteCodeTool(BaseTool):
+    """
+    Execute code tool.
+    """
+
     @property
     def name(self) -> str:
+        """
+        Return the registry name of the ExecuteCodeTool object.
+
+        Returns the constant string ``'execute_code'``.
+
+        Returns:
+            str: the rendered string.
+        """
         return "execute_code"
 
     @property
     def description(self) -> str:
+        """
+        Return the human readable description shown to the model.
+
+        Returns the constant string ``'Execute code in a sandboxed subprocess. Supports python and
+            bash.'``.
+
+        Returns:
+            str: the rendered string.
+        """
         return "Execute code in a sandboxed subprocess. Supports python and bash."
 
     @property
     def parameters(self) -> dict[str, Any]:
+        """
+        Return the JSON schema describing this tool's arguments.
+
+        Returns:
+            dict[str, Any]: a mapping of str, Any.
+        """
         return {
             "type": "object",
             "properties": {
@@ -43,11 +76,29 @@ class ExecuteCodeTool(BaseTool):
         }
 
     def __init__(self, config: Any = None) -> None:
+        """
+        Initialise a ExecuteCodeTool instance.
+
+        Args:
+            config (Any): configuration object. Defaults to ``None``.
+        """
         super().__init__(config)
         self._timeout: float = float(getattr(config, "code_timeout", 30) or 30)
         self._max_output: int = int(getattr(config, "code_max_output", 10000) or 10000)
 
     async def execute(self, **kwargs: Any) -> str:
+        """
+        Execute the tool and return its textual result.
+
+        Args:
+            **kwargs (Any): keyword arguments forwarded to the implementation.
+
+        Returns:
+            str: the rendered string.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         code = kwargs.get("code", "")
         language = kwargs.get("language", "python")
         timeout = kwargs.get("timeout", self._timeout)

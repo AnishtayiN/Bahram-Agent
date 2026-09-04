@@ -1,3 +1,9 @@
+"""
+Cron.
+
+Public objects: ``JobState``, ``CronJob``, ``CronScheduler``.
+"""
+
 from __future__ import annotations
 
 import asyncio
@@ -15,6 +21,10 @@ logger = logging.getLogger(__name__)
 
 
 class JobState(str, Enum):
+    """
+    Job state.
+    """
+
     SCHEDULED = "scheduled"
     PAUSED = "paused"
     RUNNING = "running"
@@ -23,6 +33,28 @@ class JobState(str, Enum):
 
 @dataclass
 class CronJob:
+    """
+    Cron job.
+
+    Attributes:
+        id (str): id string.
+        name (str): name of the object.
+        prompt (str): prompt string.
+        schedule (str): schedule string.
+        state (JobState): state.
+        skills (list[str]): collection of skills.
+        script (str): script string.
+        context_from (list[str]): collection of context from.
+        continuity (bool): when ``True``, enable continuity.
+        deliver_to (str): deliver to string.
+        repeat (int): numeric value for repeat.
+        run_count (int): numeric value for run count.
+        created_at (str): created at string.
+        last_run (str | None): last run string.
+        next_run (str | None): next run string.
+        metadata (dict[str, Any]): mapping of metadata.
+    """
+
     id: str = field(default_factory=lambda: str(uuid.uuid4())[:8])
     name: str = ""
     prompt: str = ""
@@ -42,7 +74,17 @@ class CronJob:
 
 
 class CronScheduler:
+    """
+    Cron scheduler.
+    """
+
     def __init__(self, data_dir: str = "data/cron") -> None:
+        """
+        Initialise a CronScheduler instance.
+
+        Args:
+            data_dir (str): directory that holds the on-disk state. Defaults to ``'data/cron'``.
+        """
         self.data_dir = Path(data_dir)
         self.data_dir.mkdir(parents=True, exist_ok=True)
         self.jobs: dict[str, CronJob] = {}
@@ -102,6 +144,20 @@ class CronScheduler:
         deliver_to: str = "origin",
         repeat: int = 0,
     ) -> CronJob:
+        """
+        Create job.
+
+        Args:
+            prompt (str): prompt string.
+            schedule (str): schedule string.
+            name (str): name of the object. Defaults to ``''``.
+            skills (list[str]): collection of skills. Defaults to ``None``.
+            deliver_to (str): deliver to string. Defaults to ``'origin'``.
+            repeat (int): numeric value for repeat. Defaults to ``0``.
+
+        Returns:
+            CronJob: the resulting CronJob.
+        """
         job = CronJob(
             name=name or f"job-{uuid.uuid4().hex[:6]}",
             prompt=prompt,
@@ -117,12 +173,36 @@ class CronScheduler:
         return job
 
     def get_job(self, job_id: str) -> CronJob | None:
+        """
+        Return the job.
+
+        Args:
+            job_id (str): job identifier.
+
+        Returns:
+            CronJob | None: the resulting object, or ``None`` when it is not available.
+        """
         return self.jobs.get(job_id)
 
     def list_jobs(self) -> list[CronJob]:
+        """
+        List jobs.
+
+        Returns:
+            list[CronJob]: a sequence of CronJob entries (empty when there is nothing to report).
+        """
         return list(self.jobs.values())
 
     def pause_job(self, job_id: str) -> bool:
+        """
+        Pause job.
+
+        Args:
+            job_id (str): job identifier.
+
+        Returns:
+            bool: ``True`` when the operation succeeds, otherwise ``False``.
+        """
         job = self.jobs.get(job_id)
         if job:
             job.state = JobState.PAUSED
@@ -131,6 +211,15 @@ class CronScheduler:
         return False
 
     def resume_job(self, job_id: str) -> bool:
+        """
+        Resume job.
+
+        Args:
+            job_id (str): job identifier.
+
+        Returns:
+            bool: ``True`` when the operation succeeds, otherwise ``False``.
+        """
         job = self.jobs.get(job_id)
         if job:
             job.state = JobState.SCHEDULED
@@ -140,6 +229,15 @@ class CronScheduler:
         return False
 
     def remove_job(self, job_id: str) -> bool:
+        """
+        Remove job.
+
+        Args:
+            job_id (str): job identifier.
+
+        Returns:
+            bool: ``True`` when the operation succeeds, otherwise ``False``.
+        """
         if job_id in self.jobs:
             del self.jobs[job_id]
             self._save_jobs()
@@ -147,6 +245,16 @@ class CronScheduler:
         return False
 
     def update_job(self, job_id: str, updates: dict) -> bool:
+        """
+        Update job.
+
+        Args:
+            job_id (str): job identifier.
+            updates (dict): mapping of updates.
+
+        Returns:
+            bool: ``True`` when the operation succeeds, otherwise ``False``.
+        """
         job = self.jobs.get(job_id)
         if job:
             for key, value in updates.items():
@@ -174,6 +282,12 @@ class CronScheduler:
         return (now + timedelta(hours=1)).isoformat()
 
     def get_due_jobs(self) -> list[CronJob]:
+        """
+        Return the due jobs.
+
+        Returns:
+            list[CronJob]: a sequence of CronJob entries (empty when there is nothing to report).
+        """
         now = datetime.now()
         due = []
 
@@ -189,11 +303,23 @@ class CronScheduler:
         return due
 
     async def start(self) -> None:
+        """
+        Start the component and acquire any resources it needs.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         self._running = True
         asyncio.create_task(self._tick_loop())
         logger.info("Cron scheduler started")
 
     async def stop(self) -> None:
+        """
+        Stop the component and release any resources it holds.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         self._running = False
         logger.info("Cron scheduler stopped")
 
@@ -246,11 +372,30 @@ class CronScheduler:
         logger.info(f"Delivered result for job: {job.name}")
 
     def register_handler(self, event: str, handler: Callable) -> None:
+        """
+        Register handler.
+
+        Args:
+            event (str): event string.
+            handler (Callable): callable used for handler.
+        """
         if event not in self._handlers:
             self._handlers[event] = []
         self._handlers[event].append(handler)
 
     async def trigger_job(self, job_id: str) -> str | None:
+        """
+        Trigger job.
+
+        Args:
+            job_id (str): job identifier.
+
+        Returns:
+            str | None: the resulting object, or ``None`` when it is not available.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         job = self.jobs.get(job_id)
         if job:
             result = await self._execute_job(job)

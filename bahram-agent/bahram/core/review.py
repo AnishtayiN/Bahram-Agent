@@ -1,3 +1,9 @@
+"""
+Review.
+
+Public objects: ``ReviewItem``, ``BackgroundReviewer``.
+"""
+
 from __future__ import annotations
 
 import json
@@ -13,6 +19,18 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class ReviewItem:
+    """
+    Review item.
+
+    Attributes:
+        conversation_id (str): conversation id string.
+        timestamp (float): numeric value for timestamp.
+        summary (str): summary string.
+        issues (list[str]): collection of issues.
+        suggestions (list[str]): collection of suggestions.
+        reviewed (bool): when ``True``, enable reviewed.
+    """
+
     conversation_id: str
     timestamp: float
     summary: str
@@ -22,7 +40,17 @@ class ReviewItem:
 
 
 class BackgroundReviewer:
+    """
+    Background reviewer.
+    """
+
     def __init__(self, data_dir: str = "data/memory") -> None:
+        """
+        Initialise a BackgroundReviewer instance.
+
+        Args:
+            data_dir (str): directory that holds the on-disk state. Defaults to ``'data/memory'``.
+        """
         self.data_dir = Path(data_dir)
         self.data_dir.mkdir(parents=True, exist_ok=True)
         self._reviews: list[ReviewItem] = []
@@ -57,6 +85,12 @@ class BackgroundReviewer:
             json.dump(data, f, indent=2)
 
     def set_review_function(self, fn: Callable) -> None:
+        """
+        Set the review function.
+
+        Args:
+            fn (Callable): callable used for fn.
+        """
         self._review_fn = fn
 
     async def review_conversation(
@@ -65,7 +99,20 @@ class BackgroundReviewer:
         messages: list[dict],
         model_fn: Callable = None,
     ) -> ReviewItem:
+        """
+        Review conversation.
 
+        Args:
+            conversation_id (str): conversation id string.
+            messages (list[dict]): chat messages to send to the model.
+            model_fn (Callable): callable used for model fn. Defaults to ``None``.
+
+        Returns:
+            ReviewItem: the resulting ReviewItem.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         review_fn = model_fn or self._review_fn
 
         if review_fn:
@@ -127,6 +174,12 @@ class BackgroundReviewer:
         }
 
     def get_pending_reviews(self) -> list[dict]:
+        """
+        Return the pending reviews.
+
+        Returns:
+            list[dict]: a sequence of dict entries (empty when there is nothing to report).
+        """
         return [
             {
                 "conversation_id": r.conversation_id,
@@ -138,6 +191,15 @@ class BackgroundReviewer:
         ]
 
     def mark_reviewed(self, conversation_id: str) -> bool:
+        """
+        Mark reviewed.
+
+        Args:
+            conversation_id (str): conversation id string.
+
+        Returns:
+            bool: ``True`` when the operation succeeds, otherwise ``False``.
+        """
         for r in self._reviews:
             if r.conversation_id == conversation_id:
                 r.reviewed = True
@@ -146,6 +208,12 @@ class BackgroundReviewer:
         return False
 
     def get_statistics(self) -> dict[str, Any]:
+        """
+        Return the statistics.
+
+        Returns:
+            dict[str, Any]: a mapping of str, Any.
+        """
         total = len(self._reviews)
         reviewed = sum(1 for r in self._reviews if r.reviewed)
         issues = sum(len(r.issues) for r in self._reviews)

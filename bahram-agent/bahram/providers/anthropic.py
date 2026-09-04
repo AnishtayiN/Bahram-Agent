@@ -1,3 +1,9 @@
+"""
+Anthropic.
+
+Public objects: ``AnthropicProvider``.
+"""
+
 from __future__ import annotations
 
 import json
@@ -13,9 +19,21 @@ logger = logging.getLogger(__name__)
 
 
 class AnthropicProvider(BaseProvider):
+    """
+    Anthropic provider.
+    """
+
     BASE_URL = "https://api.anthropic.com/v1"
 
     def __init__(self, api_key: str = "", model: str = "", **kwargs: Any) -> None:
+        """
+        Initialise a AnthropicProvider instance.
+
+        Args:
+            api_key (str): api key string. Defaults to ``''``.
+            model (str): model identifier in ``provider/model`` form. Defaults to ``''``.
+            **kwargs (Any): keyword arguments forwarded to the implementation.
+        """
         super().__init__(api_key=api_key, model=model or "claude-sonnet-4-20250514", **kwargs)
         self.temperature = kwargs.get("temperature", 0.7)
         self.max_tokens = kwargs.get("max_tokens", 4096)
@@ -189,6 +207,12 @@ class AnthropicProvider(BaseProvider):
         return AgentResponse(content="\n".join(text_parts), tool_calls=tool_calls)
 
     def get_models(self) -> list[str]:
+        """
+        Return the models.
+
+        Returns:
+            list[str]: a sequence of str entries (empty when there is nothing to report).
+        """
         return [
             "claude-sonnet-4-20250514",
             "claude-3-5-sonnet-20241022",
@@ -197,4 +221,10 @@ class AnthropicProvider(BaseProvider):
         ]
 
     def get_provider_info(self) -> dict[str, Any]:
+        """
+        Return the provider info.
+
+        Returns:
+            dict[str, Any]: a mapping of str, Any.
+        """
         return {"name": "anthropic", "configured": bool(self.api_key), "model": self.model}

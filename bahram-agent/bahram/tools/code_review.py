@@ -1,3 +1,9 @@
+"""
+Code review.
+
+Public objects: ``CodeIssue``, ``CodeReviewTool``.
+"""
+
 from __future__ import annotations
 
 import logging
@@ -9,6 +15,18 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class CodeIssue:
+    """
+    Code issue.
+
+    Attributes:
+        file (str): file string.
+        line (int): numeric value for line.
+        severity (str): severity string.
+        category (str): category string.
+        message (str): message to process.
+        suggestion (str): suggestion string.
+    """
+
     file: str
     line: int
     severity: str
@@ -18,7 +36,14 @@ class CodeIssue:
 
 
 class CodeReviewTool:
+    """
+    Code review tool.
+    """
+
     def __init__(self) -> None:
+        """
+        Initialise a CodeReviewTool instance.
+        """
         self._rules: list[tuple[str, str, str, str]] = [
             (r"print\(", "info", "style", "Consider using logging instead of print"),
             (r"except:", "warning", "error", "Bare except clause - specify exception type"),
@@ -44,6 +69,19 @@ class CodeReviewTool:
         ]
 
     async def review_file(self, file_path: str) -> list[CodeIssue]:
+        """
+        Review file.
+
+        Args:
+            file_path (str): path of the file to operate on.
+
+        Returns:
+            list[CodeIssue]: a sequence of CodeIssue entries (empty when there is nothing to
+                report).
+
+        Note:
+            Coroutine - must be awaited.
+        """
         try:
             with open(file_path, encoding="utf-8", errors="replace") as f:
                 content = f.read()
@@ -71,6 +109,20 @@ class CodeReviewTool:
             return []
 
     async def review_code(self, code: str, language: str = "python") -> list[CodeIssue]:
+        """
+        Review code.
+
+        Args:
+            code (str): source code to execute.
+            language (str): language string. Defaults to ``'python'``.
+
+        Returns:
+            list[CodeIssue]: a sequence of CodeIssue entries (empty when there is nothing to
+                report).
+
+        Note:
+            Coroutine - must be awaited.
+        """
         issues = []
         lines = code.split("\n")
 
@@ -101,12 +153,30 @@ class CodeReviewTool:
         return suggestions.get(category, "")
 
     def get_summary(self, issues: list[CodeIssue]) -> dict[str, int]:
+        """
+        Return the summary.
+
+        Args:
+            issues (list[CodeIssue]): collection of issues.
+
+        Returns:
+            dict[str, int]: a mapping of str, int.
+        """
         summary = {"error": 0, "warning": 0, "info": 0}
         for issue in issues:
             summary[issue.severity] = summary.get(issue.severity, 0) + 1
         return summary
 
     def format_report(self, issues: list[CodeIssue]) -> str:
+        """
+        Format report.
+
+        Args:
+            issues (list[CodeIssue]): collection of issues.
+
+        Returns:
+            str: the rendered string.
+        """
         if not issues:
             return "No issues found!"
 

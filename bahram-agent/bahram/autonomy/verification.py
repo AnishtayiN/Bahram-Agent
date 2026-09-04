@@ -1,3 +1,9 @@
+"""
+Verification.
+
+Public objects: ``VerificationType``, ``VerificationResult``, ``VerificationEngine``.
+"""
+
 from __future__ import annotations
 
 import asyncio
@@ -13,6 +19,10 @@ logger = logging.getLogger(__name__)
 
 
 class VerificationType:
+    """
+    Verification type.
+    """
+
     COMMAND = "command"
     FILE_EXISTS = "file_exists"
     CONTENT_CHECK = "content_check"
@@ -23,6 +33,17 @@ class VerificationType:
 
 @dataclass
 class VerificationResult:
+    """
+    Verification result.
+
+    Attributes:
+        passed (bool): when ``True``, enable passed.
+        verification_type (str): verification type string.
+        details (str): details string.
+        duration_ms (float): numeric value for duration ms.
+        evidence (dict[str, Any]): mapping of evidence.
+    """
+
     passed: bool
     verification_type: str
     details: str = ""
@@ -30,6 +51,12 @@ class VerificationResult:
     evidence: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Serialise the object to a JSON-serialisable dictionary.
+
+        Returns:
+            dict[str, Any]: a mapping of str, Any.
+        """
         return {
             "passed": self.passed,
             "verification_type": self.verification_type,
@@ -40,10 +67,24 @@ class VerificationResult:
 
 
 class VerificationEngine:
+    """
+    Verification engine.
+    """
+
     def __init__(self) -> None:
+        """
+        Initialise a VerificationEngine instance.
+        """
         self._custom_verifiers: dict[str, Callable] = {}
 
     def register_verifier(self, name: str, fn: Callable) -> None:
+        """
+        Register verifier.
+
+        Args:
+            name (str): name of the object.
+            fn (Callable): callable used for fn.
+        """
         self._custom_verifiers[name] = fn
 
     async def verify(
@@ -52,6 +93,21 @@ class VerificationEngine:
         criteria: list[dict[str, Any]],
         context: dict[str, Any] | None = None,
     ) -> list[VerificationResult]:
+        """
+        Verify.
+
+        Args:
+            result (str): result string.
+            criteria (list[dict[str, Any]]): collection of criteria.
+            context (dict[str, Any] | None): mapping of context. Defaults to ``None``.
+
+        Returns:
+            list[VerificationResult]: a sequence of VerificationResult entries (empty when there is
+                nothing to report).
+
+        Note:
+            Coroutine - must be awaited.
+        """
         results = []
         for criterion in criteria:
             v_type = criterion.get("type", "")
@@ -78,6 +134,7 @@ class VerificationEngine:
                         details=f"Unknown verification type: {v_type}",
                     )
             except Exception as e:
+                logger.error("Verification %s raised: %s", v_type, e, exc_info=True)
                 vr = VerificationResult(
                     passed=False,
                     verification_type=v_type,

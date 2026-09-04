@@ -1,3 +1,9 @@
+"""
+Compat.
+
+Public objects: ``OpenAICompatibleProvider``.
+"""
+
 from __future__ import annotations
 
 import json
@@ -12,9 +18,22 @@ logger = logging.getLogger(__name__)
 
 
 class OpenAICompatibleProvider(BaseProvider):
+    """
+    Open ai compatible provider.
+    """
+
     def __init__(
         self, api_key: str = "", model: str = "", base_url: str = "", **kwargs: Any
     ) -> None:
+        """
+        Initialise a OpenAICompatibleProvider instance.
+
+        Args:
+            api_key (str): api key string. Defaults to ``''``.
+            model (str): model identifier in ``provider/model`` form. Defaults to ``''``.
+            base_url (str): base url string. Defaults to ``''``.
+            **kwargs (Any): keyword arguments forwarded to the implementation.
+        """
         super().__init__(api_key=api_key, model=model, **kwargs)
         self.base_url = base_url.rstrip("/")
         self.temperature = kwargs.get("temperature", 0.7)

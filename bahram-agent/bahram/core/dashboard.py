@@ -1,3 +1,9 @@
+"""
+Dashboard.
+
+Public objects: ``DashboardStats``, ``Dashboard``.
+"""
+
 from __future__ import annotations
 
 import json
@@ -12,6 +18,20 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class DashboardStats:
+    """
+    Dashboard stats.
+
+    Attributes:
+        total_messages (int): numeric value for total messages.
+        total_tokens (int): numeric value for total tokens.
+        total_cost (float): numeric value for total cost.
+        active_platforms (list[str]): collection of active platforms.
+        uptime (float): numeric value for uptime.
+        last_activity (float): numeric value for last activity.
+        errors (int): numeric value for errors.
+        success_rate (float): numeric value for success rate.
+    """
+
     total_messages: int = 0
     total_tokens: int = 0
     total_cost: float = 0.0
@@ -23,7 +43,17 @@ class DashboardStats:
 
 
 class Dashboard:
+    """
+    Dashboard.
+    """
+
     def __init__(self, data_dir: str = "data/gateway") -> None:
+        """
+        Initialise a Dashboard instance.
+
+        Args:
+            data_dir (str): directory that holds the on-disk state. Defaults to ``'data/gateway'``.
+        """
         self.data_dir = Path(data_dir)
         self.data_dir.mkdir(parents=True, exist_ok=True)
         self._stats = DashboardStats()
@@ -57,6 +87,14 @@ class Dashboard:
             json.dump(data, f, indent=2)
 
     def record_message(self, platform: str, tokens: int = 0, cost: float = 0.0) -> None:
+        """
+        Record message.
+
+        Args:
+            platform (str): platform string.
+            tokens (int): numeric value for tokens. Defaults to ``0``.
+            cost (float): numeric value for cost. Defaults to ``0.0``.
+        """
         self._stats.total_messages += 1
         self._stats.total_tokens += tokens
         self._stats.total_cost += cost
@@ -68,6 +106,9 @@ class Dashboard:
         self._save()
 
     def record_error(self) -> None:
+        """
+        Record error.
+        """
         self._stats.errors += 1
         if self._stats.total_messages > 0:
             self._stats.success_rate = (
@@ -76,6 +117,12 @@ class Dashboard:
         self._save()
 
     def get_stats(self) -> dict[str, Any]:
+        """
+        Return the stats.
+
+        Returns:
+            dict[str, Any]: a mapping of str, Any.
+        """
         self._stats.uptime = time.time() - self._start_time
         return {
             "total_messages": self._stats.total_messages,
@@ -89,6 +136,12 @@ class Dashboard:
         }
 
     def get_health(self) -> str:
+        """
+        Return the health.
+
+        Returns:
+            str: the rendered string.
+        """
         if self._stats.success_rate > 99:
             return "healthy"
         elif self._stats.success_rate > 95:
@@ -97,6 +150,12 @@ class Dashboard:
             return "unhealthy"
 
     def format_dashboard(self) -> str:
+        """
+        Format dashboard.
+
+        Returns:
+            str: the rendered string.
+        """
         stats = self.get_stats()
         health = self.get_health()
         health_emoji = {"healthy": "🟢", "degraded": "🟡", "unhealthy": "🔴"}
@@ -115,6 +174,9 @@ class Dashboard:
         return "\n".join(lines)
 
     def reset(self) -> None:
+        """
+        Reset.
+        """
         self._stats = DashboardStats()
         self._start_time = time.time()
         self._save()

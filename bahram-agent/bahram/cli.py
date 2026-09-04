@@ -1,3 +1,9 @@
+"""
+CLI.
+
+Public objects: ``main``.
+"""
+
 from __future__ import annotations
 
 import asyncio
@@ -243,6 +249,9 @@ def _print_response(response: AgentResponse) -> None:
 
 
 def main() -> None:
+    """
+    Main.
+    """
     if app:
         app()
     else:

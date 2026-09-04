@@ -25,6 +25,19 @@ MODEL_PRICING: dict[str, dict[str, float]] = {
 
 @dataclass
 class CostEntry:
+    """
+    Cost entry.
+
+    Attributes:
+        model (str): model identifier in ``provider/model`` form.
+        input_tokens (int): numeric value for input tokens.
+        output_tokens (int): numeric value for output tokens.
+        input_cost (float): numeric value for input cost.
+        output_cost (float): numeric value for output cost.
+        total_cost (float): numeric value for total cost.
+        timestamp (float): numeric value for timestamp.
+    """
+
     model: str
     input_tokens: int
     output_tokens: int

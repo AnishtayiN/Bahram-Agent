@@ -1,3 +1,9 @@
+"""
+Documentation.
+
+Public objects: ``DocumentationGenerator``.
+"""
+
 from __future__ import annotations
 
 import logging
@@ -7,7 +13,14 @@ logger = logging.getLogger(__name__)
 
 
 class DocumentationGenerator:
+    """
+    Documentation generator.
+    """
+
     def __init__(self) -> None:
+        """
+        Initialise a DocumentationGenerator instance.
+        """
         self._templates: dict[str, str] = {
             "readme": self._get_readme_template(),
             "api": self._get_api_template(),
@@ -15,6 +28,20 @@ class DocumentationGenerator:
         }
 
     async def generate(self, source_path: str, output_path: str, doc_type: str = "readme") -> bool:
+        """
+        Generate.
+
+        Args:
+            source_path (str): source path string.
+            output_path (str): output path string.
+            doc_type (str): doc type string. Defaults to ``'readme'``.
+
+        Returns:
+            bool: ``True`` when the operation succeeds, otherwise ``False``.
+
+        Note:
+            Coroutine - must be awaited.
+        """
         try:
             source = Path(source_path)
             if not source.exists():
@@ -88,8 +115,8 @@ class DocumentationGenerator:
             match = re.search(r"'''(.*?)'''", content, re.DOTALL)
             if match:
                 return match.group(1).strip()
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning("Could not extract module docstring: %s", e)
         return ""
 
     def _get_readme_template(self) -> str:

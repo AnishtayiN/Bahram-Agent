@@ -1,3 +1,9 @@
+"""
+File safety.
+
+Public objects: ``FileWriteSafety``.
+"""
+
 from __future__ import annotations
 
 import logging
@@ -8,7 +14,14 @@ logger = logging.getLogger(__name__)
 
 
 class FileWriteSafety:
+    """
+    File write safety.
+    """
+
     def __init__(self) -> None:
+        """
+        Initialise a FileWriteSafety instance.
+        """
         self._protected_paths: list[str] = [
             "/etc/passwd",
             "/etc/shadow",
@@ -22,9 +35,25 @@ class FileWriteSafety:
         self._max_file_size: int = 100 * 1024 * 1024
 
     def set_safe_root(self, root: str) -> None:
+        """
+        Set the safe root.
+
+        Args:
+            root (str): root string.
+        """
         self._safe_root = root
 
     def is_path_safe(self, path: str) -> tuple[bool, str]:
+        """
+        Return ``True`` when path safe.
+
+        Args:
+            path (str): filesystem path to operate on.
+
+        Returns:
+            tuple[bool, str]: a sequence of bool, str entries (empty when there is nothing to
+                report).
+        """
         path_str = str(path)
         has_parent_ref = ".." in Path(path_str).parts
         real_path = os.path.realpath(path_str)
@@ -55,17 +84,48 @@ class FileWriteSafety:
         return True, "OK"
 
     def check_write(self, path: str) -> tuple[bool, str]:
+        """
+        Check write.
+
+        Args:
+            path (str): filesystem path to operate on.
+
+        Returns:
+            tuple[bool, str]: a sequence of bool, str entries (empty when there is nothing to
+                report).
+        """
         return self.is_path_safe(path)
 
     def add_protected_path(self, path: str) -> None:
+        """
+        Add protected path.
+
+        Args:
+            path (str): filesystem path to operate on.
+        """
         if path not in self._protected_paths:
             self._protected_paths.append(path)
 
     def remove_protected_path(self, path: str) -> bool:
+        """
+        Remove protected path.
+
+        Args:
+            path (str): filesystem path to operate on.
+
+        Returns:
+            bool: ``True`` when the operation succeeds, otherwise ``False``.
+        """
         if path in self._protected_paths:
             self._protected_paths.remove(path)
             return True
         return False
 
     def set_max_file_size(self, max_size: int) -> None:
+        """
+        Set the max file size.
+
+        Args:
+            max_size (int): numeric value for max size.
+        """
         self._max_file_size = max_size

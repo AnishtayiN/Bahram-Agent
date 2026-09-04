@@ -1,3 +1,9 @@
+"""
+Cursor rules.
+
+Public objects: ``CursorRules``.
+"""
+
 from __future__ import annotations
 
 import logging
@@ -7,12 +13,25 @@ logger = logging.getLogger(__name__)
 
 
 class CursorRules:
+    """
+    Cursor rules.
+    """
+
     def __init__(self, project_root: str = ".") -> None:
+        """
+        Initialise a CursorRules instance.
+
+        Args:
+            project_root (str): project root string. Defaults to ``'.'``.
+        """
         self.project_root = Path(project_root)
         self._rules: list[str] = []
         self._loaded = False
 
     def load(self) -> None:
+        """
+        Load.
+        """
         if self._loaded:
             return
 
@@ -28,10 +47,22 @@ class CursorRules:
         self._loaded = True
 
     def get_rules(self) -> list[str]:
+        """
+        Return the rules.
+
+        Returns:
+            list[str]: a sequence of str entries (empty when there is nothing to report).
+        """
         self.load()
         return self._rules.copy()
 
     def get_rules_text(self) -> str:
+        """
+        Return the rules text.
+
+        Returns:
+            str: the rendered string.
+        """
         rules = self.get_rules()
         if not rules:
             return ""
@@ -42,12 +73,27 @@ class CursorRules:
         return "\n".join(lines)
 
     def add_rule(self, rule: str) -> None:
+        """
+        Add rule.
+
+        Args:
+            rule (str): rule string.
+        """
         self.load()
         if rule not in self._rules:
             self._rules.append(rule)
             self._save()
 
     def remove_rule(self, rule: str) -> bool:
+        """
+        Remove rule.
+
+        Args:
+            rule (str): rule string.
+
+        Returns:
+            bool: ``True`` when the operation succeeds, otherwise ``False``.
+        """
         self.load()
         if rule in self._rules:
             self._rules.remove(rule)
@@ -61,5 +107,11 @@ class CursorRules:
         rules_file.write_text(content)
 
     def has_rules(self) -> bool:
+        """
+        Return ``True`` when the object has rules.
+
+        Returns:
+            bool: ``True`` when the operation succeeds, otherwise ``False``.
+        """
         self.load()
         return len(self._rules) > 0

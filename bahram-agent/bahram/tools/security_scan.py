@@ -1,3 +1,9 @@
+"""
+Security scan.
+
+Public objects: ``SecurityIssue``, ``SecurityScanner``.
+"""
+
 from __future__ import annotations
 
 import logging
@@ -10,6 +16,18 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class SecurityIssue:
+    """
+    Security issue.
+
+    Attributes:
+        file (str): file string.
+        line (int): numeric value for line.
+        severity (str): severity string.
+        category (str): category string.
+        description (str): human readable description.
+        recommendation (str): recommendation string.
+    """
+
     file: str
     line: int
     severity: str
@@ -19,7 +37,14 @@ class SecurityIssue:
 
 
 class SecurityScanner:
+    """
+    Security scanner.
+    """
+
     def __init__(self) -> None:
+        """
+        Initialise a SecurityScanner instance.
+        """
         self._patterns: list[tuple[str, str, str, str, str]] = [
             (
                 r"eval\(",
@@ -85,6 +110,19 @@ class SecurityScanner:
         ]
 
     async def scan_file(self, file_path: str) -> list[SecurityIssue]:
+        """
+        Scan file.
+
+        Args:
+            file_path (str): path of the file to operate on.
+
+        Returns:
+            list[SecurityIssue]: a sequence of SecurityIssue entries (empty when there is nothing to
+                report).
+
+        Note:
+            Coroutine - must be awaited.
+        """
         try:
             with open(file_path, encoding="utf-8", errors="replace") as f:
                 content = f.read()
@@ -112,6 +150,19 @@ class SecurityScanner:
             return []
 
     async def scan_directory(self, dir_path: str) -> list[SecurityIssue]:
+        """
+        Scan directory.
+
+        Args:
+            dir_path (str): dir path string.
+
+        Returns:
+            list[SecurityIssue]: a sequence of SecurityIssue entries (empty when there is nothing to
+                report).
+
+        Note:
+            Coroutine - must be awaited.
+        """
         issues = []
         path = Path(dir_path)
 
@@ -122,6 +173,15 @@ class SecurityScanner:
         return issues
 
     def get_report(self, issues: list[SecurityIssue]) -> str:
+        """
+        Return the report.
+
+        Args:
+            issues (list[SecurityIssue]): collection of issues.
+
+        Returns:
+            str: the rendered string.
+        """
         if not issues:
             return "No security issues found!"
 
@@ -151,6 +211,15 @@ class SecurityScanner:
         return "\n".join(lines)
 
     def get_summary(self, issues: list[SecurityIssue]) -> dict[str, int]:
+        """
+        Return the summary.
+
+        Args:
+            issues (list[SecurityIssue]): collection of issues.
+
+        Returns:
+            dict[str, int]: a mapping of str, int.
+        """
         summary = {"critical": 0, "high": 0, "medium": 0, "low": 0}
         for issue in issues:
             summary[issue.severity] = summary.get(issue.severity, 0) + 1
